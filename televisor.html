@@ -2351,7 +2351,7 @@
     const YT_PROXY = 'https://cathedral-seniors-partnerships-uncertainty.trycloudflare.com/';
     // Movie-proxy tunnel (movie-proxy.js running via cloudflared) — update when URL rotates
     const MOVIE_TUNNEL = 'https://programmers-sword-faqs-fired.trycloudflare.com/';
-    function getProxy() { return 'https://goottvmoviesandstuff.mryeastco.workers.dev'; }
+    function getProxy() { return 'https://goottvmoviesandstuff.untdocapis.workers.dev'; }
     function streamUrl(url) { return url ? STREAM_PROXY + '?url=' + encodeURIComponent(url) : ''; }
 
     let queue = [], currentIndex = -1, playlists = {}, currentPlaylistName = 'Default Queue';
@@ -3408,7 +3408,7 @@
       setupSync();initProgressBar();loadPlaylists();updateTrackInfo();
       // Restore saved worker URL (or use default)
       const el = document.getElementById('workerUrlInput');
-      if (el) el.value = localStorage.getItem('gootMovieWorker') || 'https://goottv.mryeastco.workers.dev';
+      if (el) el.value = localStorage.getItem('gootMovieWorker') || 'https://goottv.untdocapis.workers.dev';
       const urlInput = document.getElementById('urlInput');
 
       // Debounced live search as user types
@@ -3855,7 +3855,7 @@
     }
 
     function getWorkerUrl() {
-      return 'https://goottvmoviesandstuff.mryeastco.workers.dev';
+      return 'https://goottvmoviesandstuff.untdocapis.workers.dev';
     }
 
     // Cache of tmdbId -> imdbId lookups
@@ -4271,7 +4271,7 @@
     // ══════════════════════════════════════════════
 
     // ── PASTE YOUR CLOUDFLARE WORKER URL HERE ───────────────────────────
-    const NIGGLE_STREAM_WORKER = 'https://televisorvids.mryeastco.workers.dev';  // e.g. 'https://niggle-stream.yourname.workers.dev'
+    const NIGGLE_STREAM_WORKER = 'https://televisorvids.untdocapis.workers.dev';  // e.g. 'https://niggle-stream.yourname.workers.dev'
     // ────────────────────────────────────────────────────────────────────
     const NIGGLE_DRIVE_FOLDER_ID = '1mgiwbTAEuc3FG-IWofAD3CZBrtEg6z5P';   // folder ID from the Drive URL
     const NIGGLE_API_KEY         = 'AIzaSyBTV5mayqZksu5Vg47TiVm2-22_iWiq4eY';   // your Google API key
