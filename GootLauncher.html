@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+
+
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Goot Launcher</title>
+   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0"
+       rel="stylesheet" />
+   <style>
+       :root {
+           /* M3 Dark Tonal Palette Defaults */
+           --md-sys-color-primary: #D0BCFF;
+           --md-sys-color-on-primary: #381E72;
+           --md-sys-color-primary-container: rgba(208, 188, 255, 0.15);
+           --md-sys-color-on-primary-container: #EADDFF;
+
+
+
+
+           /* Deep Dark Surface */
+           --md-sys-color-surface: #0f0e13;
+           --md-sys-color-on-surface: #E6E1E5;
+           --md-sys-color-surface-container: #1d1b20;
+
+
+
+
+           /* Expressive Tokens */
+           --md-sys-shape-corner-extra-large: 28px;
+           --md-sys-shape-corner-full: 9999px;
+           --primary-rgb: 208, 188, 255;
+       }
+
+
+
+
+       body {
+           background-color: var(--md-sys-color-surface);
+           color: var(--md-sys-color-on-surface);
+           font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           justify-content: center;
+           min-height: 100vh;
+           margin: 0;
+           overflow: hidden;
+           transition: background-color 0.4s ease;
+       }
+
+
+
+
+       body::before {
+           content: "";
+           position: absolute;
+           width: 300px;
+           height: 300px;
+           background: var(--md-sys-color-primary);
+           filter: blur(150px);
+           opacity: 0.15;
+           z-index: -1;
+           border-radius: 50%;
+           top: 10%;
+       }
+
+
+
+
+       header {
+           text-align: center;
+           margin-bottom: 40px;
+           z-index: 1;
+       }
+
+
+
+
+       h1 {
+           font-size: 4rem;
+           font-weight: 900;
+           margin: 0;
+           color: var(--md-sys-color-primary);
+           letter-spacing: -2px;
+           text-shadow: 0 0 30px rgba(var(--primary-rgb), 0.4);
+       }
+
+
+
+
+       p {
+           margin-top: 8px;
+           opacity: 0.6;
+           font-weight: 500;
+           letter-spacing: 0.5px;
+       }
+
+
+
+
+       .launcher-card {
+           background-color: var(--md-sys-color-surface-container);
+           padding: 24px;
+           border-radius: var(--md-sys-shape-corner-extra-large);
+           width: 90%;
+           max-width: 420px;
+           display: flex;
+           flex-direction: column;
+           gap: 12px;
+           box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+           border: 1px solid rgba(var(--primary-rgb), 0.1);
+           z-index: 1;
+       }
+
+
+
+
+       .game-btn {
+           background-color: var(--md-sys-color-primary-container);
+           color: var(--md-sys-color-on-primary-container);
+           border: 1px solid rgba(var(--primary-rgb), 0.1);
+           padding: 20px 24px;
+           font-size: 1.1rem;
+           font-weight: 600;
+           border-radius: var(--md-sys-shape-corner-full);
+           cursor: pointer;
+           display: flex;
+           align-items: center;
+           justify-content: space-between;
+           transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+       }
+
+
+
+
+       .game-btn:hover {
+           transform: translateY(-3px) scale(1.02);
+           background-color: var(--md-sys-color-primary);
+           color: var(--md-sys-color-on-primary);
+           box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.3);
+           border-color: transparent;
+       }
+
+
+
+
+       .game-btn:active {
+           transform: scale(0.97);
+       }
+
+
+
+
+       .game-btn .icon {
+           font-family: 'Material Symbols Rounded';
+           font-size: 24px;
+       }
+
+
+
+
+       .version-label {
+           font-size: 0.8rem;
+           opacity: 0.6;
+           margin-left: 8px;
+           font-weight: 400;
+       }
+
+
+
+
+       .settings-fab {
+           position: fixed;
+           bottom: 32px;
+           right: 32px;
+           background: var(--md-sys-color-surface-container);
+           color: var(--md-sys-color-on-surface);
+           padding: 12px 18px;
+           border-radius: var(--md-sys-shape-corner-extra-large);
+           display: flex;
+           align-items: center;
+           gap: 12px;
+           box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+           border: 1px solid rgba(var(--primary-rgb), 0.2);
+           cursor: pointer;
+           backdrop-filter: blur(10px);
+       }
+
+
+
+
+       #accentColor {
+           width: 28px;
+           height: 28px;
+           border: none;
+           border-radius: 50%;
+           cursor: pointer;
+           padding: 0;
+           background: none;
+           overflow: hidden;
+           border: 2px solid var(--md-sys-color-on-surface);
+       }
+
+
+
+
+       ::-webkit-color-swatch-wrapper {
+           padding: 0;
+       }
+
+
+
+
+       ::-webkit-color-swatch {
+           border: none;
+           border-radius: 50%;
+       }
+   </style>
+</head>
+
+
+
+
+<body>
+
+
+
+
+   <header>
+       <h1>Goot</h1>
+   </header>
+
+
+
+
+   <div class="launcher-card">
+       <button class="game-btn" onclick="launchGame('https://raw.githubusercontent.com/RalphEG/UpdatedUGSOF/refs/heads/main/GootV3.6.html?t=')">
+           <span>V3.6 <span class="version-label">Latest</span></span>
+           <span class="icon">rocket_launch</span>
+       </button>
+
+
+       <button class="game-btn" onclick="launchGame('https://raw.githubusercontent.com/RalphEG/UpdatedUGSOF/refs/heads/main/GootV3.html?t=')">
+           <span>V3 <span class="version-label">Legacy</span></span>
+           <span class="icon">autoplay</span>
+       </button>
+
+
+       <button class="game-btn" onclick="launchGame('https://raw.githubusercontent.com/RalphEG/UpdatedUGSOF/refs/heads/main/GootV2.1Player.html?t=')">
+           <span>V2.1 <span class="version-label">Legacy</span></span>
+           <span class="icon">play_circle</span>
+       </button>
+
+
+
+
+       <button class="game-btn" onclick="launchGame('https://raw.githubusercontent.com/RalphEG/UpdatedUGSOF/refs/heads/main/gootv2.html?t=')">
+           <span>V2 <span class="version-label">Legacy</span></span>
+           <span class="icon">history</span>
+       </button>
+
+
+
+
+       <button class="game-btn" onclick="launchGame('https://raw.githubusercontent.com/RalphEG/UpdatedUGSOF/refs/heads/main/GootV1NG.html?t=')">
+           <span>V1 NG<span class="version-label">Legacy</span></span>
+           <span class="icon">new_releases</span>
+       </button>
+
+
+
+
+       <div class="settings-fab">
+           <span class="icon" style="font-family: 'Material Symbols Rounded';">palette</span>
+           <span style="font-weight: 600; font-size: 0.9rem;">ACCENT</span>
+           <input type="color" id="accentColor" value="#D0BCFF">
+       </div>
+   </div>
+
+
+
+
+   <script>
+       const colorPicker = document.getElementById('accentColor');
+
+
+
+
+       function hexToRgb(hex) {
+           const r = parseInt(hex.slice(1, 3), 16);
+           const g = parseInt(hex.slice(3, 5), 16);
+           const b = parseInt(hex.slice(5, 7), 16);
+           return `${r}, ${g}, ${b}`;
+       }
+
+
+
+
+       function applyTheme(hex) {
+           // Skip if same color (prevents unnecessary work)
+           if (hex === document.documentElement.style.getPropertyValue('--md-sys-color-primary')) {
+               return;
+           }
+
+
+
+
+           const rgb = hexToRgb(hex);
+           const r = parseInt(hex.slice(1, 3), 16);
+           const g = parseInt(hex.slice(3, 5), 16);
+           const b = parseInt(hex.slice(5, 7), 16);
+           const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+
+
+
+
+           const root = document.documentElement.style;
+           root.setProperty('--primary-rgb', rgb);
+           root.setProperty('--md-sys-color-primary', hex);
+           root.setProperty('--md-sys-color-primary-container', `rgba(${rgb}, 0.15)`);
+           root.setProperty('--md-sys-color-surface-container', `rgba(${rgb}, 0.06)`);
+
+
+
+
+           const onPrimary = brightness > 150 ? '#000000' : '#ffffff';
+           root.setProperty('--md-sys-color-on-primary', onPrimary);
+
+
+
+
+           root.setProperty('--md-sys-color-on-primary-container',
+               brightness > 180 ? hex : '#D0BCFF');
+       }
+
+
+
+
+       // Live preview while dragging (smooth with RAF)
+       colorPicker.addEventListener('input', (e) => {
+           requestAnimationFrame(() => applyTheme(e.target.value));
+       });
+
+
+
+
+       // Save only on final commit (release mouse / touch end)
+       const saveColor = () => {
+           localStorage.setItem('goot-accent-dark', colorPicker.value);
+       };
+
+
+
+
+       colorPicker.addEventListener('change', saveColor);
+       colorPicker.addEventListener('pointerup', saveColor);
+       colorPicker.addEventListener('touchend', saveColor);
+
+
+
+
+       // Init from saved or default
+       const savedColor = localStorage.getItem('goot-accent-dark') || '#D0BCFF';
+       colorPicker.value = savedColor;
+       applyTheme(savedColor);
+
+
+
+
+       function launchGame(url) {
+           const newWin = window.open('about:blank', '_blank');
+           if (!newWin) {
+               alert('Pop-up blocked! Please allow pop-ups to launch the cloaked engine.');
+               return;
+           }
+
+
+
+
+           newWin.document.write(`
+               <style>
+                   body { background: #000; color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; }
+                   .loader { border: 4px solid #333; border-top: 4px solid ${colorPicker.value}; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+                   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+               </style>
+               <div class="loader"></div>
+               <div><h2>Initializing Goot Engine...</h2></div>
+           `);
+
+
+
+
+           fetch(url + Date.now())
+               .then(r => r.text())
+               .then(html => {
+                   newWin.document.open();
+                   newWin.document.write(html);
+                   newWin.document.close();
+               })
+               .catch(err => {
+                   newWin.document.body.innerHTML = "Error loading game.";
+               });
+       }
+   </script>
+</body>
+
+
+
+
+</html>
+

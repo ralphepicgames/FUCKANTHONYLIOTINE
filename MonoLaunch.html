@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MonoLaunch</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;scrollbar-width:none}
+*::-webkit-scrollbar{display:none}
+html{overflow:hidden;height:100%}
+
+:root{
+  --bg:#06060a;
+  --accent:#a78bfa;
+  --accent2:#60a5fa;
+  --card-bg:rgba(255,255,255,0.028);
+  --card-border:rgba(255,255,255,0.07);
+  --card-hover-border:rgba(167,139,250,0.35);
+  --text:#f0eeff;
+  --muted:rgba(240,238,255,0.38);
+  --blur:blur(40px) saturate(160%);
+  --speed:0.55s;
+}
+
+body.perf-mode{
+  --card-bg:rgba(18,16,30,0.92);
+  --blur:none;
+  --speed:0.25s;
+}
+
+body{
+  font-family:'DM Sans',system-ui,sans-serif;
+  background:var(--bg);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  color:var(--text);
+}
+
+/* ── Grain ── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity:0.032;
+  pointer-events:none;
+  z-index:999;
+}
+
+/* ── Blobs ── */
+.blob{position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;will-change:transform}
+.blob-1{width:700px;height:700px;background:radial-gradient(circle,rgba(109,40,217,0.5),transparent 70%);top:-20%;left:-15%;animation:d1 22s ease-in-out infinite}
+.blob-2{width:600px;height:600px;background:radial-gradient(circle,rgba(37,99,235,0.4),transparent 70%);bottom:-20%;right:-10%;animation:d2 26s ease-in-out infinite}
+.blob-3{width:400px;height:400px;background:radial-gradient(circle,rgba(167,139,250,0.25),transparent 70%);top:40%;left:50%;animation:d3 18s ease-in-out infinite}
+body.perf-mode .blob{filter:blur(60px);animation:none}
+
+@keyframes d1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4%,6%) scale(1.08)}}
+@keyframes d2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-4%,-5%) scale(1.06)}}
+@keyframes d3{0%,100%{transform:translate(0,0)}33%{transform:translate(-6%,4%) scale(0.94)}66%{transform:translate(5%,-3%) scale(1.05)}}
+
+/* ── Shell ── */
+.shell{position:relative;z-index:10;width:min(640px,calc(100vw - 32px));padding-bottom:16px}
+
+/* ── Title ── */
+.title-wrap{padding:0 4px 28px;opacity:0;transform:translateY(18px);animation:fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.1s forwards}
+
+.eyebrow{
+  font-size:0.68rem;letter-spacing:0.22em;text-transform:uppercase;
+  color:var(--accent);font-weight:500;margin-bottom:6px;
+  display:flex;align-items:center;gap:8px;
+}
+.eyebrow::before{content:'';width:20px;height:1px;background:var(--accent);opacity:0.7}
+
+h1{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(2.6rem,6vw,3.8rem);
+  font-weight:800;letter-spacing:-0.04em;line-height:0.92;
+  background:linear-gradient(135deg,#fff 0%,rgba(167,139,250,0.9) 45%,rgba(96,165,250,0.8) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+body.perf-mode h1{background:none;-webkit-text-fill-color:#e8e0ff}
+
+/* ── Cards ── */
+.cards{display:flex;flex-direction:column;gap:10px}
+
+.card{
+  background:var(--card-bg);
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--card-border);
+  border-radius:18px;padding:22px 24px;
+  display:flex;align-items:center;gap:18px;
+  cursor:pointer;position:relative;overflow:hidden;
+  transition:border-color var(--speed) ease,transform var(--speed) cubic-bezier(0.34,1.56,0.64,1),box-shadow var(--speed) ease;
+  opacity:0;transform:translateY(22px);
+}
+
+.card.visible{
+  opacity:1;transform:translateY(0);
+  transition:opacity 0.6s cubic-bezier(0.22,1,0.36,1),transform 0.6s cubic-bezier(0.22,1,0.36,1),border-color var(--speed) ease,box-shadow var(--speed) ease;
+}
+
+.card:hover{
+  border-color:var(--card-hover-border);
+  transform:translateY(-5px) scale(1.008);
+  box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 0 1px rgba(167,139,250,0.12) inset,0 0 70px rgba(109,40,217,0.18);
+}
+body.perf-mode .card:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,0.5)}
+
+/* Shimmer sweep */
+.card::before{
+  content:'';position:absolute;top:0;left:-120%;
+  width:60%;height:100%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,0.04),transparent);
+  transition:left 0.7s ease;pointer-events:none;
+}
+body.perf-mode .card::before{display:none}
+.card:hover::before{left:160%}
+
+/* Top glow line */
+.card::after{
+  content:'';position:absolute;top:0;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(167,139,250,0.6),transparent);
+  opacity:0;transition:opacity 0.4s ease;
+}
+body.perf-mode .card::after{display:none}
+.card:hover::after{opacity:1}
+
+/* ── Icon ── */
+.icon{
+  width:50px;height:50px;flex-shrink:0;border-radius:14px;
+  background:linear-gradient(145deg,rgba(109,40,217,0.22),rgba(37,99,235,0.18));
+  border:1px solid rgba(255,255,255,0.1);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.4s ease;
+}
+body.perf-mode .icon{transition:transform 0.2s ease}
+.icon svg{width:22px;height:22px;color:rgba(255,255,255,0.88);transition:transform 0.35s ease}
+.card:hover .icon{transform:scale(1.08) rotate(-4deg);box-shadow:0 0 24px rgba(109,40,217,0.4)}
+.card:hover .icon svg{transform:scale(1.12)}
+body.perf-mode .card:hover .icon{transform:scale(1.04) rotate(-2deg)}
+
+/* ── Info ── */
+.info{flex:1;min-width:0}
+.card-name{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;letter-spacing:-0.01em;color:var(--text);display:block}
+.card-tag{font-size:0.72rem;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;display:block;margin-top:2px}
+
+/* ── Button ── */
+.btn{
+  flex-shrink:0;display:inline-flex;align-items:center;gap:6px;
+  padding:10px 20px;
+  background:linear-gradient(135deg,rgba(109,40,217,0.75),rgba(37,99,235,0.75));
+  border:1px solid rgba(255,255,255,0.12);border-radius:10px;
+  font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:500;
+  color:#fff;letter-spacing:0.04em;cursor:pointer;
+  transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.35s ease,background 0.35s ease;
+  position:relative;overflow:hidden;
+}
+body.perf-mode .btn{transition:transform 0.2s ease,box-shadow 0.2s ease}
+
+.btn::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(135deg,rgba(255,255,255,0.18),rgba(255,255,255,0.04));
+  opacity:0;transition:opacity 0.3s ease;
+}
+.card:hover .btn::before{opacity:1}
+body.perf-mode .btn::before{display:none}
+
+.btn svg{width:13px;height:13px;transition:transform 0.3s ease}
+.card:hover .btn{transform:scale(1.05);box-shadow:0 6px 24px rgba(109,40,217,0.45);background:linear-gradient(135deg,rgba(124,58,237,0.9),rgba(59,130,246,0.85))}
+.card:hover .btn svg{transform:translateX(3px)}
+.btn:active{transform:scale(0.96)!important}
+body.perf-mode .card:hover .btn{transform:scale(1.02)}
+
+/* ── Ripple ── */
+.ripple{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(circle,rgba(167,139,250,0.25),transparent 70%);
+  transform:scale(0);animation:rip 0.75s ease-out forwards;pointer-events:none;
+}
+body.perf-mode .ripple{display:none}
+@keyframes rip{to{transform:scale(4);opacity:0}}
+
+/* ── Loading Overlay ── */
+#overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(6,6,10,0.93);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+}
+#overlay.on{display:flex}
+body.perf-mode #overlay{backdrop-filter:none;background:rgba(6,6,10,0.97)}
+
+.spinner{
+  width:44px;height:44px;border-radius:50%;
+  border:2.5px solid rgba(255,255,255,0.08);
+  border-top-color:#a78bfa;border-right-color:#60a5fa;
+  animation:spin 0.9s cubic-bezier(0.5,0.1,0.5,0.9) infinite;
+}
+body.perf-mode .spinner{animation:spin 1.2s linear infinite}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+
+#overlay p{font-size:0.78rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted)}
+
+/* ── Dev Stash Overlay ── */
+#dev-stash{
+  display:none;position:fixed;inset:0;
+  background:rgba(6,6,10,0.97);
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  z-index:9998;
+  align-items:flex-start;justify-content:center;
+  overflow:hidden;
+}
+#dev-stash.on{display:flex}
+body.perf-mode #dev-stash{backdrop-filter:none}
+
+/* red tinted blobs inside dev stash for differentiation */
+#dev-stash .dev-blob{
+  position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;
+}
+#dev-stash .dev-blob-1{
+  width:600px;height:600px;
+  background:radial-gradient(circle,rgba(220,38,38,0.35),transparent 70%);
+  top:-20%;left:-15%;
+}
+#dev-stash .dev-blob-2{
+  width:500px;height:500px;
+  background:radial-gradient(circle,rgba(109,40,217,0.3),transparent 70%);
+  bottom:-20%;right:-10%;
+}
+
+.dev-shell{
+  position:relative;z-index:10;
+  width:min(640px,calc(100vw - 32px));
+  padding:0;
+  margin-top:min(18vh,120px);
+}
+
+.dev-title-wrap{padding:0 4px 28px}
+
+.dev-eyebrow{
+  font-size:0.68rem;letter-spacing:0.22em;text-transform:uppercase;
+  color:#f87171;font-weight:500;margin-bottom:6px;
+  display:flex;align-items:center;gap:8px;
+}
+.dev-eyebrow::before{content:'';width:20px;height:1px;background:#f87171;opacity:0.7}
+
+.dev-h1{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(2.2rem,5vw,3.2rem);
+  font-weight:800;letter-spacing:-0.04em;line-height:0.92;
+  background:linear-gradient(135deg,#fff 0%,rgba(248,113,113,0.9) 45%,rgba(251,146,60,0.8) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+body.perf-mode .dev-h1{background:none;-webkit-text-fill-color:#ffe8e8}
+
+.dev-subtitle{
+  font-size:0.78rem;color:rgba(248,113,113,0.5);
+  letter-spacing:0.06em;margin-top:8px;
+  display:flex;align-items:center;gap:6px;
+}
+.dev-subtitle::before{
+  content:'';display:inline-block;
+  width:6px;height:6px;border-radius:50%;
+  background:#f87171;
+  box-shadow:0 0 8px #f87171;
+  animation:pulse-dot 1.5s ease-in-out infinite;
+}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+
+/* dev cards share same card styles but with red accent on hover */
+#dev-stash .card:hover{
+  border-color:rgba(248,113,113,0.35);
+  box-shadow:0 20px 60px rgba(0,0,0,0.5),0 0 0 1px rgba(248,113,113,0.1) inset,0 0 70px rgba(220,38,38,0.15);
+}
+#dev-stash .card::after{
+  background:linear-gradient(90deg,transparent,rgba(248,113,113,0.5),transparent);
+}
+#dev-stash .card:hover .icon{
+  box-shadow:0 0 24px rgba(220,38,38,0.4);
+}
+#dev-stash .btn{
+  background:linear-gradient(135deg,rgba(185,28,28,0.75),rgba(109,40,217,0.75));
+}
+#dev-stash .card:hover .btn{
+  box-shadow:0 6px 24px rgba(185,28,28,0.45);
+  background:linear-gradient(135deg,rgba(220,38,38,0.9),rgba(124,58,237,0.85));
+}
+
+/* Close button */
+.dev-close{
+  position:absolute;top:16px;right:0;
+  width:36px;height:36px;border-radius:10px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  color:var(--muted);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background 0.25s ease,color 0.25s ease,border-color 0.25s ease;
+}
+.dev-close:hover{
+  background:rgba(248,113,113,0.12);
+  border-color:rgba(248,113,113,0.3);
+  color:#f87171;
+}
+.dev-close svg{width:16px;height:16px}
+
+/* ── Konami hint toast ── */
+#konami-toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:rgba(18,16,30,0.92);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(248,113,113,0.3);border-radius:12px;
+  padding:10px 18px;
+  font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;
+  color:rgba(248,113,113,0.8);
+  opacity:0;pointer-events:none;z-index:10000;
+  transition:opacity 0.4s ease,transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  white-space:nowrap;
+}
+#konami-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.perf-badge{position:fixed;bottom:12px;right:12px;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.18);opacity:0;transition:opacity 0.3s}
+body.perf-mode .perf-badge{opacity:1}
+
+@media(max-width:500px){
+  .card{padding:18px 16px;gap:14px;flex-wrap:wrap}
+  .btn{width:100%;justify-content:center}
+  h1{font-size:2.4rem}
+  .dev-h1{font-size:2rem}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:0.01ms!important;transition-duration:0.01ms!important}
+  .blob{animation:none}
+}
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="shell">
+  <div class="title-wrap">
+    <div class="eyebrow">App Launcher</div>
+    <h1>MonoLaunch</h1>
+  </div>
+
+  <!-- ✅ ADD PUBLIC CARDS HERE -->
+  <div class="cards">
+
+    <div class="card" onclick="launchGoot(event)">
+      <div class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+        </svg>
+      </div>
+      <div class="info">
+        <span class="card-name">Goot</span>
+        <span class="card-tag">Music</span>
+      </div>
+      <button class="btn">Launch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 7l5 5-5 5M6 12h12"/></svg></button>
+    </div>
+
+    <div class="card" onclick="launchUntDoc(event)">
+      <div class="icon">
+        <svg viewBox="0 -960 960 960" fill="currentColor">
+          <path d="M182-200q-51 0-79-35.5T82-322l42-300q9-60 53.5-99T282-760h396q60 0 104.5 39t53.5 99l42 300q7 51-21 86.5T778-200q-21 0-39-7.5T706-230l-90-90H344l-90 90q-15 15-33 22.5t-39 7.5Zm16-86 114-114h336l114 114q2 2 16 6 11 0 17.5-6.5T800-304l-44-308q-4-29-26-48.5T678-680H282q-30 0-52 19.5T204-612l-44 308q-2 11 4.5 17.5T182-280q2 0 16-6Zm482-154q17 0 28.5-11.5T720-480q0-17-11.5-28.5T680-520q-17 0-28.5 11.5T640-480q0 17 11.5 28.5T680-440Zm-80-120q17 0 28.5-11.5T640-600q0-17-11.5-28.5T600-640q-17 0-28.5 11.5T560-600q0 17 11.5 28.5T600-560ZM310-440h60v-70h70v-60h-70v-70h-60v70h-70v60h70v70Z"/>
+        </svg>
+      </div>
+      <div class="info">
+        <span class="card-name">UntDoc</span>
+        <span class="card-tag">Gaming</span>
+      </div>
+      <button class="btn">Launch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 7l5 5-5 5M6 12h12"/></svg></button>
+    </div>
+
+    <div class="card" onclick="launchChatterBox(event)">
+      <div class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <div class="info">
+        <span class="card-name">ChatterBox</span>
+        <span class="card-tag">Chat</span>
+      </div>
+      <button class="btn">Launch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 7l5 5-5 5M6 12h12"/></svg></button>
+    </div>
+
+    <div class="card" onclick="launchTelevisor(event)">
+      <div class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="7" width="20" height="13" rx="2"/>
+          <path d="M8 7l4-4 4 4"/>
+          <path d="M12 12v4M10 14h4"/>
+        </svg>
+      </div>
+      <div class="info">
+        <span class="card-name">Televisor</span>
+        <span class="card-tag">Movies &amp; TV</span>
+      </div>
+      <button class="btn">Launch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 7l5 5-5 5M6 12h12"/></svg></button>
+    </div>
+
+  </div>
+</div>
+
+<div class="perf-badge">Perf Mode</div>
+
+<!-- Loading Overlay -->
+<div id="overlay">
+  <div class="spinner"></div>
+  <p>Loading…</p>
+</div>
+
+
+<!-- ============================================================
+     🔒 DEV STASH — secret screen, opened via Konami code
+     Add secret dev cards inside #dev-cards below.
+     Nothing in here is visible to normal users.
+     ============================================================ -->
+<div id="dev-stash">
+  <div class="dev-blob dev-blob-1"></div>
+  <div class="dev-blob dev-blob-2"></div>
+  <div class="dev-shell">
+    <div class="dev-title-wrap">
+      <button class="dev-close" onclick="closeDevStash()" title="Close (Esc)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="dev-eyebrow">Dev Stash</div>
+      <div class="dev-h1">Secret Build</div>
+      <div class="dev-subtitle">Development builds — handle with care</div>
+    </div>
+
+    <!-- 🔒 ADD SECRET CARDS HERE -->
+    <div class="cards" id="dev-cards">
+
+      <div class="card" onclick="launchChatterBoxDev(event)">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <path d="M12 8v4M12 16h.01" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="info">
+          <span class="card-name">ChatterBox Dev</span>
+          <span class="card-tag">Chat · Dev Build</span>
+        </div>
+        <button class="btn">Launch <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 7l5 5-5 5M6 12h12"/></svg></button>
+      </div>
+
+    </div>
+    <!-- 🔒 END SECRET CARDS -->
+
+  </div>
+</div>
+<!-- ============================================================
+     END DEV STASH
+     ============================================================ -->
+
+<!-- Konami Toast -->
+<div id="konami-toast">🔓 Access granted</div>
+
+<script>
+(function(){
+  function lowEnd(){
+    const c=navigator.hardwareConcurrency||0;
+    if(c>0&&c<4)return true;
+    if(navigator.getBattery)navigator.getBattery().then(b=>{if(!b.charging&&b.level<0.2)perf()}).catch(()=>{});
+    const m=navigator.deviceMemory;
+    if(m&&m<4)return true;
+    return false;
+  }
+  function perf(){document.body.classList.add('perf-mode')}
+  function init(){
+    if(lowEnd()||window.matchMedia('(prefers-reduced-motion:reduce)').matches)perf();
+    window.matchMedia('(prefers-reduced-motion:reduce)').addEventListener('change',e=>{if(e.matches)perf()});
+    const isPerfMode=document.body.classList.contains('perf-mode');
+    document.querySelectorAll('.shell .card').forEach((c,i)=>{
+      setTimeout(()=>c.classList.add('visible'),isPerfMode?0:180+i*100);
+    });
+  }
+  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init):init();
+})();
+
+function ripple(e){
+  if(document.body.classList.contains('perf-mode'))return;
+  const c=e.currentTarget,r=document.createElement('span');
+  r.className='ripple';
+  const rect=c.getBoundingClientRect(),sz=Math.max(rect.width,rect.height);
+  r.style.cssText=`width:${sz}px;height:${sz}px;left:${e.clientX-rect.left-sz/2}px;top:${e.clientY-rect.top-sz/2}px`;
+  c.appendChild(r);setTimeout(()=>r.remove(),750);
+}
+
+function showLoad(){document.getElementById('overlay').classList.add('on')}
+function hideLoad(){document.getElementById('overlay').classList.remove('on')}
+
+function launch(url,msg,e){
+  if(e)ripple(e);
+  setTimeout(()=>{
+    showLoad();
+    const w=window.open('about:blank','_blank');
+    if(!w){hideLoad();alert('Pop-up blocked!');return}
+    w.document.write(`<style>body{background:#06060a;color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;margin:0;font-family:sans-serif}.s{border:3px solid rgba(255,255,255,0.08);border-top-color:#a78bfa;border-radius:50%;width:40px;height:40px;animation:sp 0.9s linear infinite;margin-bottom:16px}@keyframes sp{to{transform:rotate(360deg)}}</style><div class="s"></div><p style="color:rgba(255,255,255,0.4);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase">${msg}</p>`);
+    fetch(url+Date.now())
+      .then(r=>r.text())
+      .then(html=>{hideLoad();w.document.open();w.document.write(html);w.document.close()})
+      .catch(()=>{hideLoad();w.document.body.innerHTML='<h2 style="color:#ef4444;font-family:sans-serif;text-align:center;margin-top:40vh">Failed to load.</h2>'});
+  },280);
+}
+
+// ── PUBLIC LINKS ── add new public apps here ──────────────────
+function launchGoot(e){launch('https://raw.githubusercontent.com/RalphEG/KevinNair/refs/heads/main/Goot/GootLauncher.html?t=','Loading Goot…',e)}
+function launchUntDoc(e){launch('https://raw.githubusercontent.com/RalphEG/KevinNair/refs/heads/main/UNTDOC.html?t=','Loading UntDoc…',e)}
+function launchChatterBox(e){launch('https://raw.githubusercontent.com/RalphEG/KevinNair/refs/heads/main/ChatterBox.html?t=','Loading ChatterBox…',e)}
+function launchTelevisor(e){launch('https://raw.githubusercontent.com/RalphEG/KevinNair/refs/heads/main/televisor.html?t=','Loading Televisor…',e)}
+
+// 🔒 SECRET LINKS ── add new dev/secret apps here ─────────────
+function launchChatterBoxDev(e){launch('https://raw.githubusercontent.com/RalphEG/KevinNair/refs/heads/main/ChatterBox_DEV.html?t=','Loading ChatterBox Dev…',e)}
+// 🔒 END SECRET LINKS ─────────────────────────────────────────
+
+/* ── Konami Code ── */
+(function(){
+  const COMBO=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a','Enter'];
+  let pos=0;
+  let toastTimer=null;
+
+  document.addEventListener('keydown',function(e){
+    const key=e.key;
+    if(key===COMBO[pos]){
+      pos++;
+      if(pos===COMBO.length){
+        pos=0;
+        openDevStash();
+      }
+    } else {
+      // restart, but check if this key starts the combo
+      pos=0;
+      if(key===COMBO[0]) pos=1;
+    }
+  });
+
+  window.openDevStash=function(){
+    const stash=document.getElementById('dev-stash');
+    stash.classList.add('on');
+    // reset then animate dev cards in
+    const isPerfMode=document.body.classList.contains('perf-mode');
+    document.querySelectorAll('#dev-cards .card').forEach((c,i)=>{
+      c.classList.remove('visible');
+      // force reflow so removing visible takes effect before re-adding
+      void c.offsetWidth;
+      setTimeout(()=>c.classList.add('visible'),isPerfMode?0:180+i*100);
+    });
+    // show toast
+    const toast=document.getElementById('konami-toast');
+    toast.classList.add('show');
+    if(toastTimer)clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>toast.classList.remove('show'),2800);
+  };
+
+  window.closeDevStash=function(){
+    document.getElementById('dev-stash').classList.remove('on');
+  };
+
+  // Close on Escape
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){
+      closeDevStash();
+    }
+  });
+})();
+</script>
+</body>
+</html>
