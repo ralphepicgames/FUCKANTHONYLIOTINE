@@ -8,7 +8,7 @@
 		content="img-src 'self' data: blob: https: http:; media-src 'self' data: blob: https: http:;">
 	<title>GootV4</title>
 	<link rel="icon" type="image/svg+xml"
-		href="https://gootapimask.gootmedia.workers.dev/?id=1c3wD7lMcL8jWPmAdfhUCGQ1fQr698C2f&mime=image%2Fjpeg/">
+		href="https://gootapimask.goot-api.workers.dev/?id=1c3wD7lMcL8jWPmAdfhUCGQ1fQr698C2f&mime=image%2Fjpeg/">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
 		crossorigin="anonymous" referrerpolicy="no-referrer">
 	<link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.5.1/css/all.css">
@@ -15232,9 +15232,9 @@
     }
 })();
 
-const SCANNER_WORKER_URL = "https://gootbeta.gootmedia.workers.dev";
-const PLAYER_WORKER_URL = "https://gootapimask.gootmedia.workers.dev";
-const COLOR_WORKER_URL = "https://gootcolor.gootmedia.workers.dev";
+const SCANNER_WORKER_URL = "https://gootbeta.goot-api.workers.dev";
+const PLAYER_WORKER_URL = "https://gootapimask.goot-api.workers.dev";
+const COLOR_WORKER_URL = "https://gootcolor.goot-api.workers.dev";
 const METADATA_API_URL = SCANNER_WORKER_URL;
 const SEARCH_API_URL = PLAYER_WORKER_URL;
 const STREAMING_URL = PLAYER_WORKER_URL;
@@ -18256,7 +18256,7 @@ function startCrossfade() {
         const oldPlayer = currentPlayer;
         const newPlayer = nextPlayer;
         const userVolume = oldPlayer.volume;
-        const expectedSrc = `https://gootapimask.gootmedia.workers.dev/?id=${track.id}`;
+        const expectedSrc = `https://gootapimask.goot-api.workers.dev/?id=${track.id}`;
         if (newPlayer.src !== expectedSrc) {
                         newPlayer.src = expectedSrc;
             newPlayer.load();
@@ -33910,7 +33910,7 @@ function unpinItem(type, id) {
 async function _deleteD1PinnedItem(type, id, item) {
     const tok = localStorage.getItem('goot_account_token');
     if (!tok) return; // not logged in — tombstone + localStorage is enough
-    const API = 'https://gootapimask.gootmedia.workers.dev';
+    const API = 'https://gootapimask.goot-api.workers.dev';
     const body = { type, id, name: item?.name || null };
     try {
         const r = await fetch(`${API}/account/pinned`, {
@@ -34007,7 +34007,7 @@ async function incrementPlayCount(trackId) {
     // Fires on the same 25% threshold as local play count. No account needed.
     try {
         const _artUrl = (track.albumArt || track.art || albumArtCache[track.album] || '').replace(/^blob:/, '');
-        fetch('https://gootapimask.gootmedia.workers.dev/charts/scrobble', {
+        fetch('https://gootapimask.goot-api.workers.dev/charts/scrobble', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -36931,7 +36931,7 @@ player.ontimeupdate = () => {
         }
         let nextIndex = qIndex + 1;
         const nextTrack = queue[nextIndex];
-        const expectedUrl = nextTrack ? `https://gootapimask.gootmedia.workers.dev/?id=${nextTrack.id}` : null;
+        const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
         const _preloadCached = nextTrack ? (_clientAudioBlobUrls[nextTrack.id] || null) : null;
         const _preloadSrc = _preloadCached || expectedUrl;
         const hasCorrectNextTrack = nextPlayer.src === _preloadSrc || nextPlayer.src === expectedUrl;
@@ -37007,7 +37007,7 @@ player2.ontimeupdate = () => {
         }
         let nextIndex = qIndex + 1;
         const nextTrack = queue[nextIndex];
-        const expectedUrl = nextTrack ? `https://gootapimask.gootmedia.workers.dev/?id=${nextTrack.id}` : null;
+        const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
         const _preloadCached = nextTrack ? (_clientAudioBlobUrls[nextTrack.id] || null) : null;
         const _preloadSrc = _preloadCached || expectedUrl;
         const hasCorrectNextTrack = nextPlayer.src === _preloadSrc || nextPlayer.src === expectedUrl;
@@ -37213,7 +37213,7 @@ player.onended = () => {
         filterQueue('');
     }
     const nextTrack = queue[next];
-    const expectedUrl = nextTrack ? `https://gootapimask.gootmedia.workers.dev/?id=${nextTrack.id}` : null;
+    const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
     const hasPreloadedTrack = nextPlayer.src === expectedUrl;
     if (hasPreloadedTrack && nextTrack) {
         qIndex = next;
@@ -37296,7 +37296,7 @@ player2.onended = () => {
         filterQueue('');
     }
     const nextTrack = queue[next];
-    const expectedUrl = nextTrack ? `https://gootapimask.gootmedia.workers.dev/?id=${nextTrack.id}` : null;
+    const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
     const hasPreloadedTrack = nextPlayer.src === expectedUrl;
     if (hasPreloadedTrack && nextTrack) {
         qIndex = next;
@@ -39428,7 +39428,7 @@ function revealSecretFolder() {
             const sound = new Audio();
             sound.crossOrigin = "anonymous"; // Try to enable CORS
             sound.volume = 1.0; // MAX VOLUME
-            sound.src = 'https://gootapimask.gootmedia.workers.dev/?id=1qmc-KJMQdBFOXxumPWEGROwszFJaG02l';
+            sound.src = 'https://gootapimask.goot-api.workers.dev/?id=1qmc-KJMQdBFOXxumPWEGROwszFJaG02l';
             if (!audioCtx) {
                 initAudioContext();
             }
@@ -44647,7 +44647,7 @@ window.switchOfflineTab    = switchOfflineTab;
 											</div>
 											<script>
 												(function () {
-  var API = 'https://gootapimask.gootmedia.workers.dev';
+  var API = 'https://gootapimask.goot-api.workers.dev';
   var SYNC_MS = 5000;
   var tok   = localStorage.getItem('goot_account_token')    || '';
   var uname = localStorage.getItem('goot_account_username') || '';
@@ -45800,7 +45800,7 @@ function closeAndRun(fn) {
 
 const YT_PROXY        = 'https://cathedral-seniors-partnerships-uncertainty.trycloudflare.com/';
 const YT_STREAM_PROXY = 'https://gootstream.peneener2001.workers.dev';
-const YT_SEARCH_WORKER = 'https://ytsearch.gootmedia.workers.dev/';
+const YT_SEARCH_WORKER = 'https://ytsearch.goot-api.workers.dev/';
 
 // ── State ──
 let isYTMode       = false;   // true when YouTube is the active audio source
@@ -47151,7 +47151,7 @@ document.addEventListener('DOMContentLoaded', syncMobileActionRowVisibility);
             // Play the wet fart sound
             const fart = new Audio();
             fart.volume = 1.0;
-            fart.src = 'https://gootapimask.gootmedia.workers.dev/?id=1qmc-KJMQdBFOXxumPWEGROwszFJaG02l';
+            fart.src = 'https://gootapimask.goot-api.workers.dev/?id=1qmc-KJMQdBFOXxumPWEGROwszFJaG02l';
             fart.play().catch(() => {});
             // Show modal
             const modal = document.getElementById('xiaomiModal');
@@ -47848,7 +47848,7 @@ async function toggle8D() {
     if(cache[q]){ render(cache[q]); return; }
     if(ac){ try{ac.abort();}catch(e){} }
     ac = new AbortController();
-    var url = (typeof YT_SEARCH_WORKER!=='undefined'?YT_SEARCH_WORKER:'https://ytsearch.gootmedia.workers.dev/')
+    var url = (typeof YT_SEARCH_WORKER!=='undefined'?YT_SEARCH_WORKER:'https://ytsearch.goot-api.workers.dev/')
               + '?q=' + encodeURIComponent(q);
     fetch(url,{signal:ac.signal})
       .then(function(r){return r.json();})
@@ -48137,7 +48137,7 @@ async function toggle8D() {
 
         // Populate metadata + art
         function tryPopulate(attempts) {
-            var workerUrl = typeof PLAYER_WORKER_URL !== 'undefined' ? PLAYER_WORKER_URL : 'https://gootapimask.gootmedia.workers.dev';
+            var workerUrl = typeof PLAYER_WORKER_URL !== 'undefined' ? PLAYER_WORKER_URL : 'https://gootapimask.goot-api.workers.dev';
             fetch(workerUrl + '/metadata/track/' + trackId)
                 .then(function(r){ return r.ok ? r.json() : null; })
                 .then(function(data) {
