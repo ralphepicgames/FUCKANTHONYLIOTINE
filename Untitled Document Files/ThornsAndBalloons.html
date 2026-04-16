@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html style="--construct-scale: 0.6666666666666666;">
+    <head>
+        <meta name="referrer" content="no-referrer-when-downgrade"/>
+        
+        <noscript>
+            <img src="/t/p?payload=%7B%22website%22%3A%22b9510d8e-e1e5-4dff-ad86-297ebece5574%22%2C%22url%22%3A%22%2F%22%2C%22hostname%22%3A%22vng.lol%22%2C%22name%22%3A%22pageview%22%7D" style="display:none;">
+        </noscript>
+        <meta charset="utf-8"/>
+        <title>Thorn and Balloons</title>
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" name="viewport"/>
+        <meta content="Scirra Construct" name="generator"/>
+        <meta content="Hooda Math" name="author"/>
+        <meta content="Puzzle" name="description"/>
+        <link href="appmanifest.json" rel="manifest"/>
+        <link href="icons/icon-128.png" rel="apple-touch-icon" sizes="128x128"/>
+        <link href="icons/icon-256.png" rel="apple-touch-icon" sizes="256x256"/>
+        <link href="icons/icon-512.png" rel="apple-touch-icon" sizes="512x512"/>
+        <link href="icons/icon-512.png" rel="icon" type="image/png"/>
+      <link href="https://cdn.jsdelivr.net/gh/RalphEG/KevinNair@main/BigTest(icle)/style.css" rel="stylesheet"/>
+        <style>
+            /* Fixed bottom ad bar styles */
+            .fixed_bottom {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(255, 255, 255, 1);
+                border-top: 1px solid #f2f2f2;
+                color: #fff;
+                z-index: 10001;
+                transform: translateY(0);
+                transition: transform 0.4s;
+                padding: 0;
+            }
+
+            .fixed_bottom.expanded {
+                transform: translateY(100%);
+            }
+
+            .fixed_bottom .fixed_btn {
+                position: absolute;
+                top: -36px;
+                right: 20px;
+                background: #fff;
+                color: #333;
+                border: 1px solid #f2f2f2;
+                border-bottom: 0;
+                border-radius: 10px 10px 0 0;
+                padding: 6px 24px;
+                cursor: pointer;
+                font-size: 1em;
+                user-select: none;
+            }
+
+            .fixed_bottom .fixed_inner {
+                padding: 24px 0;
+                text-align: center;
+            }
+        </style>
+<script>
+  const BASE = 'https://cdn.jsdelivr.net/gh/RalphEG/KevinNair@main/BigTest%28icle%29/';
+  
+  const _fetch = window.fetch;
+  window.fetch = function(url, opts) {
+    if (typeof url === 'string' && (url.includes('cdn-cache') || url.includes('user-tracking'))) {
+      return Promise.resolve(new Response('', {status: 200}));
+    }
+    if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('blob') && !url.startsWith('data:')) {
+      url = BASE + url.replace(/^\.?\/?/, '');
+    }
+    return _fetch(url, opts);
+  };
+
+  const _Worker = window.Worker;
+  window.Worker = function(url, opts) {
+    if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('blob')) {
+      url = BASE + url.replace(/^\.?\/?/, '');
+    }
+    const workerCode = `
+      const BASE = '${BASE}';
+      const _fetch = self.fetch;
+      self.fetch = function(url, opts) {
+        if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('blob') && !url.startsWith('data:')) {
+          url = BASE + url.replace(/^\\.?\\/?/, '');
+        }
+        return _fetch(url, opts);
+      };
+      const _importScripts = self.importScripts;
+      self.importScripts = function(...urls) {
+        urls = urls.map(u => (!u.startsWith('http') && !u.startsWith('blob')) ? BASE + u.replace(/^\\.?\\/?/, '') : u);
+        return _importScripts(...urls);
+      };
+    `;
+    const fullCode = workerCode + `\nimportScripts('${url}');`;
+    const blob = new Blob([fullCode], {type: 'application/javascript'});
+    const blobUrl = URL.createObjectURL(blob);
+    const newOpts = Object.assign({}, opts);
+    delete newOpts.type;
+    return new _Worker(blobUrl, newOpts);
+  };
+  window.Worker.prototype = _Worker.prototype;
+  window.cr_runtimeBaseUrl = BASE;
+</script>
+        <script src="https://cdn.jsdelivr.net/gh/RalphEG/KevinNair@main/BigTest%28icle%29/scripts/modernjscheck.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/RalphEG/KevinNair@main/BigTest%28icle%29/scripts/supportcheck.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/RalphEG/KevinNair@main/BigTest%28icle%29/scripts/offlineclient.js" type="module"></script>
+<script src="https://cdn.jsdelivr.net/gh/RalphEG/KevinNair@master/BigTest%28icle%29/scripts/main.js" type="module"></script>
+    </body>
+    <iframe id="google_esf" name="google_esf" src="https://googleads.g.doubleclick.net/pagead/html/r20251006/r20190131/zrt_lookup_fy2021.html" style="display: none;"></iframe>
+</html>

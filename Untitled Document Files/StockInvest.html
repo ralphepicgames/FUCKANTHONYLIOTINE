@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Terminal V2</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --panel-bg: #111;
+            --text-color: #e0e0e0;
+            --accent-color: #00ff41; /* Matrix Green */
+            --accent-dim: #008f11;
+            --error-color: #ff3333;
+            --warn-color: #ffcc00;
+            --border-radius: 4px;
+            --font-main: 'Courier New', Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 15px;
+            overflow: hidden;
+        }
+
+        /* --- Header Section --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--accent-dim);
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        .company-info h1 {
+            font-size: 1.4rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            text-shadow: 0 0 5px var(--accent-dim);
+        }
+
+        .stock-price-display {
+            font-size: 1.1rem;
+        }
+
+        /* Company Switcher */
+        .company-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid var(--accent-dim);
+            color: var(--text-color);
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: var(--font-main);
+            font-size: 0.8rem;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--accent-color);
+            color: black;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+
+        /* Money & Cheat Section */
+        .money-panel {
+            text-align: right;
+        }
+
+        .cash-display {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 5px;
+        }
+
+        .cheat-controls {
+            display: flex;
+            gap: 5px;
+            justify-content: flex-end;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        input {
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-dim);
+            color: var(--accent-color);
+            padding: 4px;
+            font-family: var(--font-main);
+            outline: none;
+        }
+
+        button {
+            background: var(--accent-dim);
+            color: black;
+            border: none;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-family: var(--font-main);
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: var(--accent-color);
+        }
+
+        button:disabled {
+            background: #333;
+            color: #555;
+            cursor: not-allowed;
+        }
+
+        /* --- Main Layout (Grid) --- */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            gap: 10px;
+            min-height: 0; /* Important for nested flex scrolling */
+        }
+
+        /* --- Chart Area --- */
+        .chart-container {
+            flex-grow: 2;
+            position: relative;
+            border: 2px solid var(--text-color);
+            background: #000;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.05);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-label {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 0.8rem;
+            opacity: 0.7;
+            background: rgba(0,0,0,0.7);
+            padding: 2px;
+        }
+
+        /* --- News Feed (New Feature) --- */
+        .news-container {
+            flex-grow: 1;
+            border: 1px solid var(--accent-dim);
+            background: #050505;
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column-reverse; /* Newest at bottom visually like a chat, or top? Let's do standard list */
+        }
+
+        .news-header {
+            border-bottom: 1px dashed #333;
+            margin-bottom: 5px;
+            color: #888;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+
+        .news-item {
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+        .news-time { color: #666; margin-right: 5px; }
+        .news-good { color: var(--accent-color); }
+        .news-bad { color: var(--error-color); }
+        .news-neutral { color: var(--warn-color); }
+
+        /* --- Footer / Trading Controls --- */
+        footer {
+            margin-top: 10px;
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            border: 2px solid var(--text-color);
+            background: var(--panel-bg);
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .trade-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .trade-label {
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .holding-info {
+            margin-left: auto;
+            font-size: 1.1rem;
+        }
+
+        /* Animations */
+        @keyframes flash-green { 0% { color: #fff; } 50% { color: var(--accent-color); } 100% { color: var(--text-color); } }
+        @keyframes flash-red { 0% { color: #fff; } 50% { color: var(--error-color); } 100% { color: var(--text-color); } }
+        .flash { animation: flash-green 0.5s ease; }
+        .flash-error { animation: flash-red 0.5s ease; }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #333; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="company-info">
+            <h1 id="companyName">Loading...</h1>
+            <div class="stock-price-display">Price: $<span id="currentPrice">0.00</span> <span id="priceChange" style="font-size:0.8rem"></span></div>
+        </div>
+
+        <div class="company-nav" id="companyNav"></div>
+
+        <div class="money-panel">
+            <div class="cash-display">$<span id="playerCash">0.00</span></div>
+            <div class="cheat-controls">
+                <span>Wire Transfer:</span>
+                <input type="number" id="cheatInput" placeholder="Qty" style="width: 70px;" max="10000">
+                <button id="cheatBtn" onclick="addFunds()">EXEC</button>
+            </div>
+            <div style="font-size: 0.6rem; opacity: 0.6;">SEC LIMIT: $10k // CD: 5s</div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div class="chart-container">
+            <div class="chart-label">MARKET_VISUALIZER.EXE</div>
+            <canvas id="stockChart"></canvas>
+        </div>
+
+        <div class="news-container" id="newsFeed">
+            <div class="news-header">Global Event Stream // Connected</div>
+            </div>
+    </div>
+
+    <footer>
+        <div class="trade-group">
+            <span class="trade-label" style="color: var(--accent-color)">BUY</span>
+            <input type="number" id="buyInput" placeholder="Qty" min="1" style="width: 80px;">
+            <button onclick="buyStock()">CONFIRM</button>
+        </div>
+
+        <div class="trade-group">
+            <span class="trade-label" style="color: #ff5555">SELL</span>
+            <input type="number" id="sellInput" placeholder="Qty" min="1" style="width: 80px;">
+            <button onclick="sellStock()">CONFIRM</button>
+        </div>
+
+        <div class="holding-info">
+            Holdings: <span id="ownedStocks" style="color: var(--accent-color)">0</span>
+        </div>
+    </footer>
+
+    <script>
+        // --- Configuration & State ---
+        const MAX_HISTORY = 150;
+        const GAME_STATE = {
+            money: 1000.00,
+            lastCheatTime: 0,
+            activeCompanyIndex: 0,
+            companies: [
+                { name: "NEXUS CORP", symbol: "NXS", price: 50, history: [], owned: 0, volatility: 1.5 },
+                { name: "OMNI SYSTEMS", symbol: "OMI", price: 120, history: [], owned: 0, volatility: 0.8 },
+                { name: "VOID DYNAMICS", symbol: "VOID", price: 15, history: [], owned: 0, volatility: 3.0 },
+                { name: "HYPER GRID", symbol: "HYP", price: 300, history: [], owned: 0, volatility: 5.0 }
+            ]
+        };
+
+        // Event Templates
+        const EVENTS = {
+            GOOD: [
+                "announces breakthrough AI technology.",
+                "reports quarterly earnings double expectations.",
+                "CEO featured on Time Magazine cover.",
+                "secures massive government defense contract.",
+                "releases highly anticipated product early."
+            ],
+            BAD: [
+                "CEO arrested for insider trading.",
+                "servers hacked, millions of user data leaked.",
+                "factory burns down in mysterious fire.",
+                "facing antitrust lawsuit from DOJ.",
+                "product recall issued due to safety hazard."
+            ],
+            NEUTRAL: [
+                "announces rebranding strategy.",
+                "merger talks rumored to be stalled.",
+                "releases vague roadmap for Q4."
+            ]
+        };
+
+        // Initialize
+        GAME_STATE.companies.forEach(c => {
+            for(let i=0; i<MAX_HISTORY; i++) c.history.push(c.price);
+        });
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('stockChart');
+        const ctx = canvas.getContext('2d');
+        const elNewsFeed = document.getElementById('newsFeed');
+        
+        // --- Core Loop ---
+        setInterval(() => {
+            marketTick();
+            if(Math.random() < 0.02) triggerRandomEvent(); // 2% chance per tick for news
+        }, 200);
+
+        function marketTick() {
+            GAME_STATE.companies.forEach(company => {
+                // Normal Volatility
+                let change = (Math.random() - 0.5) * company.volatility;
+                
+                // Apply change
+                company.price += change;
+                
+                // Floor price
+                if (company.price < 1) company.price = 1; 
+                
+                // Record history
+                company.history.push(company.price);
+                if (company.history.length > MAX_HISTORY) company.history.shift();
+            });
+            updateUI();
+            drawChart();
+        }
+
+        // --- Event System ---
+        function triggerRandomEvent() {
+            const company = GAME_STATE.companies[Math.floor(Math.random() * GAME_STATE.companies.length)];
+            const rand = Math.random();
+            let type = 'NEUTRAL';
+            let impact = 0;
+            let message = "";
+
+            if (rand < 0.4) { 
+                // BAD NEWS
+                type = 'BAD';
+                message = EVENTS.BAD[Math.floor(Math.random() * EVENTS.BAD.length)];
+                impact = -(10 + Math.random() * 15); // Drop price by $10-$25 roughly (scaled by price later)
+            } else {
+                // GOOD NEWS
+                type = 'GOOD';
+                message = EVENTS.GOOD[Math.floor(Math.random() * EVENTS.GOOD.length)];
+                impact = (10 + Math.random() * 15);
+            }
+
+            // Apply massive price shock based on event
+            const priceImpact = (company.price * 0.15) * (impact > 0 ? 1 : -1); 
+            company.price += priceImpact;
+            if(company.price < 1) company.price = 1;
+
+            logNews(company.symbol, message, type);
+        }
+
+        function logNews(symbol, text, type) {
+            const div = document.createElement('div');
+            div.className = 'news-item';
+            
+            const time = new Date().toLocaleTimeString('en-US', {hour12: false});
+            let colorClass = type === 'GOOD' ? 'news-good' : (type === 'BAD' ? 'news-bad' : 'news-neutral');
+            let arrow = type === 'GOOD' ? '▲' : (type === 'BAD' ? '▼' : '■');
+
+            div.innerHTML = `<span class="news-time">[${time}]</span> <strong class="${colorClass}">${symbol} ${arrow}</strong> ${text}`;
+            
+            // Insert after header
+            elNewsFeed.insertBefore(div, elNewsFeed.children[1]); 
+            
+            // Keep feed clean
+            if(elNewsFeed.children.length > 20) {
+                elNewsFeed.removeChild(elNewsFeed.lastChild);
+            }
+        }
+
+        // --- Player Actions & Market Impact ---
+
+        function calculateImpact(qty, currentPrice) {
+            // Buying creates demand (price up). Selling creates supply (price down).
+            // The impact is relative to the total cost involved.
+            // A $1000 purchase moves the needle less than a $100,000 purchase.
+            
+            const sensitivity = 0.0002; // Tuning knob for difficulty
+            const totalValue = qty * currentPrice;
+            return totalValue * sensitivity;
+        }
+
+        function buyStock() {
+            const qty = parseInt(document.getElementById('buyInput').value);
+            const company = GAME_STATE.companies[GAME_STATE.activeCompanyIndex];
+            
+            if (!qty || qty <= 0) return;
+            
+            const cost = qty * company.price;
+            if (GAME_STATE.money >= cost) {
+                GAME_STATE.money -= cost;
+                company.owned += qty;
+
+                // MARKET IMPACT: BUYING PUMPS THE PRICE
+                const impact = calculateImpact(qty, company.price);
+                company.price += impact;
+                logNews("MARKET", `High volume BUY order detected for ${company.symbol}. Price surging.`, "GOOD");
+
+                updateUI();
+                flashElement(document.getElementById('ownedStocks'), 'flash');
+            } else {
+                alert("INSUFFICIENT FUNDS");
+            }
+        }
+
+        function sellStock() {
+            const qty = parseInt(document.getElementById('sellInput').value);
+            const company = GAME_STATE.companies[GAME_STATE.activeCompanyIndex];
+
+            if (!qty || qty <= 0) return;
+
+            if (company.owned >= qty) {
+                // MARKET IMPACT: SELLING DUMPS THE PRICE
+                // We lower the price BEFORE giving the money? No, sell at current, then price crashes.
+                const gain = qty * company.price;
+                GAME_STATE.money += gain;
+                company.owned -= qty;
+
+                const impact = calculateImpact(qty, company.price);
+                company.price -= impact;
+                if(company.price < 1) company.price = 1;
+
+                logNews("MARKET", `Large SELL-OFF detected for ${company.symbol}. Price correcting.`, "BAD");
+
+                updateUI();
+                flashElement(document.getElementById('playerCash'), 'flash');
+            } else {
+                alert("INSUFFICIENT STOCK OWNED");
+            }
+        }
+
+        function addFunds() {
+            const now = Date.now();
+            const input = document.getElementById('cheatInput');
+            const amount = parseFloat(input.value);
+            const btn = document.getElementById('cheatBtn');
+
+            if (isNaN(amount) || amount <= 0) return alert("Invalid Amount");
+            if (amount > 10000) return alert("Security Limit Exceeded.");
+            
+            if (now - GAME_STATE.lastCheatTime < 5000) return; // Simple block
+
+            GAME_STATE.money += amount;
+            GAME_STATE.lastCheatTime = now;
+            updateUI();
+            
+            btn.disabled = true;
+            btn.innerText = "WAIT";
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerText = "EXEC";
+            }, 5000);
+        }
+
+        // --- UI & Rendering ---
+        function switchCompany(index) {
+            GAME_STATE.activeCompanyIndex = index;
+            updateNav();
+            drawChart();
+            updateUI();
+        }
+
+        function updateNav() {
+            const nav = document.getElementById('companyNav');
+            nav.innerHTML = '';
+            GAME_STATE.companies.forEach((c, index) => {
+                const btn = document.createElement('button');
+                btn.className = `nav-btn ${index === GAME_STATE.activeCompanyIndex ? 'active' : ''}`;
+                btn.innerText = c.symbol;
+                btn.onclick = () => switchCompany(index);
+                nav.appendChild(btn);
+            });
+        }
+
+        function updateUI() {
+            const company = GAME_STATE.companies[GAME_STATE.activeCompanyIndex];
+            document.getElementById('companyName').innerText = company.name;
+            document.getElementById('currentPrice').innerText = company.price.toFixed(2);
+            document.getElementById('playerCash').innerText = GAME_STATE.money.toFixed(2);
+            document.getElementById('ownedStocks').innerText = company.owned;
+        }
+
+        function flashElement(el, cls) {
+            el.classList.remove(cls);
+            void el.offsetWidth; 
+            el.classList.add(cls);
+        }
+
+        function drawChart() {
+            resizeCanvas();
+            const company = GAME_STATE.companies[GAME_STATE.activeCompanyIndex];
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Dynamic Scaling
+            const min = Math.min(...company.history) * 0.9;
+            const max = Math.max(...company.history) * 1.1;
+            const range = max - min || 1;
+
+            // Grid
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for(let i=1; i<5; i++) {
+                let y = (h/5)*i;
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+            }
+            ctx.stroke();
+
+            // Line
+            ctx.strokeStyle = '#00ff41';
+            ctx.lineWidth = 2;
+            ctx.lineJoin = 'round';
+            ctx.shadowBlur = 6;
+            ctx.shadowColor = '#00ff41';
+            
+            ctx.beginPath();
+            company.history.forEach((p, i) => {
+                const x = (i / (MAX_HISTORY - 1)) * w;
+                const y = h - ((p - min) / range) * h;
+                if (i===0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Fill
+            ctx.lineTo(w, h);
+            ctx.lineTo(0, h);
+            ctx.fillStyle = 'rgba(0, 255, 65, 0.05)';
+            ctx.fill();
+        }
+
+        function resizeCanvas() {
+            if(canvas.width !== canvas.parentElement.offsetWidth) {
+                canvas.width = canvas.parentElement.offsetWidth;
+                canvas.height = canvas.parentElement.offsetHeight;
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // Init
+        updateNav();
+        updateUI();
+        logNews("SYSTEM", "Market connection established.", "NEUTRAL");
+
+    </script>
+</body>
+</html>
