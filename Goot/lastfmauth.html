@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Last.fm Authentication - Goot Player</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+            padding: 40px;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #666;
+            border-left: 4px solid #667eea;
+        }
+        .info strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🎵 Last.fm Login</h1>
+            <p>Connect your Goot Player to Last.fm</p>
+        </div>
+        
+        <form id="authForm">
+            <div class="form-group">
+                <label for="username">Last.fm Username</label>
+                <input type="text" id="username" name="username" required autocomplete="username">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Last.fm Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">Connect to Last.fm</button>
+        </form>
+        
+        <div id="message" class="message"></div>
+        
+        <div class="info">
+            <strong>⚠️ Privacy Note:</strong> Your credentials are sent directly to Last.fm's API and are NOT stored on this server. This page is hosted on your own server.
+        </div>
+    </div>
+
+    <script>
+        const WORKER_URL = 'https://gootapimask.gootmedia.workers.dev';
+        
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = document.getElementById('submitBtn');
+            const message = document.getElementById('message');
+            
+            // Disable button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Connecting...';
+            message.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${WORKER_URL}/lastfm-auth-submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    message.className = 'message success';
+                    message.style.display = 'block';
+                    message.innerHTML = `
+                        <strong>✅ Success!</strong><br>
+                        Connected as <strong>${data.username}</strong><br><br>
+                        <strong>Your Session Key:</strong><br>
+                        <code style="word-break: break-all; background: #fff; padding: 8px; display: block; margin-top: 8px; border-radius: 4px;">${data.sessionKey}</code><br><br>
+                        Copy this key and paste it into your Goot Player settings!
+                    `;
+                    submitBtn.textContent = '✓ Connected!';
+                } else {
+                    throw new Error(data.error || 'Authentication failed');
+                }
+            } catch (error) {
+                message.className = 'message error';
+                message.style.display = 'block';
+                message.innerHTML = `<strong>❌ Error:</strong> ${error.message}`;
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Try Again';
+            }
+        });
+    </script>
+</body>
+</html>

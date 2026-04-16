@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Home</title>
+  <link rel="icon" type="image/svg+xml" href="https://www.gstatic.com/classroom/logo_square_rounded.svg">
+<link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+        :root {
+            --primary-bg: #000;
+            --secondary-bg: #0a0a0a;
+            --accent: #40c4ff;
+            --accent-dark: #0091ea;
+            --teal: #80deea;
+            --text-light: #80deea;
+            --text-muted: #4dd0e1;
+            --border-soft: rgba(64,196,255,0.2);
+            --shadow-light: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-hover: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Inter, Segoe UI, Tahoma, sans-serif;
+            background: linear-gradient(135deg, var(--primary-bg) 0%, var(--secondary-bg) 100%);
+            color: var(--text-light);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+        h2 {
+            margin: 8px 0 20px;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 2rem;
+            letter-spacing: -0.025em;
+            text-align: center;
+        }
+        h2 i {
+            background: rgba(64,196,255,0.2);
+            border-radius: 50%;
+            padding: 8px;
+            margin-right: 8px;
+        }
+        .breadcrumbs {
+            margin: 0 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 4px;
+            font-size: 14px;
+        }
+        .breadcrumbs button {
+            background: none;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: inherit;
+            padding: 6px 8px;
+            border-radius: 6px;
+            transition: all .2s;
+            font-weight: 500;
+        }
+        .breadcrumbs button:hover {
+            background: rgba(64,196,255,0.1);
+            transform: translateY(-1px);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+            margin-top: 10px;
+        }
+        .folder {
+            background: var(--secondary-bg);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all .2s cubic-bezier(.4,0,.2,1);
+            border: 1px solid var(--border-soft);
+            color: var(--text-light);
+            user-select: none;
+            position: relative;
+            overflow: hidden;
+        }
+        .icon-container {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: 10px;
+            color: var(--accent);
+            background: rgba(64,196,255,0.15);
+            border-radius: 50%;
+            padding: 12px;
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .folder span {
+            display: block;
+            font-size: .95rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .folder:hover {
+            transform: translateY(-4px);
+            background: #1a1a1a;
+            border-color: var(--accent);
+            box-shadow: var(--shadow-hover);
+        }
+        .playlist {
+            list-style: none;
+            padding: 0;
+            width: 100%;
+            max-width: 900px;
+            margin-top: 30px;
+            background: var(--secondary-bg);
+            border-radius: 16px;
+            box-shadow: var(--shadow-light);
+            margin-bottom: 140px;
+            border: 1px solid var(--border-soft);
+            overflow: hidden;
+        }
+        .playlist li {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-soft);
+            cursor: pointer;
+            color: var(--text-light);
+            transition: all .15s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        .playlist li:last-child {
+            border-bottom: none;
+        }
+        .playlist li:hover {
+            background: rgba(64,196,255,0.05);
+            padding-left: 24px;
+        }
+        .playlist li.active {
+            background: linear-gradient(90deg, var(--accent) 0%, var(--accent-dark) 100%);
+            color: #000;
+            font-weight: 600;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .playlist li.selected {
+            background: linear-gradient(90deg, rgba(128,222,234,0.15), rgba(128,222,234,0.05));
+            border-left: 4px solid var(--teal);
+            color: var(--text-light);
+        }
+        .playlist li.selected:hover {
+            background: linear-gradient(90deg, rgba(128,222,234,0.2), rgba(128,222,234,0.1));
+        }
+        .playlist li small {
+            opacity: .6;
+            font-size: .8rem;
+            margin-left: auto;
+            padding-left: 10px;
+        }
+        .player-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, var(--secondary-bg) 100%);
+            border-top: 1px solid var(--border-soft);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+            z-index: 1000;
+            backdrop-filter: blur(20px);
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            margin: 0 20px;
+        }
+        .player-content {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        .custom-player {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 700px;
+            background: var(--secondary-bg);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid var(--border-soft);
+        }
+        .player-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        .media-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .media-controls button, .loop-btn {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-light);
+            border: 1px solid var(--border-soft);
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            transition: all .2s;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .media-controls button:hover, .loop-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-light);
+        }
+        .media-controls button.active, .loop-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+        }
+        .play-pause-btn {
+            width: 52px;
+            height: 52px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.2rem;
+        }
+        .play-pause-btn:hover {
+            background: var(--accent-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-light);
+        }
+        .progress-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        #currentTime, #duration {
+            font-size: .85rem;
+            color: var(--text-muted);
+            min-width: 40px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+        .progress-wrapper {
+            flex: 1;
+            position: relative;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-bg {
+            position: absolute;
+            inset: 0;
+            background: var(--border-soft);
+        }
+        .progress-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0%;
+            background: var(--accent);
+            transition: width .3s;
+        }
+        #progressBar {
+            position: absolute;
+            inset: 0;
+            margin: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+        .volume-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            justify-content: flex-end;
+        }
+        .volume-wrapper {
+            position: relative;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            width: 80px;
+        }
+        .volume-bg {
+            position: absolute;
+            inset: 0;
+            background: var(--border-soft);
+        }
+        .volume-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+            background: var(--accent);
+            transition: width .3s;
+        }
+        #volumeSlider {
+            position: absolute;
+            inset: 0;
+            margin: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+        .volume-btn {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-light);
+            border: 1px solid var(--border-soft);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            transition: all .2s;
+            font-size: .9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .volume-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+        }
+        .playlist-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+        }
+        .playlist-controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: all .2s;
+            font-weight: 500;
+            font-size: .9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .playlist-controls button.secondary {
+            background: transparent;
+            border: 1px solid var(--border-soft);
+            color: var(--text-light);
+        }
+        .playlist-controls button:hover {
+            background: var(--accent-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-light);
+        }
+        .playlist-controls button.secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(64,196,255,0.1);
+        }
+        footer {
+            margin-top: 50px;
+            font-size: 14px;
+            text-align: center;
+            color: var(--text-muted);
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+            border-radius: 12px;
+            background: rgba(10,10,10,0.5);
+        }
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        footer a i {
+            background: rgba(64,196,255,0.15);
+            border-radius: 50%;
+            padding: 4px;
+            margin-right: 4px;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+        #importInput, #audioPlayer {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 15px;
+            }
+            .folder {
+                padding: 16px;
+            }
+            .icon-container {
+                font-size: 2rem;
+                width: 50px;
+                height: 50px;
+                padding: 10px;
+            }
+            .playlist li {
+                padding: 12px 16px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            .playlist li small {
+                margin-left: 0;
+                align-self: flex-end;
+            }
+            .player-top-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .media-controls {
+                order: 2;
+            }
+            .loop-btn {
+                order: 1;
+                align-self: center;
+            }
+            .progress-section {
+                flex-direction: column;
+                gap: 8px;
+                align-items: stretch;
+            }
+            #currentTime, #duration {
+                order: 2;
+                text-align: center;
+            }
+            .volume-section {
+                justify-content: center;
+            }
+            .volume-wrapper {
+                width: 140px;
+            }
+            .playlist-controls {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .player-bar {
+                margin: 0 10px;
+                padding: 15px;
+            }
+        }
+        .grid p {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h2><i class="fas fa-music"></i> GootV2.1</h2>
+    <div class="breadcrumbs" id="breadcrumbs"></div>
+    <div class="grid" id="folderGrid"></div>
+    <ul class="playlist" id="playlist"></ul>
+    <div class="player-bar" role="region" aria-label="Player">
+        <div class="player-content">
+            <div class="custom-player">
+                <div class="player-top-row">
+                    <div class="media-controls">
+                        <button id="prevBtn" title="Previous Track"><i class="fas fa-step-backward"></i></button>
+                        <button id="playPauseBtn" class="play-pause-btn" title="Play/Pause"><i class="fas fa-play"></i></button>
+                        <button id="nextBtn" title="Next Track"><i class="fas fa-step-forward"></i></button>
+                    </div>
+                    <button id="loopBtn" class="loop-btn" title="Toggle Loop"><i class="fas fa-redo"></i></button>
+                </div>
+                <div class="progress-section">
+                    <span id="currentTime">0:00</span>
+                    <div class="progress-wrapper">
+                        <div class="progress-bg"></div>
+                        <div class="progress-fill" id="progressFill"></div>
+                        <input type="range" id="progressBar" min="0" max="100" value="0">
+                    </div>
+                    <span id="duration">0:00</span>
+                </div>
+                <div class="volume-section">
+                    <button id="volumeBtn" class="volume-btn" title="Mute/Unmute"><i class="fas fa-volume-up"></i></button>
+                    <div class="volume-wrapper">
+                        <div class="volume-bg"></div>
+                        <div class="volume-fill" id="volumeFill"></div>
+                        <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
+                    </div>
+                </div>
+            </div>
+            <div class="playlist-controls">
+                <button id="savePlaylistBtn"><i class="fas fa-save"></i> Save Playlist</button>
+                <button id="loadPlaylistBtn" class="secondary"><i class="fas fa-upload"></i> Load Playlist</button>
+                <button id="clearSelectionBtn" class="secondary" style="display:none"><i class="fas fa-times"></i> Clear</button>
+                <input id="importInput" type="file" accept=".goot" />
+            </div>
+        </div>
+        <audio id="audioPlayer"></audio>
+    </div>
+    <footer>
+        <p>For song requests or issues, please fill out this form:<br>
+            <a href="https://forms.gle/cKjAvKf6PGCTWKUU9" target="_blank" rel="noopener noreferrer">
+                <i class="fas fa-external-link-alt"></i> https://forms.gle/cKjAvKf6PGCTWKUU9
+            </a>
+        </p>
+        <p><em>GootV2 playback may be unreliable; resolved by waiting it out. 🎵</em></p>
+    </footer>
+    <script>
+        const API_KEY = "AIzaSyCz7rRmTCl1LluxJmvMHjlmDWo7OrY23ZY";
+        const ROOT_FOLDER_ID = "1kje6wQMhMxvuI-2eYsAMVvs09JYLDo2s";
+        const folderGrid = document.getElementById("folderGrid");
+        const playlistEl = document.getElementById("playlist");
+        const audioPlayer = document.getElementById("audioPlayer");
+        const breadcrumbs = document.getElementById("breadcrumbs");
+        const saveBtn = document.getElementById("savePlaylistBtn");
+        const loadBtn = document.getElementById("loadPlaylistBtn");
+        const clearSelBtn = document.getElementById("clearSelectionBtn");
+        const importInput = document.getElementById("importInput");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+        const loopBtn = document.getElementById("loopBtn");
+        const playPauseBtn = document.getElementById("playPauseBtn");
+        const progressBar = document.getElementById("progressBar");
+        const progressFill = document.getElementById("progressFill");
+        const currentTimeEl = document.getElementById("currentTime");
+        const durationEl = document.getElementById("duration");
+        const volumeSlider = document.getElementById("volumeSlider");
+        const volumeFill = document.getElementById("volumeFill");
+        const volumeBtn = document.getElementById("volumeBtn");
+        let folderStack = [{ id: ROOT_FOLDER_ID, name: "Home" }];
+        let currentSongs = [];
+        let currentTrackIndex = -1;
+        let loopEnabled = false;
+        let selectMode = false;
+        let selectedIds = new Set();
+        let selectedOrder = [];
+        let songInfo = {};
+        const artistImages = {
+            "kanye west": "https://media1.tenor.com/m/-OpJG9GeK3EAAAAC/kanye-west-stare.gif",
+            "blizziboi": "https://pbs.twimg.com/profile_images/1968747648170516480/q_kwvLd-_400x400.jpg",
+            "c418": "https://i.scdn.co/image/befae36cfc75f9ebed91cdd8dccb494a1168aa59",
+            "heaven pierce her": "https://preview.redd.it/opinions-on-the-new-heaven-pierce-her-pfp-v0-ny2omke55x8e1.jpeg?width=2304&auto=webp&s=453bd27648d8be08f0406ab629f72dc3bf6d296e",
+            "kglw": "https://i.etsystatic.com/25660612/r/il/1fb601/5049909915/il_340x270.5049909915_3cd1.jpg",
+            "weezer": "https://wallpapers.com/images/hd/weezer-blue-album-logo-4h6a5elgb0ax5tq8.jpg",
+            "mr. yeast music": "https://i.imgur.com/IoFdE9H.jpeg"
+        };
+        audioPlayer.controls = false;
+        audioPlayer.volume = 1;
+        audioPlayer.style.display = "none";
+        function naturalSortByName(a, b) {
+            return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+        }
+        function buildFileUrl(id) {
+            return `https://www.googleapis.com/drive/v3/files/${id}?alt=media&key=${API_KEY}`;
+        }
+        function formatTime(s) {
+            if (isNaN(s)) return "0:00";
+            const m = Math.floor(s / 60);
+            const sec = Math.floor(s % 60);
+            return `${m}:${sec.toString().padStart(2, "0")}`;
+        }
+        function updateProgress() {
+            if (audioPlayer.duration && !isNaN(audioPlayer.duration)) {
+                const p = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                progressFill.style.width = `${p}%`;
+                progressBar.value = p;
+                currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+            }
+        }
+        function updateVolumeFill() {
+            const v = audioPlayer.muted ? 0 : audioPlayer.volume;
+            volumeFill.style.width = `${v * 100}%`;
+        }
+        function updateVolumeIcon() {
+            let ic = "fa-volume-up";
+            if (audioPlayer.muted || audioPlayer.volume === 0) ic = "fa-volume-mute";
+            else if (audioPlayer.volume < 0.5) ic = "fa-volume-down";
+            volumeBtn.querySelector("i").className = `fas ${ic}`;
+        }
+        updateVolumeFill();
+        updateVolumeIcon();
+        audioPlayer.addEventListener("play", () => {
+            playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        });
+        audioPlayer.addEventListener("pause", () => {
+            playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+        });
+        audioPlayer.addEventListener("loadedmetadata", () => {
+            durationEl.textContent = formatTime(audioPlayer.duration);
+            updateProgress();
+        });
+        audioPlayer.addEventListener("timeupdate", updateProgress);
+        audioPlayer.addEventListener("loadeddata", () => {
+            if (currentTrackIndex !== -1) {
+                audioPlayer.play().catch(e => {
+                    console.warn("Initial play after load failed:", e);
+                    retryPlay(buildFileUrl(currentSongs[currentTrackIndex].id));
+                });
+            }
+        });
+        progressBar.addEventListener("input", () => {
+            if (!isNaN(audioPlayer.duration)) {
+                const p = progressBar.value;
+                audioPlayer.currentTime = (p / 100) * audioPlayer.duration;
+                progressFill.style.width = `${p}%`;
+            }
+        });
+        volumeSlider.addEventListener("input", () => {
+            audioPlayer.volume = volumeSlider.value;
+            audioPlayer.muted = false;
+            updateVolumeFill();
+            updateVolumeIcon();
+        });
+        volumeBtn.addEventListener("click", () => {
+            audioPlayer.muted = !audioPlayer.muted;
+            if (audioPlayer.muted) volumeSlider.value = 0;
+            else volumeSlider.value = audioPlayer.volume || 1;
+            updateVolumeFill();
+            updateVolumeIcon();
+        });
+        playPauseBtn.addEventListener("click", () => {
+            if (audioPlayer.paused) {
+                audioPlayer.play().catch(err => console.warn("Play failed:", err));
+            } else {
+                audioPlayer.pause();
+            }
+        });
+        async function loadFolders(folderId) {
+            folderGrid.innerHTML = "<p><i class='fas fa-spinner fa-spin'></i> Loading...</p>";
+            playlistEl.innerHTML = "";
+            const fq = `'${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+            const aq = `'${folderId}' in parents and mimeType contains 'audio/' and trashed=false`;
+            const folderUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(fq)}&orderBy=name&fields=files(id,name)&key=${API_KEY}`;
+            const filesUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(aq)}&orderBy=name&fields=files(id,name)&key=${API_KEY}`;
+            try {
+                const [fRes, fiRes] = await Promise.all([fetch(folderUrl), fetch(filesUrl)]);
+                const [fData, fiData] = await Promise.all([fRes.json(), fiRes.json()]);
+                renderBreadcrumbs();
+                const folders = (fData.files || []).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+                const songs = (fiData.files || []).sort(naturalSortByName);
+                const currentFolderName = folderStack[folderStack.length - 1].name;
+                songs.forEach(s => songInfo[s.id] = { name: s.name, folder: currentFolderName });
+                folderGrid.innerHTML = "";
+                folders.forEach(folder => {
+                    const d = document.createElement("div");
+                    d.className = "folder";
+                    const iconContainer = document.createElement("div");
+                    iconContainer.className = "icon-container";
+                    const folderIcon = document.createElement("i");
+                    folderIcon.className = "fas fa-folder";
+                    iconContainer.appendChild(folderIcon);
+                    d.appendChild(iconContainer);
+                    const sp = document.createElement("span");
+                    sp.textContent = folder.name;
+                    d.appendChild(sp);
+                    d.onclick = () => {
+                        folderStack.push({ id: folder.id, name: folder.name });
+                        loadFolders(folder.id);
+                    };
+                    folderGrid.appendChild(d);
+                    const lowerName = folder.name.toLowerCase();
+                    if (artistImages[lowerName]) {
+                        while (iconContainer.firstChild) iconContainer.removeChild(iconContainer.firstChild);
+                        const img = document.createElement("img");
+                        img.src = artistImages[lowerName];
+                        img.alt = folder.name;
+                        img.style.width = "100%";
+                        img.style.height = "100%";
+                        img.style.objectFit = "cover";
+                        img.style.borderRadius = "50%";
+                        iconContainer.appendChild(img);
+                        iconContainer.style.padding = "0";
+                        iconContainer.style.background = "none";
+                        iconContainer.style.color = "";
+                    } else {
+                        fetch(`https://www.theaudiodb.com/api/v1/json/2/search.php?s=${encodeURIComponent(folder.name)}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                const artist = data.artists && data.artists[0];
+                                if (artist && artist.strArtistThumb) {
+                                    while (iconContainer.firstChild) iconContainer.removeChild(iconContainer.firstChild);
+                                    const img = document.createElement("img");
+                                    img.src = artist.strArtistThumb;
+                                    img.alt = folder.name;
+                                    img.style.width = "100%";
+                                    img.style.height = "100%";
+                                    img.style.objectFit = "cover";
+                                    img.style.borderRadius = "50%";
+                                    iconContainer.appendChild(img);
+                                    iconContainer.style.padding = "0";
+                                    iconContainer.style.background = "none";
+                                    iconContainer.style.color = "";
+                                }
+                            })
+                            .catch(err => console.error("Failed to fetch artist image:", err));
+                    }
+                });
+                currentSongs = songs.map(f => ({ id: f.id, name: f.name }));
+                renderPlaylist();
+            } catch (err) {
+                console.error("Error loading Drive data:", err);
+                folderGrid.innerHTML = "<p style='color:#ff8a80;'><i class='fas fa-exclamation-triangle'></i> Failed to load. Check API key / folder sharing.</p>";
+            }
+        }
+        function renderBreadcrumbs() {
+            breadcrumbs.innerHTML = "";
+            folderStack.forEach((it, idx) => {
+                if (idx > 0) {
+                    const s = document.createElement("span");
+                    s.textContent = " / ";
+                    s.style.color = "var(--text-muted)";
+                    breadcrumbs.appendChild(s);
+                }
+                const b = document.createElement("button");
+                b.textContent = it.name;
+                b.onclick = () => {
+                    folderStack = folderStack.slice(0, idx + 1);
+                    loadFolders(it.id);
+                };
+                breadcrumbs.appendChild(b);
+            });
+        }
+        function renderPlaylist() {
+            playlistEl.innerHTML = "";
+            if (!currentSongs || currentSongs.length === 0) {
+                playlistEl.innerHTML = "<li style='padding:20px;color:var(--text-muted);text-align:center;'><i class='fas fa-music'></i> No songs in this folder.</li>";
+                return;
+            }
+            currentSongs.forEach((file, i) => {
+                const li = document.createElement("li");
+                li.dataset.id = file.id;
+                li.textContent = file.name;
+                const small = document.createElement("small");
+                small.style.opacity = ".35";
+                small.style.marginLeft = "12px";
+                small.textContent = file.id.slice(0, 6);
+                li.appendChild(small);
+                if (selectedIds.has(file.id)) li.classList.add("selected");
+                if (i === currentTrackIndex) li.classList.add("active");
+                li.onclick = e => {
+                    if (selectMode) {
+                        toggleSelect(file.id, file.name);
+                        li.classList.toggle("selected", selectedIds.has(file.id));
+                        return;
+                    }
+                    playTrack(i);
+                };
+                playlistEl.appendChild(li);
+            });
+        }
+        function enterSelectMode() {
+            selectMode = true;
+            saveBtn.innerHTML = "<i class='fas fa-save'></i> Save Selected";
+            clearSelBtn.style.display = "inline-flex";
+            playlistEl.querySelectorAll("li").forEach(li => li.classList.toggle("selected", selectedIds.has(li.dataset.id)));
+        }
+        function exitSelectMode() {
+            selectMode = false;
+            saveBtn.innerHTML = "<i class='fas fa-save'></i> Save Playlist";
+            clearSelBtn.style.display = "none";
+            playlistEl.querySelectorAll("li").forEach(li => li.classList.remove("selected"));
+        }
+        function toggleSelect(id, name) {
+            if (selectedIds.has(id)) {
+                selectedIds.delete(id);
+                const idx = selectedOrder.indexOf(id);
+                if (idx !== -1) selectedOrder.splice(idx, 1);
+            } else {
+                selectedIds.add(id);
+                selectedOrder.push(id);
+                if (!songInfo[id]) {
+                    const found = currentSongs.find(s => s.id === id);
+                    songInfo[id] = { name: found ? found.name : (name || "Unknown"), folder: folderStack[folderStack.length - 1].name };
+                }
+            }
+        }
+        function clearSelection() {
+            selectedIds.clear();
+            selectedOrder = [];
+            playlistEl.querySelectorAll("li").forEach(li => li.classList.remove("selected"));
+        }
+        function playTrack(index) {
+            const file = currentSongs[index];
+            if (!file) return;
+            currentTrackIndex = index;
+            const fileURL = buildFileUrl(file.id);
+            audioPlayer.src = fileURL;
+            audioPlayer.load();
+            audioPlayer.currentTime = 0;
+            playlistEl.querySelectorAll("li").forEach((li, i) => li.classList.toggle("active", i === index));
+            setTimeout(() => {
+                audioPlayer.play().catch(err => {
+                    console.warn("Playback failed:", err);
+                    retryPlay(fileURL);
+                });
+            }, 500);
+        }
+        function retryPlay(url, retries = 3) {
+            if (retries <= 0) {
+                console.error("Failed to load audio after retries:", url);
+                return;
+            }
+            setTimeout(() => {
+                audioPlayer.src = url;
+                audioPlayer.load();
+                audioPlayer.play().catch(() => retryPlay(url, retries - 1));
+            }, 3000);
+        }
+        audioPlayer.addEventListener("ended", () => {
+            let n = currentTrackIndex + 1;
+            if (n >= currentSongs.length) {
+                if (loopEnabled) n = 0;
+                else {
+                    playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+                    return;
+                }
+            }
+            playTrack(n);
+        });
+        prevBtn.addEventListener("click", () => {
+            if (currentTrackIndex > 0) playTrack(currentTrackIndex - 1);
+        });
+        nextBtn.addEventListener("click", () => {
+            let n = currentTrackIndex + 1;
+            if (n >= currentSongs.length) {
+                if (loopEnabled) n = 0;
+                else return;
+            }
+            playTrack(n);
+        });
+        loopBtn.addEventListener("click", () => {
+            loopEnabled = !loopEnabled;
+            loopBtn.classList.toggle("active", loopEnabled);
+        });
+        saveBtn.addEventListener("click", () => {
+            if (!selectMode) {
+                enterSelectMode();
+                return;
+            }
+            if (selectedOrder.length === 0) {
+                alert("No songs selected. Click songs to select them, then press Save Selected.");
+                return;
+            }
+            const payloadList = [];
+            for (const id of selectedOrder) {
+                const info = songInfo[id] || { name: "Unknown", folder: "Unknown" };
+                payloadList.push({ name: info.name, id: id, folder: info.folder });
+            }
+            const blob = new Blob([JSON.stringify({ songs: payloadList }, null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `${folderStack.at(-1).name || "playlist"}.goot`;
+            a.click();
+            exitSelectMode();
+        });
+        clearSelBtn.addEventListener("click", () => {
+            if (!confirm("Clear all selected songs?")) return;
+            clearSelection();
+            exitSelectMode();
+        });
+        loadBtn.addEventListener("click", () => importInput.click());
+        importInput.addEventListener("change", e => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if (!data.songs || !Array.isArray(data.songs)) throw new Error("Invalid .goot format");
+                    currentSongs = data.songs.map(s => ({ id: s.id, name: s.name }));
+                    data.songs.forEach(s => songInfo[s.id] = { name: s.name, folder: s.folder || "Imported" });
+                    folderStack = [{ id: ROOT_FOLDER_ID, name: "Imported Playlist" }];
+                    renderBreadcrumbs();
+                    folderGrid.innerHTML = "";
+                    exitSelectMode();
+                    renderPlaylist();
+                } catch (err) {
+                    alert("Failed to load playlist file. Make sure it's a valid .goot (JSON).");
+                    console.error(err);
+                }
+            };
+            r.readAsText(file);
+            e.target.value = "";
+        });
+        loadFolders(ROOT_FOLDER_ID);
+    </script>
+</body>
+</html>

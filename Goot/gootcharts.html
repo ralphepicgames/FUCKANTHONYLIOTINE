@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goot Charts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="dns-prefetch" href="https://gootapimask.gootmedia.workers.dev">
+<link rel="preconnect" href="https://gootapimask.gootmedia.workers.dev" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
+<style>
+/* ── Reset & root ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg:           #0e0e10;
+    --bg2:          #161618;
+    --bg3:          #1e1e21;
+    --surface:      #232328;
+    --surface2:     #2a2a30;
+    --border:       rgba(255,255,255,0.07);
+    --text:         #f0f0f2;
+    --text2:        rgba(240,240,242,0.55);
+    --text3:        rgba(240,240,242,0.3);
+    --gold:         #c9a227;
+    --gold-glow:    rgba(201,162,39,0.18);
+    --silver:       #9ba4b4;
+    --bronze:       #cd7f32;
+    --accent:       #7c6af7;
+    --accent2:      #5a52c7;
+    --green:        #34d399;
+    --red:          #f87171;
+    --radius:       14px;
+    --radius-sm:    8px;
+    --shadow:       0 4px 24px rgba(0,0,0,0.45);
+    --shadow-lg:    0 12px 48px rgba(0,0,0,0.6);
+    --chart-worker: https://gootapimask.gootmedia.workers.dev;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── Layout ───────────────────────────────────────────────────── */
+.page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px 80px;
+}
+
+/* ── Header ───────────────────────────────────────────────────── */
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(14,14,16,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+}
+
+.header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    gap: 16px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text);
+    flex-shrink: 0;
+}
+
+.logo-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.logo-text {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.logo-text span { color: var(--gold); }
+
+.live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--green);
+    background: rgba(52,211,153,0.12);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(52,211,153,0.2);
+}
+
+.live-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.last-updated {
+    font-size: 12px;
+    color: var(--text3);
+    flex-shrink: 0;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+.hero {
+    padding: 48px 0 32px;
+    text-align: center;
+}
+
+.hero-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 12px;
+}
+
+.hero-title {
+    font-size: clamp(36px, 7vw, 72px);
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, #fff 30%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-sub {
+    font-size: 16px;
+    color: var(--text2);
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────── */
+.tabs-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    padding: 4px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.tab {
+    padding: 8px 20px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.tab.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(124,106,247,0.4);
+}
+
+.tab:hover:not(.active) { color: var(--text); background: var(--surface2); }
+
+.view-toggle {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    padding: 4px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.view-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.view-btn.active { background: var(--surface2); color: var(--text); }
+.view-btn:hover:not(.active) { background: var(--surface2); }
+
+/* ── Section headers ──────────────────────────────────────────── */
+.section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.section-title {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.section-count {
+    font-size: 13px;
+    color: var(--text3);
+    font-weight: 500;
+}
+
+/* ── Chart list ───────────────────────────────────────────────── */
+.chart-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 40px;
+}
+
+.chart-item {
+    display: grid;
+    grid-template-columns: 52px 52px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    cursor: default;
+    transition: background 0.15s;
+    border: 1px solid transparent;
+}
+
+.chart-item.playable { cursor: pointer; }
+.chart-item:hover { background: var(--surface); border-color: var(--border); }
+
+/* Play overlay on art */
+.item-art .play-overlay,
+.grid-art .play-overlay,
+.podium-art .play-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.55);
+    opacity: 0;
+    transition: opacity 0.15s;
+    font-size: 20px;
+    border-radius: inherit;
+}
+
+.chart-item.playable:hover .play-overlay,
+.grid-item.playable:hover .play-overlay,
+.podium-item.playable:hover .play-overlay { opacity: 1; }
+
+.grid-item.playable { cursor: pointer; }
+.podium-item.playable { cursor: pointer; }
+
+/* Toast notification */
+#goot-toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 999;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+#goot-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Rank number */
+.rank {
+    font-size: 20px;
+    font-weight: 900;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+    flex-shrink: 0;
+    min-width: 32px;
+}
+
+.rank-1 { color: var(--gold); text-shadow: 0 0 20px var(--gold-glow); }
+.rank-2 { color: var(--silver); }
+.rank-3 { color: var(--bronze); }
+.rank-other { color: var(--text3); font-size: 15px; }
+
+/* Art */
+.item-art {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface2);
+    flex-shrink: 0;
+    position: relative;
+}
+
+.item-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.item-art img.loaded { opacity: 1; }
+
+/* Hide placeholder once image loads */
+.item-art img.loaded ~ .art-placeholder,
+.grid-art img.loaded ~ .art-placeholder,
+.podium-art img.loaded ~ .art-placeholder { display: none; }
+
+.item-art .art-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: var(--text3);
+}
+
+/* Info */
+.item-info {
+    min-width: 0;
+}
+
+.item-title {
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.2px;
+}
+
+.item-meta {
+    font-size: 13px;
+    color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+/* Plays */
+.item-plays {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.plays-count {
+    font-size: 16px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+}
+
+.plays-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ── Grid view ────────────────────────────────────────────────── */
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+}
+
+.grid-item {
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    cursor: default;
+    position: relative;
+}
+
+.grid-item:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+}
+
+.grid-art {
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--surface2);
+    position: relative;
+    overflow: hidden;
+}
+
+.grid-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.grid-art img.loaded { opacity: 1; }
+
+.grid-art .art-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    color: var(--text3);
+}
+
+.grid-rank {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 13px;
+    font-weight: 900;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    letter-spacing: -0.3px;
+}
+
+.grid-rank.rank-1 { color: var(--gold); background: rgba(0,0,0,0.8); }
+.grid-rank.rank-2 { color: var(--silver); }
+.grid-rank.rank-3 { color: var(--bronze); }
+
+.grid-plays {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    color: #fff;
+}
+
+.grid-info {
+    padding: 10px 12px;
+}
+
+.grid-title {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.grid-meta {
+    font-size: 12px;
+    color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+/* ── Top 3 podium ─────────────────────────────────────────────── */
+.podium {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 32px;
+}
+
+.podium-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.18s ease;
+}
+
+.podium-item:hover { transform: translateY(-2px); }
+
+.podium-item.pos-1 {
+    background: linear-gradient(135deg, rgba(201,162,39,0.12), var(--surface));
+    border-color: rgba(201,162,39,0.25);
+}
+
+.podium-item.pos-2 {
+    background: linear-gradient(135deg, rgba(155,164,180,0.08), var(--surface));
+    border-color: rgba(155,164,180,0.18);
+}
+
+.podium-item.pos-3 {
+    background: linear-gradient(135deg, rgba(205,127,50,0.08), var(--surface));
+    border-color: rgba(205,127,50,0.18);
+}
+
+.podium-rank-badge {
+    font-size: 28px;
+    margin-bottom: 12px;
+}
+
+.podium-art {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    margin: 0 auto 12px;
+    overflow: hidden;
+    background: var(--surface2);
+    position: relative;
+}
+
+.podium-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.podium-art img.loaded { opacity: 1; }
+.podium-art .art-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--text3); }
+
+.podium-title {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.podium-meta {
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.podium-plays {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -1px;
+}
+
+.podium-plays span {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text3);
+    letter-spacing: 0.5px;
+    margin-left: 4px;
+}
+
+/* ── Empty / loading states ───────────────────────────────────── */
+.state-msg {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+}
+
+.state-msg .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+.state-msg .title { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text2); }
+.state-msg .sub { font-size: 14px; }
+
+.skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 6px;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ── Separator ────────────────────────────────────────────────── */
+.divider {
+    height: 1px;
+    background: var(--border);
+    margin: 32px 0;
+}
+
+/* ── Footer ───────────────────────────────────────────────────── */
+.footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    color: var(--text3);
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .podium { grid-template-columns: 1fr; }
+    .chart-item { grid-template-columns: 36px 44px 1fr auto; gap: 8px; padding: 8px; }
+    .item-art { width: 44px; height: 44px; }
+    .rank { font-size: 16px; }
+    .hero-title { font-size: 40px; }
+    .tabs-row { flex-direction: column; align-items: flex-start; }
+}
+
+/* ── Transition helpers ───────────────────────────────────────── */
+.fade-in { animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.section { display: none; }
+.section.active { display: block; }
+/* ── Type tabs (Songs / Albums) ───────────────────────────────── */
+.type-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg2);
+    padding: 4px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+}
+
+.type-tab {
+    flex: 1;
+    padding: 10px 24px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+
+.type-tab.active {
+    background: var(--surface2);
+    color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.type-tab:hover:not(.active) { color: var(--text); }
+
+.type-panel { display: none; }
+.type-panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+    <div class="header-inner">
+        <a class="logo" href="/">
+            <div class="logo-icon">🏆</div>
+            <div class="logo-text">Goot <span>Charts</span></div>
+        </a>
+        <div class="live-badge">
+            <div class="live-dot"></div>
+            LIVE
+        </div>
+        <div class="last-updated" id="lastUpdated">Connecting…</div>
+    </div>
+</header>
+
+<div class="page">
+    <div class="hero">
+        <div class="hero-eyebrow">Global Rankings</div>
+        <h1 class="hero-title">Top Songs &amp; Albums</h1>
+    </div>
+
+    <!-- Period + view controls -->
+    <div class="tabs-row">
+        <div class="tabs" role="tablist">
+            <button class="tab active" data-period="day"     onclick="setPeriod('day')">Today</button>
+            <button class="tab"        data-period="week"    onclick="setPeriod('week')">This Week</button>
+            <button class="tab"        data-period="month"   onclick="setPeriod('month')">This Month</button>
+            <button class="tab"        data-period="alltime" onclick="setPeriod('alltime')">All Time</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <div class="view-toggle">
+                <button class="view-btn active" id="viewList" onclick="setView('list')" title="List view">☰</button>
+                <button class="view-btn"        id="viewGrid" onclick="setView('grid')" title="Grid view">⊞</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Songs / Albums type tabs -->
+    <div class="type-tabs" role="tablist">
+        <button class="type-tab active" id="typeTabSongs"  onclick="setType('songs')">🎵 Songs</button>
+        <button class="type-tab"        id="typeTabAlbums" onclick="setType('albums')">💿 Albums</button>
+    </div>
+
+    <!-- Songs panel -->
+    <div class="type-panel active" id="panelSongs">
+        <div class="section-header">
+            <div class="section-count" id="trackCount"></div>
+        </div>
+        <div id="tracksContainer"></div>
+    </div>
+
+    <!-- Albums panel -->
+    <div class="type-panel" id="panelAlbums">
+        <div class="section-header">
+            <div class="section-count" id="albumCount"></div>
+        </div>
+        <div id="albumsContainer"></div>
+    </div>
+</div>
+
+<footer class="footer">
+    Goot Charts · plays counted at 25% completion · resets every week &amp; month · no account required
+</footer>
+
+<div id="goot-toast"></div>
+
+<script>
+'use strict';
+
+const WORKER = 'https://gootapimask.gootmedia.workers.dev';
+const R2_ART_BASE = 'https://gootapimask.gootmedia.workers.dev/r2/album-art';
+
+/**
+ * Resolve album art URL for a chart item via R2.
+ * Passes raw album name — the worker handles normalization server-side,
+ * exactly as the Goot player does.
+ */
+function getArtUrl(item, isAlbum) {
+    const album  = (item.album || '').trim();
+    const artist = (item.artist || '').trim();
+    if (!album) return '';
+    const params = new URLSearchParams({ artist });
+    return `${R2_ART_BASE}/${encodeURIComponent(album)}?${params}`;
+}
+
+// Mirror the Goot player's R2 fetch strategy exactly:
+// Race artist-keyed and no-artist URLs in parallel, take whichever 200s first.
+// The worker normalizes album names server-side so we pass the raw name.
+function loadArt(img, item, isAlbum) {
+    const album  = (item.album || '').trim();
+    const artist = (item.artist || '').trim();
+    if (!album) return;
+
+    // Primary artist only (first before comma / & / feat) — covers multi-artist albums
+    // where R2 stored the art under just the lead artist name.
+    const primaryArtist = artist.split(/,|&|\bfeat\.?\b/i)[0].trim();
+
+    const urls = [];
+    if (artist) urls.push(`${R2_ART_BASE}/${encodeURIComponent(album)}?${new URLSearchParams({ artist })}`);
+    if (primaryArtist && primaryArtist !== artist)
+        urls.push(`${R2_ART_BASE}/${encodeURIComponent(album)}?${new URLSearchParams({ artist: primaryArtist })}`);
+    urls.push(`${R2_ART_BASE}/${encodeURIComponent(album)}`);
+
+    let settled = false;
+    urls.forEach(url => {
+        const probe = new Image();
+        probe.onload = () => {
+            if (settled) return;
+            settled = true;
+            img.onload = () => img.classList.add('loaded');
+            img.src = url;
+        };
+        probe.src = url;
+    });
+}
+
+// IntersectionObserver for below-fold images
+const _artObserver = typeof IntersectionObserver !== 'undefined'
+    ? new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            const img = entry.target;
+            _artObserver.unobserve(img);
+            const { item, isAlbum } = img._artData || {};
+            if (item) loadArt(img, item, isAlbum);
+        });
+    }, { rootMargin: '200px' })
+    : null;
+
+let currentPeriod = 'day';
+let currentView   = 'list';
+let currentType   = 'songs';   // 'songs' | 'albums'
+let tracksData    = [];
+let albumsData    = [];
+let ws            = null;
+let wsReconnectTimer = null;
+
+// ── Period / view switches ───────────────────────────────────────
+
+function setPeriod(p) {
+    if (p === currentPeriod) return;
+    currentPeriod = p;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.period === p));
+    switchCachedPeriod();
+}
+
+function setView(v) {
+    currentView = v;
+    document.getElementById('viewList').classList.toggle('active', v === 'list');
+    document.getElementById('viewGrid').classList.toggle('active', v === 'grid');
+    render();
+}
+
+function setType(t) {
+    if (t === currentType) return;
+    currentType = t;
+    document.getElementById('typeTabSongs').classList.toggle('active', t === 'songs');
+    document.getElementById('typeTabAlbums').classList.toggle('active', t === 'albums');
+    document.getElementById('panelSongs').classList.toggle('active', t === 'songs');
+    document.getElementById('panelAlbums').classList.toggle('active', t === 'albums');
+    render();
+}
+
+// ── Fetch ────────────────────────────────────────────────────────
+
+async function fetchCharts() {
+    const [tr, al] = await Promise.all([
+        fetch(`${WORKER}/charts/tracks?period=${currentPeriod}&limit=100`).then(r => r.json()),
+        fetch(`${WORKER}/charts/albums?period=${currentPeriod}&limit=100`).then(r => r.json()),
+    ]);
+    tracksData = tr.tracks || [];
+    albumsData = al.albums || [];
+    document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    render();
+}
+
+// Fetch all three periods so switching tabs is instant
+async function fetchAllPeriods() {
+    showSkeleton();
+    try {
+        const [td, tw, tm, ta, ad, aw, am, aa] = await Promise.all([
+            fetch(`${WORKER}/charts/tracks?period=day&limit=100`).then(r=>r.json()),
+            fetch(`${WORKER}/charts/tracks?period=week&limit=100`).then(r=>r.json()),
+            fetch(`${WORKER}/charts/tracks?period=month&limit=100`).then(r=>r.json()),
+            fetch(`${WORKER}/charts/tracks?period=alltime&limit=100`).then(r=>r.json()),
+            fetch(`${WORKER}/charts/albums?period=day&limit=100`).then(r=>r.json()),
+            fetch(`${WORKER}/charts/albums?period=week&limit=100`).then(r=>r.json()),
+            fetch(`${WORKER}/charts/albums?period=month&limit=100`).then(r=>r.json()),
+            fetch(`${WORKER}/charts/albums?period=alltime&limit=100`).then(r=>r.json()),
+        ]);
+        window._chartsCache = {
+            tracks: { day: td.tracks||[], week: tw.tracks||[], month: tm.tracks||[], alltime: ta.tracks||[] },
+            albums: { day: ad.albums||[], week: aw.albums||[], month: am.albums||[], alltime: aa.albums||[] },
+        };
+        tracksData = window._chartsCache.tracks[currentPeriod];
+        albumsData = window._chartsCache.albums[currentPeriod];
+        // Debug: log first track so we can see available fields
+        if (tracksData.length) console.log('[GootCharts] sample track object:', tracksData[0]);
+        document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+        render();
+    } catch (e) {
+        console.error('[Charts] fetch failed:', e);
+        document.getElementById('tracksContainer').innerHTML = errorState('Could not load charts. Check your connection.');
+        document.getElementById('albumsContainer').innerHTML = '';
+    }
+}
+
+function switchCachedPeriod() {
+    const c = window._chartsCache;
+    if (!c) { fetchAllPeriods(); return; }
+    tracksData = c.tracks[currentPeriod] || [];
+    albumsData = c.albums[currentPeriod] || [];
+    render();
+}
+
+
+
+// ── WebSocket (live updates) ─────────────────────────────────────
+
+function connectWS() {
+    if (ws && ws.readyState <= 1) return;
+    try {
+        ws = new WebSocket(`${WORKER.replace('https://', 'wss://')}/charts/live`);
+        ws.onopen = () => {
+            console.log('[Charts] WS connected');
+            document.getElementById('lastUpdated').textContent = 'Live';
+        };
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                if (msg.type === 'chart-update') {
+                    // Refetch all on any change
+                    fetchAllPeriods();
+                } else if (msg.type === 'chart-state') {
+                    // Initial full state from WS
+                    window._chartsCache = {
+                        tracks: { day: [], week: msg.weekTracks||[], month: msg.monthTracks||[], alltime: msg.alltimeTracks||[] },
+                        albums: { day: [], week: [], month: [], alltime: [] },
+                    };
+                    // Albums not sent over WS — fetch separately
+                    fetchAlbums();
+                }
+            } catch (_) {}
+        };
+        ws.onclose = () => {
+            console.log('[Charts] WS closed — reconnecting in 5s');
+            wsReconnectTimer = setTimeout(connectWS, 5000);
+        };
+        ws.onerror = () => ws.close();
+    } catch (e) {
+        console.warn('[Charts] WS unavailable — polling fallback');
+        setInterval(fetchAllPeriods, 30000);
+    }
+}
+
+async function fetchAlbums() {
+    try {
+        const [ad, aw, am, aa] = await Promise.all([
+            fetch(`${WORKER}/charts/albums?period=day&limit=100`).then(r=>r.json()),
+            fetch(`${WORKER}/charts/albums?period=week&limit=100`).then(r=>r.json()),
+            fetch(`${WORKER}/charts/albums?period=month&limit=100`).then(r=>r.json()),
+            fetch(`${WORKER}/charts/albums?period=alltime&limit=100`).then(r=>r.json()),
+        ]);
+        if (window._chartsCache) {
+            window._chartsCache.albums = { day: ad.albums||[], week: aw.albums||[], month: am.albums||[], alltime: aa.albums||[] };
+        }
+        albumsData = window._chartsCache?.albums[currentPeriod] || [];
+        render();
+    } catch (_) {}
+}
+
+// ── Render ───────────────────────────────────────────────────────
+
+function render() {
+    renderSection('tracksContainer', tracksData, 'track');
+    renderSection('albumsContainer', albumsData, 'album');
+    document.getElementById('trackCount').textContent = tracksData.length > 0 ? `${tracksData.length} charted` : '';
+    document.getElementById('albumCount').textContent = albumsData.length > 0 ? `${albumsData.length} charted` : '';
+}
+
+function renderSection(containerId, data, type) {
+    const el = document.getElementById(containerId);
+    if (!data || data.length === 0) {
+        el.innerHTML = emptyState(currentPeriod);
+        return;
+    }
+
+    if (currentView === 'grid') {
+        el.innerHTML = renderGrid(data, type);
+    } else {
+        el.innerHTML = renderList(data, type);
+    }
+
+    // Load images: eager for first 6 (likely in viewport), observed for the rest
+    const isAlbum = type === 'album';
+    el.querySelectorAll('img[data-item-idx]').forEach(img => {
+        const idx  = parseInt(img.dataset.itemIdx, 10);
+        const item = data[idx];
+        if (!item) return;
+        if (idx < 6 || !_artObserver) {
+            loadArt(img, item, isAlbum);
+        } else {
+            img._artData = { item, isAlbum };
+            _artObserver.observe(img);
+        }
+    });
+}
+
+function renderList(data, type) {
+    const top3   = data.slice(0, 3);
+    const rest   = data.slice(3);
+    const isAlbum = type === 'album';
+
+    let html = '';
+
+    // ── Podium (top 3) ───────────────────────────────────────────
+    if (top3.length > 0) {
+        html += '<div class="podium">';
+        top3.forEach((item, i) => {
+            const rank      = i + 1;
+            const badge     = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+            const art       = getArtUrl(item, isAlbum);
+            const title     = escHtml(isAlbum ? item.album : item.title);
+            const meta      = escHtml(item.artist || '');
+            const plays     = fmtPlays(item.plays);
+            const tid = getTrackId(item);
+            const canPlay   = !isAlbum && !!tid;
+            const clickAttr = canPlay ? `onclick="openInPlayer('${escHtml(tid)}')"` : '';
+
+            html += `
+            <div class="podium-item pos-${rank}${canPlay ? ' playable' : ''}" ${clickAttr}>
+                <div class="podium-rank-badge">${badge}</div>
+                <div class="podium-art">
+                    ${'<img data-item-idx="' + i + '" alt="" ' + (i < 3 ? 'fetchpriority="high"' : '') + '>'}
+                    <div class="art-placeholder">🎵</div>
+                    ${canPlay ? '<div class="play-overlay">▶</div>' : ''}
+                </div>
+                <div class="podium-title">${title}</div>
+                <div class="podium-meta">${meta}</div>
+                <div class="podium-plays">${plays}<span>plays</span></div>
+            </div>`;
+        });
+        html += '</div>';
+    }
+
+    // ── Rest of list (#4+) ───────────────────────────────────────
+    if (rest.length > 0) {
+        html += '<div class="chart-list">';
+        rest.forEach((item, rIdx) => {
+            const itemIdx   = rIdx + 3;
+            const rank      = item.rank;
+            const art       = getArtUrl(item, isAlbum);
+            const title     = escHtml(isAlbum ? item.album : item.title);
+            const meta      = escHtml(item.artist || (isAlbum ? '' : item.album || ''));
+            const plays     = fmtPlays(item.plays);
+            const tid = getTrackId(item);
+            const canPlay   = !isAlbum && !!tid;
+            const clickAttr = canPlay ? `onclick="openInPlayer('${escHtml(tid)}')"` : '';
+
+            html += `
+            <div class="chart-item${canPlay ? ' playable' : ''}" ${clickAttr}>
+                <div class="rank rank-other">${rank}</div>
+                <div class="item-art">
+                    ${'<img data-item-idx="' + itemIdx + '" alt="">'}
+                    <div class="art-placeholder">🎵</div>
+                    ${canPlay ? '<div class="play-overlay">▶</div>' : ''}
+                </div>
+                <div class="item-info">
+                    <div class="item-title">${title}</div>
+                    <div class="item-meta">${meta}</div>
+                </div>
+                <div class="item-plays">
+                    <div class="plays-count">${plays}</div>
+                    <div class="plays-label">plays</div>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+    }
+
+    return html;
+}
+
+function renderGrid(data, type) {
+    const isAlbum = type === 'album';
+    let html = '<div class="chart-grid">';
+    data.forEach((item, itemIdx) => {
+        const rank      = item.rank;
+        const rankCls   = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+        const art       = getArtUrl(item, isAlbum);
+        const title     = escHtml(isAlbum ? item.album : item.title);
+        const meta      = escHtml(item.artist || '');
+        const plays     = fmtPlays(item.plays);
+        const tid = getTrackId(item);
+            const canPlay   = !isAlbum && !!tid;
+        const clickAttr = canPlay ? `onclick="openInPlayer('${escHtml(tid)}')"` : '';
+
+        html += `
+        <div class="grid-item${canPlay ? ' playable' : ''}" ${clickAttr}>
+            <div class="grid-art">
+                ${'<img data-item-idx="' + itemIdx + '" alt="">'}
+                <div class="art-placeholder">🎵</div>
+                <div class="grid-rank ${rankCls}">#${rank}</div>
+                <div class="grid-plays">${plays}</div>
+                ${canPlay ? '<div class="play-overlay">▶</div>' : ''}
+            </div>
+            <div class="grid-info">
+                <div class="grid-title">${title}</div>
+                <div class="grid-meta">${meta}</div>
+            </div>
+        </div>`;
+    });
+    html += '</div>';
+    return html;
+}
+
+// ── Skeleton / empty / error ─────────────────────────────────────
+
+function showSkeleton() {
+    const skRow = (n=1) => `<div class="chart-item" style="pointer-events:none">${Array(4).fill('<div class="skeleton" style="height:${16+n*4}px;border-radius:6px;"></div>').join('')}</div>`;
+    const skel = Array.from({length: 8}, (_,i) => skRow(i % 3)).join('');
+    document.getElementById('tracksContainer').innerHTML = `<div class="chart-list">${skel}</div>`;
+    document.getElementById('albumsContainer').innerHTML = `<div class="chart-list">${skel}</div>`;
+}
+
+function emptyState(period) {
+    const label = period === 'day' ? 'today' : period === 'week' ? 'this week' : period === 'month' ? 'this month' : 'yet';
+    return `<div class="state-msg">
+        <div class="icon">📭</div>
+        <div class="title">Nothing charted ${label}</div>
+        <div class="sub">Play some music in Goot to start the charts!</div>
+    </div>`;
+}
+
+function errorState(msg) {
+    return `<div class="state-msg">
+        <div class="icon">⚠️</div>
+        <div class="title">Couldn't load charts</div>
+        <div class="sub">${escHtml(msg)}</div>
+    </div>`;
+}
+
+// ── Utils ────────────────────────────────────────────────────────
+
+function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtPlays(n) {
+    if (!n) return '0';
+    if (n >= 1000000000) return (n / 1000000000).toFixed(1).replace(/\.0$/,'') + 'B';
+    if (n >= 1000000)    return (n / 1000000).toFixed(1).replace(/\.0$/,'') + 'M';
+    if (n >= 1000)       return (n / 1000).toFixed(1).replace(/\.0$/,'') + 'K';
+    return String(n);
+}
+
+// ── Deep-link into Goot player ───────────────────────────────────
+
+const PLAYER_URL = window.location.origin === 'https://gootchart.untitleddoc.workers.dev'
+    ? 'https://gootv4.untitleddoc.workers.dev'
+    : 'https://raw.githubusercontent.com/RalphEG/KevinNair/refs/heads/main/Goot/GootV4beta.html';
+
+/** Extract the Drive ID from a track object — try every field the API might use */
+function getTrackId(item) {
+    return item.id || item.track_id || item.trackId || item.drive_id || item.driveId || item.file_id || null;
+}
+
+function openInPlayer(trackId) {
+    if (!trackId) return;
+    showToast('▶ Opening in Goot…');
+
+    // When running on the worker domain, we can't fetch+inject the player HTML
+    // due to CORS. Instead, drop the track token into localStorage (same origin)
+    // and open the player directly — it will pick it up on load via the search
+    // box share-token handler.
+    if (window.location.origin === 'https://gootchart.untitleddoc.workers.dev') {
+        const newWin = window.open(PLAYER_URL + '#goot-track:' + encodeURIComponent(trackId), '_blank');
+        if (!newWin) showToast('⚠ Pop-ups blocked — please allow pop-ups', 3500);
+        return;
+    }
+
+    const newWin = window.open('about:blank', '_blank');
+    if (!newWin) {
+        showToast('⚠ Pop-ups blocked — please allow pop-ups', 3500);
+        return;
+    }
+
+    // Show a loading screen while fetching
+    newWin.document.write(`
+        <style>
+            body { background: #0f0e13; color: #E6E1E5; display: flex; flex-direction: column;
+                   justify-content: center; align-items: center; height: 100vh; margin: 0;
+                   font-family: sans-serif; }
+            .loader { border: 4px solid #333; border-top: 4px solid #D0BCFF;
+                      border-radius: 50%; width: 40px; height: 40px;
+                      animation: spin 1s linear infinite; margin-bottom: 20px; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+        <div class="loader"></div>
+        <h2>Loading Goot…</h2>
+    `);
+
+    // Fetch the player HTML, inject the track hash, then write it into the new tab
+    fetch(PLAYER_URL + '?t=' + Date.now())
+        .then(r => r.text())
+        .then(html => {
+            // Inject the album-view launch card + auto-play snippet right before </body>
+            const snippet = `
+<style>
+#goot-launch-overlay {
+    position: fixed; inset: 0; z-index: 99999;
+    background: rgba(0,0,0,0.82);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    animation: _glo-in 0.3s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes _glo-in { from { opacity:0; } to { opacity:1; } }
+#goot-launch-card {
+    background: var(--md-sys-color-surface-variant, #2b2930);
+    border-radius: 28px;
+    width: 100%; max-width: 420px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 32px 80px rgba(0,0,0,0.7);
+    overflow: hidden;
+    animation: _glc-in 0.35s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes _glc-in { from { transform: scale(0.88) translateY(20px); opacity:0; } to { transform:none; opacity:1; } }
+#goot-launch-art-wrap {
+    width: 100%; aspect-ratio: 1;
+    background: var(--md-sys-color-surface, #1c1b1f);
+    position: relative; overflow: hidden;
+}
+#goot-launch-art {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block; opacity: 0;
+    transition: opacity 0.4s ease;
+}
+#goot-launch-art.loaded { opacity: 1; }
+#goot-launch-art-placeholder {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 72px; opacity: 0.15;
+}
+#goot-launch-info {
+    padding: 24px 24px 8px;
+}
+#goot-launch-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--md-sys-color-primary, #D0BCFF);
+    opacity: 0.7; margin-bottom: 8px;
+}
+#goot-launch-title {
+    font-size: 26px; font-weight: 800; letter-spacing: -0.5px;
+    line-height: 1.15; margin-bottom: 6px;
+    color: var(--md-sys-color-on-surface, #E6E1E5);
+}
+#goot-launch-artist {
+    font-size: 15px; opacity: 0.55;
+    color: var(--md-sys-color-on-surface, #E6E1E5);
+    margin-bottom: 0;
+}
+#goot-launch-actions {
+    display: flex; gap: 12px; padding: 20px 24px 24px;
+    align-items: center;
+}
+#goot-launch-play-btn {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 16px 24px;
+    background: var(--md-sys-color-primary, #D0BCFF);
+    color: var(--md-sys-color-on-primary, #381E72);
+    border: none; border-radius: 100px;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px rgba(208,188,255,0.35);
+}
+#goot-launch-play-btn:hover { transform: scale(1.03); box-shadow: 0 8px 28px rgba(208,188,255,0.45); }
+#goot-launch-play-btn:active { transform: scale(0.97); }
+#goot-launch-dismiss-btn {
+    width: 52px; height: 52px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50%; cursor: pointer;
+    color: var(--md-sys-color-on-surface, #E6E1E5);
+    font-size: 20px; transition: background 0.15s;
+}
+#goot-launch-dismiss-btn:hover { background: rgba(255,255,255,0.13); }
+</style>
+
+<div id="goot-launch-overlay">
+  <div id="goot-launch-card">
+    <div id="goot-launch-art-wrap">
+      <img id="goot-launch-art" alt="">
+      <div id="goot-launch-art-placeholder">🎵</div>
+    </div>
+    <div id="goot-launch-info">
+      <div id="goot-launch-label">From Goot Charts</div>
+      <div id="goot-launch-title">Loading…</div>
+      <div id="goot-launch-artist"></div>
+    </div>
+    <div id="goot-launch-actions">
+      <button id="goot-launch-play-btn" onclick="_gootLaunchPlay()">
+        <i class="fa-solid fa-play"></i> Play
+      </button>
+      <button id="goot-launch-dismiss-btn" onclick="_gootLaunchDismiss()" title="Dismiss">✕</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+    var trackId = ${JSON.stringify(trackId)};
+    var _played = false;
+
+    function _gootLaunchDismiss() {
+        var el = document.getElementById('goot-launch-overlay');
+        if (el) { el.style.opacity = '0'; el.style.transition = 'opacity 0.2s'; setTimeout(function(){ el.remove(); }, 220); }
+    }
+    window._gootLaunchDismiss = _gootLaunchDismiss;
+
+    function _gootLaunchPlay() {
+        _gootLaunchDismiss();
+
+        // Resume AudioContext synchronously inside this user-gesture click
+        var ctx = (typeof audioCtx !== 'undefined' && audioCtx) || (typeof audioContext !== 'undefined' && audioContext);
+        var doPlay = function() {
+            if (typeof playTrackById === 'function') {
+                playTrackById(trackId).then(function(ok) {
+                    if (!ok && typeof showShareToast === 'function') showShareToast('Track not found', 'error');
+                });
+            }
+        };
+        if (ctx) {
+            if (ctx.state === 'suspended') {
+                ctx.resume().then(doPlay).catch(doPlay);
+            } else {
+                doPlay();
+            }
+        } else {
+            // AudioContext not created yet — create it via initAudioContext inside this gesture, then play
+            if (typeof initAudioContext === 'function') {
+                var p = initAudioContext();
+                if (p && p.then) { p.then(doPlay).catch(doPlay); } else { doPlay(); }
+            } else {
+                doPlay();
+            }
+        }
+    }
+    window._gootLaunchPlay = _gootLaunchPlay;
+
+    // Populate metadata + art once Goot is ready
+    function tryPopulate(attempts) {
+        var workerUrl = typeof PLAYER_WORKER_URL !== 'undefined' ? PLAYER_WORKER_URL : 'https://gootapimask.gootmedia.workers.dev';
+
+        fetch(workerUrl + '/metadata/track/' + trackId)
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(data) {
+                if (!data) return;
+                var title = data.name || data.title || 'Unknown Track';
+                var artist = data.artist || '';
+                var album = data.album || '';
+                document.getElementById('goot-launch-title').textContent = title;
+                document.getElementById('goot-launch-artist').textContent = artist + (album ? ' · ' + album : '');
+
+                // Try R2 art
+                if (album) {
+                    var artUrl = workerUrl + '/r2/album-art/' + encodeURIComponent(album.toUpperCase());
+                    if (artist) artUrl += '?artist=' + encodeURIComponent(artist);
+                    var img = document.getElementById('goot-launch-art');
+                    img.onload = function(){ img.classList.add('loaded'); document.getElementById('goot-launch-art-placeholder').style.display='none'; };
+                    img.onerror = function(){ 
+                        // fallback without artist
+                        img.src = workerUrl + '/r2/album-art/' + encodeURIComponent(album.toUpperCase());
+                    };
+                    img.src = artUrl;
+                }
+
+                // Update play button with track title
+                var pb = document.getElementById('goot-launch-play-btn');
+                if (pb) pb.innerHTML = '<i class="fa-solid fa-play"></i> Play';
+            })
+            .catch(function() {
+                if (attempts > 0) setTimeout(function(){ tryPopulate(attempts - 1); }, 500);
+            });
+    }
+
+    // Pre-fetch metadata so the card populates quickly, but DON'T call play yet
+    // — wait for the user to click the Play button (real gesture needed for AudioContext)
+    function tryPopulateWhenReady(attempts) {
+        if (typeof PLAYER_WORKER_URL === 'undefined') {
+            if (attempts > 0) setTimeout(function(){ tryPopulateWhenReady(attempts - 1); }, 300);
+            return;
+        }
+        tryPopulate(5);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function(){ tryPopulateWhenReady(30); }, { once: true });
+    } else {
+        tryPopulateWhenReady(30);
+    }
+})();
+<\/script>`;
+            const patched = html.replace('</body>', snippet + '</body>');
+            newWin.document.open();
+            newWin.document.write(patched);
+            newWin.document.close();
+        })
+        .catch(() => {
+            newWin.document.body.innerHTML = '<p style="color:#fff;text-align:center;margin-top:40vh">Error loading Goot.</p>';
+        });
+}
+
+let _toastTimer = null;
+function showToast(msg, duration = 2500) {
+    const el = document.getElementById('goot-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+
+showSkeleton();
+fetchAllPeriods();
+connectWS();
+</script>
+
+</body>
+</html>
