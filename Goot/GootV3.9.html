@@ -7637,8 +7637,8 @@ body:has(.desktop-extended:not(.collapsed)) #playerBarExtendedBtn {
 
 <script>
 
-const SCANNER_WORKER_URL = "https://gootbeta.gootmedia.workers.dev";
-const PLAYER_WORKER_URL = "https://gootapimask.gootmedia.workers.dev";
+const SCANNER_WORKER_URL = "https://gootbeta.untdocapis.workers.dev";
+const PLAYER_WORKER_URL = "https://gootapimask.untdocapis.workers.dev";
 
 const METADATA_API_URL = SCANNER_WORKER_URL;
 const SEARCH_API_URL = PLAYER_WORKER_URL;
@@ -9007,7 +9007,7 @@ function startCrossfade() {
         const userVolume = oldPlayer.volume;
         
         // Validate next player has correct source
-        const expectedSrc = `https://gootapimask.gootmedia.workers.dev/?id=${track.id}`;
+        const expectedSrc = `https://gootapimask.untdocapis.workers.dev/?id=${track.id}`;
         if (newPlayer.src !== expectedSrc) {
             console.log('⚠️ Correcting next player source');
             newPlayer.src = expectedSrc;
@@ -20387,7 +20387,7 @@ player.ontimeupdate = () => {
         let nextIndex = qIndex + 1;
         
         const nextTrack = queue[nextIndex];
-        const expectedUrl = nextTrack ? `https://gootapimask.gootmedia.workers.dev/?id=${nextTrack.id}` : null;
+        const expectedUrl = nextTrack ? `https://gootapimask.untdocapis.workers.dev/?id=${nextTrack.id}` : null;
         const hasCorrectNextTrack = nextPlayer.src === expectedUrl;
         
         // ALWAYS PRELOAD (regardless of crossfade setting)
@@ -20482,7 +20482,7 @@ player2.ontimeupdate = () => {
         let nextIndex = qIndex + 1;
         
         const nextTrack = queue[nextIndex];
-        const expectedUrl = nextTrack ? `https://gootapimask.gootmedia.workers.dev/?id=${nextTrack.id}` : null;
+        const expectedUrl = nextTrack ? `https://gootapimask.untdocapis.workers.dev/?id=${nextTrack.id}` : null;
         const hasCorrectNextTrack = nextPlayer.src === expectedUrl;
         
         // ALWAYS PRELOAD (regardless of crossfade setting)
@@ -22140,7 +22140,7 @@ function revealSecretFolder() {
             const sound = new Audio();
             sound.crossOrigin = "anonymous"; // Try to enable CORS
             sound.volume = 1.0; // MAX VOLUME
-            sound.src = 'https://gootapimask.gootmedia.workers.dev/?id=1qmc-KJMQdBFOXxumPWEGROwszFJaG02l';
+            sound.src = 'https://gootapimask.untdocapis.workers.dev/?id=1qmc-KJMQdBFOXxumPWEGROwszFJaG02l';
             
             // Initialize audio context if not already done
             if (!audioCtx) {
