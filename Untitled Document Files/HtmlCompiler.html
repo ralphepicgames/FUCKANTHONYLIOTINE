@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Compiler</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #e7f3ff; /* Light blue background */
+            position: relative; /* For absolute positioning of the button */
+        }
+        h1 {
+            color: #003366; /* Darker blue for headings */
+        }
+        p {
+            color: #333;
+        }
+        #uploadContainer {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        #fileInput {
+            display: none;
+        }
+        #uploadLabel {
+            padding: 10px 20px;
+            background-color: #007bff; /* Brighter blue */
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        #fileDisplay {
+            display: none;
+            align-items: center;
+            background-color: #d9e8ff; /* Lighter blue tint */
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #fileName {
+            margin-right: 10px;
+        }
+        #removeBtn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #codeInput {
+            width: 80%;
+            height: 400px;
+            margin-bottom: 20px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            border: 1px solid #b8d4ff; /* Lighter blue border */
+            background-color: #ffffff;
+        }
+        #openBtn {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff; /* Brighter blue */
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #openSelfBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+        #openSelfBtn img {
+            width: 24px;
+            height: 24px;
+        }
+    </style>
+</head>
+<body>
+    <button id="openSelfBtn" title="Open in Fullscreen">
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAEg0lEQVR4AeyZScgURxTHv+z7BrkkOSSHEMghEAiBXJJAcgrJJckhhOwhG9kTSEhIUHHf911xww08iILLRdwV9SKKHlT04MWL4q64/34NjTUz1d/U+HXPpzLD/9+vqvrV8qrqve7qubPrNvl1DLnZFrKzIj1ckeepPx6ugxtaoPoT0Lc+4jp6a0V+ZQg/wzfh6y1Q/Z/Q/x3WoLcMcUbvqBlJesZ6L9Wr95YhixjIMXgOni/gRcqL0DDuhoKimiWXL6G9D+EfBexL+V6YjN4yxFXQcacx0ql1nEdePOsllc0MuYuG3oCD4Sw4pwWq/xf6j8BW8CXK/eDjMBlFhtxLC0aTTcj18F/4FfyiBao/HP0ZMAUPovQjHAcfgDlOkNgFu/OZrpghd1PpPbgQvgZ7incSGnDVDMcj0bV/RAa34DBS8+ElWIiYIc+h/Q98BpaBVU0acfW/Q8dVD1fCgf9NuQ9OV4VkMWKGuKVepYrxGtF1mYsRxFmZSzqVs9F1IN8ii6APul2HohD6hCvxJ2U+xc8gmyJmyNtBrSukV0DLPkPqiKn8Gv0R8BSMwe3kE34yN8Pt5Oz3p8xggUhDzJCng6o6mM5+JCgrI/kwjejYPi9CI1z9QdybBJNWAr0MMUPChq+idRaWDVf1fxp9DObQiF/IGLVOIltCzJCWGmhRWWf+njqjoauCyODADTCG6gtZSe3FCQ1L3PJhPhp+axRKzDxKW4ZYo9A9pHO4hXT26RQYqRAN2EeJ72WILo3abSJkmSsStlufvo+CPMQabslmcOD/kTI6uSoko9hG6W9wJdR/xiJr0A5DDOOf0+sQ+ATMYSDxXKFPnM4LC6Th2PD/Lvf1owPIGlRtiH5gx85iGESOM4o+0GcNoueo0hCNMMQOYJihTxid9IkplJcWEasyxO3kA9H9r5Mz5gz6hCvkdvLBlxWWcanCEB37GwY3CoZG+IT3lcXzh3ue2w3wab+YUo1UmifbHGUb4kr4sKt/7dAInX0mQzJ8IqL4gdKPoBOgNE+2Oco25CG6/BiGju128qA0kXINQhTixbo79fm629ezZRviQ8uIlPegY+sTYyhoZgQqDQ/o5PElK9pLAh24x9vl6Prhzbdbj8fdbSdUe46yDXFE+7l8AD1lGmKLHBuV8lCFIY7OlXErVb4SdiarMsS228qOIW2d7oTOOiuSMEltVemsSFunO6Gz2IrUx/6YTkLTN6TiB7uwYsNHhvBmmI4N8mig4IHoZfLJr9Po3iieouIrUORM/p4WM2RL3grSGXof6dnC056v1VXQz6P+V/ICfYVYHWa6S8cMWUOFQzDHkyQ87WmMb7FV0P9f/LDgxNFdhq1cN8MkxAzZQ01nx3clkhns4H5SVdFTZT4WffQwfXma9J2NZHPklUNNv/T51jqQwoPQhhFtww568jPRdmQyYoZY2Y9lfgTzD0tnZimFni82IqvgWtpdAN3CnyCXQScUkYYiQ6xtQztJ+C+S5wv/rPf/xCr4Fv18Cv3O5ce35C1FnQzdGZIp3CqXjiE320pdAwAA//9ZsS84AAAABklEQVQDAJNWBnRwlGWFAAAAAElFTkSuQmCC" alt="Open in Fullscreen">
+    </button>
+    <h1>HTML Previewer</h1>
+    <p>Upload an HTML file or paste HTML code below. If both are provided, the uploaded file takes priority.</p>
+    
+    <div id="uploadContainer">
+        <label id="uploadLabel" for="fileInput">Upload HTML File</label>
+        <input type="file" id="fileInput" accept=".html,.htm">
+        <div id="fileDisplay">
+            <span id="fileName"></span>
+            <button id="removeBtn">Remove</button>
+        </div>
+    </div>
+    
+    <textarea id="codeInput" placeholder="Or paste your HTML code here..."></textarea>
+    
+    <button id="openBtn">Open in Fullscreen</button>
+
+    <script>
+        var fileInput = document.getElementById('fileInput');
+        var fileDisplay = document.getElementById('fileDisplay');
+        var fileNameSpan = document.getElementById('fileName');
+        var removeBtn = document.getElementById('removeBtn');
+        var uploadLabel = document.getElementById('uploadLabel');
+        var codeInput = document.getElementById('codeInput');
+
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files.length > 0) {
+                fileNameSpan.textContent = fileInput.files[0].name;
+                fileDisplay.style.display = 'flex';
+                uploadLabel.textContent = 'Change File';
+                readFileAndUpdate();
+            } else {
+                resetUpload();
+            }
+        });
+
+        removeBtn.addEventListener('click', function() {
+            fileInput.value = '';
+            resetUpload();
+            codeInput.value = ''; // Clear code input when removing file
+        });
+
+        function resetUpload() {
+            fileDisplay.style.display = 'none';
+            uploadLabel.textContent = 'Upload HTML File';
+        }
+
+        function readFileAndUpdate() {
+            if (fileInput.files.length > 0) {
+                var file = fileInput.files[0];
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    codeInput.value = e.target.result;
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        document.getElementById('openBtn').addEventListener('click', function() {
+            if (fileInput.files.length > 0) {
+                readFileAndOpen();
+            } else if (codeInput.value.trim() !== '') {
+                openPreview(codeInput.value);
+            } else {
+                alert('Please upload an HTML file or paste some HTML code.');
+            }
+        });
+
+        document.getElementById('openSelfBtn').addEventListener('click', function() {
+            var htmlContent = '<!DOCTYPE html>' + document.documentElement.outerHTML;
+            openPreview(htmlContent);
+        });
+
+        function readFileAndOpen() {
+            if (fileInput.files.length > 0) {
+                var file = fileInput.files[0];
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    openPreview(e.target.result);
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function openPreview(htmlContent) {
+            var newWindow = window.open('about:blank', '_blank');
+            if (newWindow) {
+                newWindow.document.open();
+                newWindow.document.write(htmlContent);
+                newWindow.document.close();
+                
+                // Attempt to request fullscreen (may require user permission or gesture in the new window)
+                newWindow.addEventListener('load', function() {
+                    if (newWindow.document.documentElement.requestFullscreen) {
+                        newWindow.document.documentElement.requestFullscreen().catch(function() {
+                            console.log('Fullscreen request failed. User may need to press F11 manually.');
+                        });
+                    }
+                });
+            } else {
+                alert('Popup blocked. Please allow popups and try again.');
+            }
+        }
+    </script>
+</body>
+</html>
