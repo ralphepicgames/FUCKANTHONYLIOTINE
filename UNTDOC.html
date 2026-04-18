@@ -398,131 +398,6 @@
        /* ─── Compiler ─── */
        .compiler-container { display: flex; flex-direction: column; gap: 12px; }
 
-       /* ─── Browser Tab ─── */
-       .browser-wrapper {
-           display: flex; flex-direction: column;
-           height: calc(100vh - 160px);
-           min-height: 500px;
-           gap: 0;
-       }
-       .browser-wrapper.fullscreen {
-           position: fixed; inset: 0; z-index: 9000;
-           height: 100vh; width: 100vw;
-       }
-       .browser-chrome {
-           display: flex; align-items: center; gap: 8px;
-           padding: 10px 12px;
-           background: var(--card-bg);
-           border: 1px solid var(--border-bright);
-           border-bottom: none;
-           border-radius: 6px 6px 0 0;
-           flex-shrink: 0;
-       }
-       .browser-wrapper.fullscreen ~ * .back-to-mono,
-       .browser-btn {
-           background: none; border: 1px solid var(--border-bright);
-           color: var(--text-muted); cursor: pointer;
-           width: 30px; height: 30px; border-radius: 4px;
-           display: flex; align-items: center; justify-content: center;
-           font-size: 16px; transition: all 0.15s; flex-shrink: 0;
-           font-family: 'Material Symbols Outlined';
-       }
-       .browser-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-       .browser-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-       .browser-url-bar {
-           flex: 1; display: flex; align-items: center; gap: 8px;
-           background: var(--bg2); border: 1px solid var(--border-bright);
-           border-radius: 4px; padding: 0 10px; height: 30px;
-           transition: border-color 0.15s;
-       }
-       .browser-url-bar:focus-within { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-dim); }
-       .browser-lock { font-family: 'Material Symbols Outlined'; font-size: 14px; flex-shrink: 0; }
-       .browser-lock.secure { color: var(--accent); }
-       .browser-lock.insecure { color: var(--text-muted); }
-       #browserUrlInput {
-           flex: 1; background: none; border: none; outline: none;
-           color: var(--text); font-family: 'Space Mono', monospace;
-           font-size: 0.75rem; min-width: 0;
-       }
-       #browserUrlInput::placeholder { color: var(--text-muted); }
-       .browser-frame-wrap {
-           flex: 1; position: relative; overflow: hidden;
-           border: 1px solid var(--border-bright); border-radius: 0 0 6px 6px;
-           background: #fff;
-       }
-       .browser-wrapper.fullscreen .browser-frame-wrap { border-radius: 0; border-top: none; }
-       body.browser-fullscreen nav,
-       body.browser-fullscreen header { display: none !important; }
-       body.browser-fullscreen .container { padding: 0 !important; }
-       body.browser-fullscreen #browser { position: fixed; inset: 0; z-index: 8999; }
-       #browserFrame {
-           width: 100%; height: 100%; border: none;
-           display: block;
-       }
-       .browser-loading-bar {
-           position: absolute; top: 0; left: 0; height: 2px;
-           background: var(--accent); width: 0%;
-           transition: width 0.4s ease, opacity 0.3s ease; z-index: 10;
-           box-shadow: 0 0 8px var(--accent); opacity: 0;
-       }
-       .browser-setup-overlay {
-           position: absolute; inset: 0; background: var(--bg);
-           display: flex; flex-direction: column; align-items: center; justify-content: center;
-           gap: 16px; z-index: 20; padding: 2rem;
-       }
-       .browser-setup-overlay h2 {
-           font-family: 'Orbitron', monospace; color: var(--accent);
-           text-shadow: 0 0 12px var(--accent); font-size: 1.4rem;
-       }
-       .browser-setup-overlay p { color: var(--text-muted); font-size: 0.8rem; text-align: center; max-width: 400px; }
-       .browser-setup-input {
-           width: 100%; max-width: 420px; background: var(--bg2);
-           border: 1px solid var(--border-bright); color: var(--text);
-           font-family: 'Space Mono', monospace; font-size: 0.8rem;
-           padding: 10px 14px; border-radius: 4px; outline: none;
-       }
-       .browser-setup-input:focus { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-dim); }
-       .browser-setup-btn {
-           background: var(--accent-dim); border: 1px solid var(--accent);
-           color: var(--accent); font-family: 'Space Mono', monospace;
-           font-size: 0.8rem; padding: 10px 24px; border-radius: 4px;
-           cursor: pointer; letter-spacing: 0.1em; transition: all 0.15s;
-       }
-       .browser-setup-btn:hover { background: var(--accent-mid); }
-       #editor {
-           width: 100%; height: 60vh;
-           background: var(--card-bg);
-           color: var(--accent);
-           border: 1px solid var(--border-bright);
-           padding: 16px; font-family: 'Space Mono', monospace;
-           font-size: 0.85rem; resize: vertical; outline: none;
-           scrollbar-width: thin; scrollbar-color: var(--accent) var(--border);
-           line-height: 1.6;
-       }
-       #editor::placeholder { color: var(--text-muted); }
-       #editor:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-mid); }
-       #editor::-webkit-scrollbar { width: 6px; }
-       #editor::-webkit-scrollbar-track { background: var(--bg); }
-       #editor::-webkit-scrollbar-thumb { background: var(--accent-mid); }
-       .controls {
-           display: grid;
-           grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-           gap: 8px;
-       }
-       .control-btn {
-           background: var(--card-bg); border: 1px solid var(--border-bright);
-           padding: 1.2rem; cursor: pointer; transition: all 0.2s;
-           color: var(--text-muted); font-family: 'Space Mono', monospace;
-           font-size: 0.78rem; font-weight: bold; letter-spacing: 0.1em;
-           display: flex; align-items: center; justify-content: center; gap: 8px;
-       }
-       .control-btn:hover {
-           border-color: var(--accent); color: var(--accent);
-           background: var(--surface);
-           box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.15);
-       }
-       #fileInput { display: none; }
-
        /* ─── Back button ─── */
        .back-to-mono {
            position: fixed; top: 18px; left: 18px; z-index: 200;
@@ -769,7 +644,6 @@
    <button class="nav-btn active" onclick="showTab('games')"><span class="material-symbols-outlined">sports_esports</span>GAMES</button>
    <button class="nav-btn" onclick="showTab('pinned')"><span class="material-symbols-outlined">push_pin</span>PINNED</button>
    <button class="nav-btn" onclick="showTab('compiler')"><span class="material-symbols-outlined">code</span>HTML COMPILER</button>
-   <button class="nav-btn" onclick="showTab('browser')"><span class="material-symbols-outlined">public</span>BROWSER</button>
 </nav>
 
 <div class="container">
@@ -819,39 +693,6 @@
                </div>
            </div>
        </div>
-
-       <div id="browser" class="tab-content">
-           <div class="browser-wrapper" id="browserWrapper">
-               <div class="browser-chrome">
-                   <button class="browser-btn" id="btnBack" title="Back" onclick="browserBack()">arrow_back</button>
-                   <button class="browser-btn" id="btnForward" title="Forward" onclick="browserForward()">arrow_forward</button>
-                   <button class="browser-btn" id="btnRefresh" title="Refresh" onclick="browserRefresh()">refresh</button>
-                   <button class="browser-btn" title="Home" onclick="browserHome()">home</button>
-                   <div class="browser-url-bar">
-                       <span class="browser-lock insecure" id="browserLock">lock_open</span>
-                       <input type="text" id="browserUrlInput" placeholder="https://..."
-                           onkeydown="if(event.key==='Enter')browserNavigate(this.value)"
-                           onclick="this.select()">
-                   </div>
-                   <button class="browser-btn" title="Fullscreen" id="btnFullscreen" onclick="browserToggleFullscreen()">fullscreen</button>
-               </div>
-               <div class="browser-frame-wrap">
-                   <div class="browser-loading-bar" id="browserLoadBar"></div>
-                   <iframe id="browserFrame"
-                       allow="autoplay; fullscreen"
-                       sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock"
-                   ></iframe>
-                   <div class="browser-setup-overlay" id="browserSetupOverlay" style="display:none">
-                       <h2>// WORKER SETTINGS</h2>
-                       <p>The default worker may be blocked on managed networks. Enter a custom worker URL to bypass this.</p>
-                       <input type="text" class="browser-setup-input" id="workerUrlInput"
-                           placeholder="https://your-worker.your-domain.com">
-                       <button class="browser-setup-btn" onclick="saveBrowserWorker()">SAVE & RECONNECT</button>
-                   </div>
-               </div>
-           </div>
-       </div>
-
    </div>
 </div>
 
@@ -864,12 +705,6 @@ const pinIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBo
 
 const PINNED_GAMES_STORAGE_KEY = 'untdoc_pinned_games';
 
-function openHomeInNewTab() {
-    const htmlContent = document.documentElement.outerHTML;
-    const win = window.open('about:blank', '_blank');
-    win.document.write(htmlContent);
-    win.document.close();
-}
 
    // Matrix Rain Effect - OPTIMIZED
    const canvas = document.getElementById('matrixCanvas');
@@ -933,7 +768,6 @@ function openHomeInNewTab() {
 
    const BASE_URL = "https://raw.githubusercontent.com/ralphepicgames/FUCKANTHONYLIOTINE/refs/heads/main/Untitled%20Document%20Files/";
    const onefileBaseUrl = 'https://raw.githubusercontent.com/bubbls/ugs-singlefile/refs/heads/main/UGS-Files/';
-   const gfilesBaseUrl = 'https://raw.githubusercontent.com/RalphEG/gfiles/master/games/'
 
    // OPTIMIZATION: Initialize allGames immediately by processing raw data and then deleting raw data to free memory.
    let allGames = [];
@@ -990,20 +824,6 @@ function openHomeInNewTab() {
                file: rawGithubGames[i].file,
                baseUrl: BASE_URL,
                isPNG: rawGithubGames[i].isPNG || false
-           });
-       }
-   }
-
-   {
-       const rawGfilesGames = [
-
-       ];
-       for(let i=0; i<rawGfilesGames.length; i++) {
-           allGames.push({
-               name: rawGfilesGames[i].name,
-               file: rawGfilesGames[i].file,
-               baseUrl: gfilesBaseUrl,
-               isPNG: false
            });
        }
    }
@@ -1261,9 +1081,6 @@ function openHomeInNewTab() {
        if (tabId === 'compiler') {
            document.getElementById('easterEggOverlay').classList.add('show');
        }
-       if (tabId === 'browser') {
-           setTimeout(initBrowser, 0);
-       }
    }
 
    async function launchGame(fileName, baseUrl, isPNG = false) {
@@ -1328,265 +1145,6 @@ function openHomeInNewTab() {
        if (logo) logo.style.filter = `drop-shadow(0 0 8px var(--accent)) drop-shadow(0 0 20px var(--accent)) brightness(${brightness})`;
    }
    let flickerInterval = setInterval(flickerLogo, 100);
-
-   // ─── BROWSER TAB ───────────────────────────────────────────────
-   const WORKER_STORAGE_KEY = 'untdoc_worker_url';
-   const DEFAULT_WORKER_URL = 'https://untbrowser.untdocapis.workers.dev';
-   let browserHistory = [];
-   let browserHistoryIdx = -1;
-   let browserWorkerUrl = '';
-   let browserIsFullscreen = false;
-
-   const BROWSER_WELCOME_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #000; color: #ff2b9e;
-    font-family: 'Courier New', monospace;
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100vh; padding: 2rem;
-  }
-  .box { text-align: center; max-width: 480px; }
-  h1 {
-    font-size: 1.6rem; letter-spacing: 0.3em; margin-bottom: 1.2rem;
-    text-shadow: 0 0 20px #ff2b9e;
-  }
-  p { color: rgba(255,43,158,0.6); font-size: 0.8rem; line-height: 1.9; letter-spacing: 0.06em; }
-  .hint {
-    margin-top: 1.6rem; border: 1px solid rgba(255,43,158,0.25);
-    padding: 0.9rem 1.2rem; font-size: 0.72rem;
-    color: rgba(255,43,158,0.45); letter-spacing: 0.1em; line-height: 1.8;
-  }
-  .hint span { color: #ff2b9e; }
-</style>
-</head>
-<body>
-<div class="box">
-  <h1>// UNTDOC BROWSER</h1>
-  <p>No search engine is available. Type a full URL into the address bar above and press Enter to navigate.</p>
-  <div class="hint">
-    <span>EXAMPLES</span><br>
-    youtube.com &nbsp;|&nbsp; wikipedia.org<br>
-    github.com &nbsp;|&nbsp; any site you want
-  </div>
-</div>
-</body>
-</html>`;
-
-   function browserShowWelcome() {
-       const frame = document.getElementById('browserFrame');
-       const blob = new Blob([BROWSER_WELCOME_HTML], { type: 'text/html' });
-       frame.src = URL.createObjectURL(blob);
-   }
-
-   function getBrowserWorkerUrl() {
-       return localStorage.getItem(WORKER_STORAGE_KEY) || DEFAULT_WORKER_URL;
-   }
-
-   function proxyUrl(url) {
-       return browserWorkerUrl + '/?url=' + encodeURIComponent(url);
-   }
-
-   function initBrowser() {
-       browserWorkerUrl = getBrowserWorkerUrl();
-       const frame = document.getElementById('browserFrame');
-       if (!frame.src || frame.src === 'about:blank' || frame.src === window.location.href) {
-           browserShowWelcome();
-       }
-   }
-
-   function browserShowWelcome() {
-       const frame = document.getElementById('browserFrame');
-       const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#ff2b9e';
-       const welcomeHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-<style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:#000;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;}
-.box{text-align:center;max-width:420px;}
-h1{font-size:1.5rem;letter-spacing:0.3em;color:${accent};text-shadow:0 0 20px ${accent};margin-bottom:1.2rem;font-family:'Courier New',monospace;}
-p{color:${accent};opacity:0.55;font-size:0.8rem;line-height:1.9;letter-spacing:0.06em;}
-</style></head><body>
-<div class="box">
-  <h1>// UNTDOC BROWSER</h1>
-  <p>No search engine available.<br>Enter a URL in the address bar to visit a site.</p>
-</div>
-</body></html>`;
-       frame.srcdoc = welcomeHtml;
-   }
-
-   function showBrowserSetup() {
-       const overlay = document.getElementById('browserSetupOverlay');
-       overlay.style.display = overlay.style.display === 'none' ? 'flex' : 'none';
-       const inp = document.getElementById('workerUrlInput');
-       if (inp && browserWorkerUrl) inp.value = browserWorkerUrl;
-   }
-
-   function saveBrowserWorker() {
-       const input = document.getElementById('workerUrlInput').value.trim().replace(/\/$/, '');
-       if (!input) return;
-       browserWorkerUrl = input;
-       localStorage.setItem(WORKER_STORAGE_KEY, input);
-       document.getElementById('browserSetupOverlay').style.display = 'none';
-       browserShowWelcome();
-   }
-
-   function browserToggleFullscreen() {
-       const wrapper = document.getElementById('browserWrapper');
-       const btn = document.getElementById('btnFullscreen');
-       const monoBtn = document.querySelector('.back-to-mono');
-       const settings = document.querySelector('.settings-container');
-       browserIsFullscreen = !browserIsFullscreen;
-       if (browserIsFullscreen) {
-           wrapper.classList.add('fullscreen');
-           document.body.classList.add('browser-fullscreen');
-           btn.textContent = 'fullscreen_exit';
-           btn.title = 'Exit Fullscreen';
-           document.body.style.overflow = 'hidden';
-           if (monoBtn) monoBtn.style.display = 'none';
-           if (settings) settings.style.display = 'none';
-       } else {
-           wrapper.classList.remove('fullscreen');
-           document.body.classList.remove('browser-fullscreen');
-           btn.textContent = 'fullscreen';
-           btn.title = 'Fullscreen';
-           document.body.style.overflow = '';
-           if (monoBtn) monoBtn.style.display = '';
-           if (settings) settings.style.display = '';
-       }
-   }
-
-   // ESC exits fullscreen
-   document.addEventListener('keydown', function(e) {
-       if (e.key === 'Escape' && browserIsFullscreen) browserToggleFullscreen();
-   });
-
-   let loadProgressTimer = null;
-   let loadProgress = 0;
-
-   function browserSetLoading(on) {
-       const bar = document.getElementById('browserLoadBar');
-       if (on) {
-           loadProgress = 0;
-           bar.style.opacity = '1';
-           bar.style.width = '0%';
-           clearInterval(loadProgressTimer);
-           loadProgressTimer = setInterval(() => {
-               // Advance quickly at first, slow near 90%
-               const step = loadProgress < 30 ? 8 : loadProgress < 60 ? 4 : loadProgress < 85 ? 1 : 0;
-               loadProgress = Math.min(loadProgress + step, 90);
-               bar.style.width = loadProgress + '%';
-           }, 200);
-       } else {
-           clearInterval(loadProgressTimer);
-           loadProgressTimer = null;
-           bar.style.width = '100%';
-           setTimeout(() => { bar.style.opacity = '0'; setTimeout(() => { bar.style.width = '0%'; }, 300); }, 200);
-       }
-   }
-
-   function browserUpdateNav() {
-       document.getElementById('btnBack').disabled = browserHistoryIdx <= 0;
-       document.getElementById('btnForward').disabled = browserHistoryIdx >= browserHistory.length - 1;
-   }
-
-   function browserLoadUrl(url, pushHistory = true) {
-       const frame = document.getElementById('browserFrame');
-       const urlInput = document.getElementById('browserUrlInput');
-       const lock = document.getElementById('browserLock');
-
-       // Clear srcdoc so src takes over
-       frame.removeAttribute('srcdoc');
-
-       browserSetLoading(true);
-
-       let displayUrl = url;
-       try {
-           const inner = url.includes('/?url=') ? decodeURIComponent(url.split('/?url=')[1]) : url;
-           const parsed = new URL(inner);
-           displayUrl = parsed.href;
-           lock.className = 'browser-lock ' + (parsed.protocol === 'https:' ? 'secure' : 'insecure');
-           lock.textContent = parsed.protocol === 'https:' ? 'lock' : 'lock_open';
-       } catch(e) {}
-
-       urlInput.value = displayUrl;
-
-       const proxied = url.startsWith(browserWorkerUrl) ? url : proxyUrl(url);
-
-       // Fallback timeout — 12s max
-       let loadTimer = setTimeout(() => browserSetLoading(false), 12000);
-       const onLoad = () => {
-           clearTimeout(loadTimer);
-           browserSetLoading(false);
-           frame.removeEventListener('load', onLoad);
-       };
-       frame.addEventListener('load', onLoad);
-       frame.src = proxied;
-
-       if (pushHistory) {
-           browserHistory = browserHistory.slice(0, browserHistoryIdx + 1);
-           browserHistory.push({ proxied, display: displayUrl });
-           browserHistoryIdx = browserHistory.length - 1;
-       }
-       browserUpdateNav();
-   }
-
-   function browserNavigate(input) {
-       if (!input) return;
-       input = input.trim();
-       if (!input) return;
-       const url = /^https?:\/\//.test(input) ? input : 'https://' + input;
-       browserLoadUrl(url);
-   }
-
-   function browserHome() { browserShowWelcome(); }
-
-   function browserBack() {
-       if (browserHistoryIdx <= 0) return;
-       browserHistoryIdx--;
-       const entry = browserHistory[browserHistoryIdx];
-       browserLoadUrl(entry.display, false);
-   }
-
-   function browserForward() {
-       if (browserHistoryIdx >= browserHistory.length - 1) return;
-       browserHistoryIdx++;
-       const entry = browserHistory[browserHistoryIdx];
-       browserLoadUrl(entry.display, false);
-   }
-
-   function browserRefresh() {
-       const frame = document.getElementById('browserFrame');
-       if (frame.src && frame.src !== 'about:blank') {
-           const current = frame.src;
-           frame.src = 'about:blank';
-           browserSetLoading(true);
-           let loadTimer = setTimeout(() => browserSetLoading(false), 12000);
-           const onLoad = () => { clearTimeout(loadTimer); browserSetLoading(false); frame.removeEventListener('load', onLoad); };
-           frame.addEventListener('load', onLoad);
-           setTimeout(() => { frame.src = current; }, 50);
-       }
-   }
-
-   window.addEventListener('message', function(e) {
-       if (!e.data || !e.data.type) return;
-       if (e.data.type === 'navigate') {
-           const url = e.data.url;
-           const inner = url.startsWith(browserWorkerUrl) ? decodeURIComponent(url.split('/?url=')[1] || url) : url;
-           browserLoadUrl(inner);
-       }
-       if (e.data.type === 'urlchange') {
-           const urlInput = document.getElementById('browserUrlInput');
-           const lock = document.getElementById('browserLock');
-           if (urlInput && e.data.url) urlInput.value = e.data.url;
-           if (lock) {
-               lock.className = 'browser-lock ' + (e.data.secure ? 'secure' : 'insecure');
-               lock.textContent = e.data.secure ? 'lock' : 'lock_open';
-           }
-       }
-   });
 
    // Color Picker
    const STORAGE_KEY = 'untdoc_accent_color';
