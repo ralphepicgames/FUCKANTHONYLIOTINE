@@ -29515,7 +29515,8 @@ async function clearAllCache() {
         metadataLoadingState.clear();
         if (typeof folderContentsCache !== 'undefined') folderContentsCache.clear();
         // Zero accent mirror so stale colors aren't served until next reload
-        if (typeof _accentCacheMirror !== 'undefined') {
+        // _accentCacheMirror may be null (set by _clearAccentCacheMirror above) — guard before iterating
+        if (_accentCacheMirror && typeof _accentCacheMirror === 'object') {
             for (const k of Object.keys(_accentCacheMirror)) delete _accentCacheMirror[k];
         }
         // Cancel pending IDB writes — they would re-populate trackMetadata store post-clear
