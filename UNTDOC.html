@@ -419,10 +419,78 @@
        .no-animations #matrixCanvas { display: none !important; }
        .no-animations h1 { text-shadow: 0 0 8px var(--accent) !important; filter: none !important; transform: none !important; }
        .no-animations .game-card:hover { transform: none !important; }
+
+       /* ─── Easter Egg Popup ─── */
+       #easterEggOverlay {
+           display: none;
+           position: fixed; inset: 0; z-index: 99999;
+           background: rgba(0,0,0,0.75);
+           align-items: center; justify-content: center;
+           backdrop-filter: blur(4px);
+       }
+       #easterEggOverlay.show { display: flex; }
+       #easterEggBox {
+           background: var(--card-bg);
+           border: 1px solid var(--accent);
+           box-shadow: 0 0 40px rgba(var(--accent-rgb),0.4), 0 0 80px rgba(var(--accent-rgb),0.15), inset 0 0 30px rgba(var(--accent-rgb),0.04);
+           padding: 2.5rem 3rem;
+           text-align: center;
+           max-width: 480px;
+           width: 90%;
+           animation: eggPop 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards;
+           position: relative;
+       }
+       @keyframes eggPop {
+           from { transform: scale(0.7); opacity: 0; }
+           to   { transform: scale(1);   opacity: 1; }
+       }
+       #easterEggBox .egg-label {
+           font-size: 0.65rem;
+           letter-spacing: 0.3em;
+           color: var(--text-muted);
+           text-transform: uppercase;
+           margin-bottom: 1rem;
+       }
+       #easterEggBox .egg-text {
+           font-family: 'Orbitron', monospace;
+           font-size: clamp(1rem, 4vw, 1.5rem);
+           font-weight: 900;
+           color: var(--accent);
+           text-shadow: 0 0 10px var(--accent), 0 0 30px rgba(var(--accent-rgb),0.5);
+           letter-spacing: 0.08em;
+           line-height: 1.3;
+           margin-bottom: 1.8rem;
+       }
+       #easterEggClose {
+           background: transparent;
+           border: 1px solid var(--accent-mid);
+           color: var(--text-muted);
+           padding: 10px 28px;
+           font-family: 'Space Mono', monospace;
+           font-size: 0.75rem;
+           letter-spacing: 0.15em;
+           cursor: pointer;
+           transition: all 0.2s;
+       }
+       #easterEggClose:hover {
+           border-color: var(--accent);
+           color: var(--accent);
+           background: var(--accent-dim);
+           box-shadow: 0 0 12px rgba(var(--accent-rgb),0.2);
+       }
    </style>
 <base target="_blank">
 </head>
 <body>
+
+<div id="easterEggOverlay">
+   <div id="easterEggBox">
+       <p class="egg-label">// terry jumpscare</p>
+       <img src="https://i1.sndcdn.com/artworks-DpOeuNBfyUErwo6j-HidoVA-t1080x1080.jpg" alt="easter egg" style="width:100%;max-width:260px;display:block;margin:0 auto 1.4rem;border:1px solid var(--accent-mid);box-shadow:0 0 20px rgba(var(--accent-rgb),0.3);">
+       <p class="egg-text">BUT IS IT 20,000 LINES?</p>
+       <button id="easterEggClose" onclick="document.getElementById('easterEggOverlay').classList.remove('show')">DISMISS</button>
+   </div>
+</div>
 
 <button class="back-to-mono" onclick="goToMonoLauncher()"><span class="material-symbols-outlined" style="font-size:14px">arrow_back</span>MONOLAUNCH</button>
 
@@ -864,6 +932,10 @@ function openHomeInNewTab() {
 
        newTab.classList.add('active');
        clickedBtn.classList.add('active');
+
+       if (tabId === 'compiler') {
+           document.getElementById('easterEggOverlay').classList.add('show');
+       }
    }
 
    async function launchGame(fileName, baseUrl, isPNG = false) {
