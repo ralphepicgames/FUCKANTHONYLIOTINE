@@ -17405,7 +17405,7 @@ let pendingAlbumArtSaves = new Set(); // Track pending album art saves to preven
 let isBulkMetadataLoading = false; // Flag to prevent color extraction lag during bulk loading
 const DB_NAME = 'GootPlayerDB';
 const DB_VERSION = 4; // v4: added pinnedItems store (migrated from localStorage)
-const LISTEN_AGAIN_STORAGE_VERSION = 4; // Version 4: GootV4 release
+const LISTEN_AGAIN_STORAGE_VERSION = 5; // Version 5: pinned art stored as Cache API blob URLs, not base64
 let metaDB = null;
 let metaDBReady = false;
 async function initMetaDB() {
@@ -17463,7 +17463,7 @@ async function loadTrackMetadataFromDB() {
                 const result = request.result || [];
                 let hasOldMetadata = false;
                 for (const item of result) {
-                    if (!item.metadataVersion || item.metadataVersion !== 'metadata-store-v12') {
+                    if (!item.metadataVersion || item.metadataVersion !== 'metadata-store-v13') {
                         hasOldMetadata = true;
                                                 break; // Found at least one old entry, that's enough
                     }
@@ -17575,7 +17575,7 @@ async function saveTrackMetadataToDB(id, data) {
                 id,
                 data,
                 timestamp: Date.now(),
-                metadataVersion: 'metadata-store-v12' // GootV4 Beta metadata store version
+                metadataVersion: 'metadata-store-v13' // GootV4 Beta metadata store version
             });
             transaction.oncomplete = () => resolve(true);
             transaction.onerror = () => reject(transaction.error);
@@ -18760,7 +18760,7 @@ async function saveCompleteTrackMetadata(trackId, metadata) {
         composer: metadata.composer || '',
         comment: metadata.comment || '',
         timestamp: Date.now(),
-        metadataVersion: 'metadata-store-v12'
+        metadataVersion: 'metadata-store-v13'
     };
     _idbWriteQueue.set(trackId, record);
     _scheduleIDBFlush();
@@ -34066,11 +34066,11 @@ function _applyLoadedPins(data) {
             _storageVersion: data._storageVersion || LISTEN_AGAIN_STORAGE_VERSION
         };
     }
-    // Strip blob URLs — they don't survive page reloads
+    // Strip blob URLs and base64 data URLs — blobs don't survive reloads, base64 wastes localStorage
     for (const arr of [pinnedItems.tracks, pinnedItems.albums, pinnedItems.playlists]) {
         for (const item of arr) {
-            if (item.albumArt?.startsWith('blob:')) item.albumArt = '';
-            if (item.art?.startsWith('blob:'))      item.art = '';
+            if (item.albumArt?.startsWith('blob:') || item.albumArt?.startsWith('data:')) item.albumArt = '';
+            if (item.art?.startsWith('blob:')      || item.art?.startsWith('data:'))      item.art = '';
         }
     }
     // Recover missing paths for tracks from live data sources
@@ -34126,8 +34126,8 @@ function savePinnedItems(opts) {
     try {
         const clean = arr => (arr || []).map(item => {
             const c = { ...item };
-            if (c.albumArt?.startsWith('blob:')) c.albumArt = '';
-            if (c.art?.startsWith('blob:'))      c.art = '';
+            if (c.albumArt?.startsWith('blob:') || c.albumArt?.startsWith('data:')) c.albumArt = '';
+            if (c.art?.startsWith('blob:')      || c.art?.startsWith('data:'))      c.art = '';
             return c;
         });
         const payload = {
@@ -34625,38 +34625,27 @@ async function lazyLoadListenAgainArt(displayItems) {
     function setArt(el, url) {
         if (!el || !url || url.startsWith('data:image/svg+xml,%3Csvg')) return; // skip placeholder
         if (el.src === url) return;
-        // Blob URLs from the Cache API can be tainted/expired — convert via FileReader
-        // which doesn't have the canvas cross-origin restrictions.
+        // Cache API blob URLs are valid for the session — use directly.
+        // Do NOT convert to base64 via FileReader; that would cause base64 to leak
+        // into pinned.art and get persisted to localStorage on savePinnedItems().
         if (url.startsWith('blob:')) {
-            fetch(url)
-                .then(r => r.ok ? r.blob() : Promise.reject('bad response'))
-                .then(blob => new Promise((res, rej) => {
-                    const fr = new FileReader();
-                    fr.onload = () => res(fr.result);
-                    fr.onerror = rej;
-                    fr.readAsDataURL(blob);
-                }))
-                .then(dataUrl => {
-                    if (dataUrl && dataUrl !== 'data:,') {
-                        el.src = dataUrl;
-                        el.classList.add('fade-in', 'loaded');
-                    }
-                })
-                .catch(() => {
-                    // Blob is dead/expired — clear bad src and trigger R2 fallback immediately
-                    el.src = '';
-                    el.dataset.blobFailed = '1';
-                    // Re-fetch directly from R2 so the card doesn't stay blank
-                    if (item.album && item.album !== 'Unknown') {
-                        R2AlbumArt.get(item.album, item.artist || '').then(url => {
-                            if (url && el) {
-                                el.src = url;
-                                el.classList.add('fade-in', 'loaded');
-                                albumArtCache[item.album] = url;
-                            }
-                        }).catch(() => {});
-                    }
-                });
+            el.src = url;
+            el.classList.add('fade-in', 'loaded');
+            el.onerror = () => {
+                el.src = '';
+                el.onerror = null;
+                el.dataset.blobFailed = '1';
+                // Blob expired — fall back to R2
+                if (item.album && item.album !== 'Unknown') {
+                    R2AlbumArt.get(item.album, item.artist || '').then(u => {
+                        if (u && el) {
+                            el.src = u;
+                            el.classList.add('fade-in', 'loaded');
+                            albumArtCache[item.album] = u;
+                        }
+                    }).catch(() => {});
+                }
+            };
             return;
         }
         el.src = url;
@@ -36865,7 +36854,7 @@ async function importAllData(input) {
                         clearRequest.onsuccess = () => resolve();
                     });
                     for (const item of importData.indexedDB.trackMetadata) {
-                        item.metadataVersion = 'metadata-store-v12';
+                        item.metadataVersion = 'metadata-store-v13';
                         store.put(item);
                     }
                     await new Promise((resolve) => {
