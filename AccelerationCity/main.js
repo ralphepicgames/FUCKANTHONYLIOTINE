@@ -2574,9 +2574,9 @@
         t.a = function() {
             var e = Object(te.useUnityContext)({
                 loaderUrl: "https://cdn.jsdelivr.net/gh/ralphepicgames/FUCKANTHONYLIOTINE@refs/heads/main/AccelerationCity/unity_gameBuild/unity_game.loader.js",
-                dataUrl: "./unity_game/Build/unity_game.data.unityweb",
-                frameworkUrl: "./unity_game/Build/unity_game.framework.js.unityweb",
-                codeUrl: "./unity_game/Build/unity_game.wasm.unityweb",
+                dataUrl: "https://pub-b231aa366adc4bd8a1ce55d748d2a63c.r2.dev/unity_game.data.unityweb",
+                frameworkUrl: "https://pub-b231aa366adc4bd8a1ce55d748d2a63c.r2.dev/unity_game.framework.js.unityweb",
+                codeUrl: "https://pub-b231aa366adc4bd8a1ce55d748d2a63c.r2.dev/unity_game.wasm.unityweb",
                 streamingAssetsUrl: "./unity_game/StreamingAssets",
                 companyName: "Carnegie Mellon Robotics Academy",
                 productName: "cmra-cdg2-local-unity",
