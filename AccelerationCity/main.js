@@ -2577,7 +2577,7 @@
                 dataUrl: "https://pub-b231aa366adc4bd8a1ce55d748d2a63c.r2.dev/unity_game.data.unityweb",
                 frameworkUrl: "https://pub-b231aa366adc4bd8a1ce55d748d2a63c.r2.dev/unity_game.framework.js.unityweb",
                 codeUrl: "https://pub-b231aa366adc4bd8a1ce55d748d2a63c.r2.dev/unity_game.wasm.unityweb",
-                streamingAssetsUrl: "./unity_game/StreamingAssets",
+                streamingAssetsUrl: "https://pub-b231aa366adc4bd8a1ce55d748d2a63c.r2.dev/StreamingAssets",
                 companyName: "Carnegie Mellon Robotics Academy",
                 productName: "cmra-cdg2-local-unity",
                 productVersion: "0.1"
