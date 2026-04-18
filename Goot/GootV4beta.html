@@ -29537,6 +29537,7 @@ async function clearAllCache() {
         albumsWithArtLoaded.clear();
         artExtractionAttempted.clear();
         R2AlbumArt._ensuredSet.clear();
+        R2AlbumArt._notInR2.clear(); // stale negative cache blocks redirected art from re-fetching
         // AlbumArtManager.clear() handles: cache, _albumArtIndex, blob revocation, Cache API
         await AlbumArtManager.clear();
         // Note: redundant ImageCacheAPI.clear() removed — AlbumArtManager.clear() calls it
@@ -29578,6 +29579,8 @@ async function clearAllCache() {
             });
         } catch (e) { /* deprecated store, ignore */ }
 
+        // Re-load redirects so eviction runs against current list on fresh caches
+        if (typeof loadArtRedirects === 'function') await loadArtRedirects().catch(() => {});
         alert("✅ Done! Metadata and album art cleared.\n\nArt and track info will be re-fetched as you browse.");
     } catch (error) {
         console.error('[CACHE CLEAR] ERROR:', error);
@@ -30409,11 +30412,19 @@ function _evictLocalArtCache(albumLower) {
     for (const key of R2AlbumArt._ensuredSet) {
         if (key.toLowerCase() === albumLower) R2AlbumArt._ensuredSet.delete(key);
     }
-    // Evict from Cache API (best-effort, async)
-    caches.open('goot-album-art-v1').then(cache => {
-        cache.keys().then(keys => {
-            keys.forEach(req => {
-                if (req.url.toLowerCase().includes(albumLower)) cache.delete(req);
+    // Evict from _albumArtIndex — otherwise AlbumArtManager.get() re-populates albumArtCache
+    for (const key of Object.keys(AlbumArtManager._albumArtIndex)) {
+        if (key.toLowerCase() === albumLower) delete AlbumArtManager._albumArtIndex[key];
+    }
+    // Evict from ALL versioned Cache API album art stores (not just v1)
+    caches.keys().then(names => {
+        names.filter(n => n.startsWith('goot-album-art')).forEach(name => {
+            caches.open(name).then(cache => {
+                cache.keys().then(keys => {
+                    keys.forEach(req => {
+                        if (req.url.toLowerCase().includes(albumLower)) cache.delete(req);
+                    });
+                });
             });
         });
     }).catch(() => {});
