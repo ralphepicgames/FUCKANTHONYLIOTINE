@@ -451,6 +451,10 @@
            background: #fff;
        }
        .browser-wrapper.fullscreen .browser-frame-wrap { border-radius: 0; border-top: none; }
+       body.browser-fullscreen nav,
+       body.browser-fullscreen header { display: none !important; }
+       body.browser-fullscreen .container { padding: 0 !important; }
+       body.browser-fullscreen #browser { position: fixed; inset: 0; z-index: 8999; }
        #browserFrame {
            width: 100%; height: 100%; border: none;
            display: block;
@@ -1400,47 +1404,41 @@ function openHomeInNewTab() {
        const welcomeHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:#000;color:${accent};font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;}
-.box{text-align:center;max-width:480px;}
-h1{font-size:1.6rem;letter-spacing:0.3em;text-shadow:0 0 20px ${accent};margin-bottom:1.2rem;}
-p{color:rgba(255,43,158,0.65);font-size:0.82rem;line-height:1.9;letter-spacing:0.05em;margin-bottom:0.6rem;}
-.hint{border:1px solid rgba(255,43,158,0.25);padding:0.8rem 1.2rem;margin-top:1.2rem;font-size:0.75rem;color:rgba(255,43,158,0.45);letter-spacing:0.1em;}
+body{background:#000;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;}
+.box{text-align:center;max-width:420px;}
+h1{font-size:1.5rem;letter-spacing:0.3em;color:${accent};text-shadow:0 0 20px ${accent};margin-bottom:1.2rem;font-family:'Courier New',monospace;}
+p{color:${accent};opacity:0.55;font-size:0.8rem;line-height:1.9;letter-spacing:0.06em;}
 </style></head><body>
 <div class="box">
   <h1>// UNTDOC BROWSER</h1>
-  <p>No search engine available.</p>
-  <p>Enter a full URL in the address bar above to visit any site.</p>
-  <div class="hint">e.g. &nbsp; https://example.com</div>
+  <p>No search engine available.<br>Enter a URL in the address bar to visit a site.</p>
 </div>
 </body></html>`;
-       const blob = new Blob([welcomeHtml], { type: 'text/html' });
-       const old = frame.getAttribute('data-welcome-blob');
-       if (old) URL.revokeObjectURL(old);
-       const blobUrl = URL.createObjectURL(blob);
-       frame.setAttribute('data-welcome-blob', blobUrl);
-       frame.src = blobUrl;
+       frame.srcdoc = welcomeHtml;
    }
 
    function browserToggleFullscreen() {
        const wrapper = document.getElementById('browserWrapper');
        const btn = document.getElementById('btnFullscreen');
        const monoBtn = document.querySelector('.back-to-mono');
-       const settingsContainer = document.querySelector('.settings-container');
+       const settings = document.querySelector('.settings-container');
        browserIsFullscreen = !browserIsFullscreen;
        if (browserIsFullscreen) {
            wrapper.classList.add('fullscreen');
+           document.body.classList.add('browser-fullscreen');
            btn.textContent = 'fullscreen_exit';
            btn.title = 'Exit Fullscreen';
            document.body.style.overflow = 'hidden';
            if (monoBtn) monoBtn.style.display = 'none';
-           if (settingsContainer) settingsContainer.style.display = 'none';
+           if (settings) settings.style.display = 'none';
        } else {
            wrapper.classList.remove('fullscreen');
+           document.body.classList.remove('browser-fullscreen');
            btn.textContent = 'fullscreen';
            btn.title = 'Fullscreen';
            document.body.style.overflow = '';
            if (monoBtn) monoBtn.style.display = '';
-           if (settingsContainer) settingsContainer.style.display = '';
+           if (settings) settings.style.display = '';
        }
    }
 
@@ -1465,12 +1463,8 @@ p{color:rgba(255,43,158,0.65);font-size:0.82rem;line-height:1.9;letter-spacing:0
    }
 
    function browserLoadUrl(url, pushHistory = true) {
-       if (!browserWorkerUrl) { showBrowserSetup(); return; }
-       const frame = document.getElementById('browserFrame');
        const urlInput = document.getElementById('browserUrlInput');
        const lock = document.getElementById('browserLock');
-
-       browserSetLoading(true);
 
        let displayUrl = url;
        try {
@@ -1484,7 +1478,7 @@ p{color:rgba(255,43,158,0.65);font-size:0.82rem;line-height:1.9;letter-spacing:0
        urlInput.value = displayUrl;
 
        const proxied = url.startsWith(browserWorkerUrl) ? url : proxyUrl(url);
-       frame.src = proxied;
+       window.open(proxied, '_blank');
 
        if (pushHistory) {
            browserHistory = browserHistory.slice(0, browserHistoryIdx + 1);
@@ -1492,7 +1486,6 @@ p{color:rgba(255,43,158,0.65);font-size:0.82rem;line-height:1.9;letter-spacing:0
            browserHistoryIdx = browserHistory.length - 1;
        }
        browserUpdateNav();
-       frame.onload = () => browserSetLoading(false);
    }
 
    function browserNavigate(input) {
