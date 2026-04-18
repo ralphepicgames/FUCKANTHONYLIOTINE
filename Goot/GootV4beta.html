@@ -29503,8 +29503,10 @@ async function clearAllCache() {
         // ── LocalStorage: text metadata + album art ──
         localStorage.removeItem('goot_meta_cache');
         localStorage.removeItem('goot_album_art_cache');
-        _clearAccentCacheMirror();
         localStorage.removeItem('goot_trackMetadata'); // primary metadata store
+        localStorage.removeItem('goot_most_played');   // cached track list with art refs
+        localStorage.removeItem('goot_listen_again_cache');
+        _clearAccentCacheMirror();
 
         // ── In-memory: text metadata ──
         trackMetadata = {};
@@ -29530,6 +29532,10 @@ async function clearAllCache() {
         // AlbumArtManager.clear() handles: cache, _albumArtIndex, blob revocation, Cache API
         await AlbumArtManager.clear();
         // Note: redundant ImageCacheAPI.clear() removed — AlbumArtManager.clear() calls it
+        // Playlist custom covers (separate Cache API store)
+        try { await caches.delete(PlaylistCoverManager.cacheName); } catch (e) {}
+        // Folder covers (session memory only — no persistent cache store)
+        R2FolderCovers._memoryCache.clear();
 
         // ── IndexedDB: trackMetadata store (title/artist/album/albumArt fields) ──
         if (!metaDB) await initMetaDB();
