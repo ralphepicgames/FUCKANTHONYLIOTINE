@@ -397,6 +397,95 @@
 
        /* ─── Compiler ─── */
        .compiler-container { display: flex; flex-direction: column; gap: 12px; }
+
+       /* ─── Browser Tab ─── */
+       .browser-wrapper {
+           display: flex; flex-direction: column;
+           height: calc(100vh - 160px);
+           min-height: 500px;
+           gap: 0;
+       }
+       .browser-chrome {
+           display: flex; align-items: center; gap: 8px;
+           padding: 10px 12px;
+           background: var(--card-bg);
+           border: 1px solid var(--border-bright);
+           border-bottom: none;
+           border-radius: 6px 6px 0 0;
+           flex-shrink: 0;
+       }
+       .browser-btn {
+           background: none; border: 1px solid var(--border-bright);
+           color: var(--text-muted); cursor: pointer;
+           width: 30px; height: 30px; border-radius: 4px;
+           display: flex; align-items: center; justify-content: center;
+           font-size: 16px; transition: all 0.15s; flex-shrink: 0;
+           font-family: 'Material Symbols Outlined';
+       }
+       .browser-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+       .browser-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+       .browser-url-bar {
+           flex: 1; display: flex; align-items: center; gap: 8px;
+           background: var(--bg2); border: 1px solid var(--border-bright);
+           border-radius: 4px; padding: 0 10px; height: 30px;
+           transition: border-color 0.15s;
+       }
+       .browser-url-bar:focus-within { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-dim); }
+       .browser-lock { font-family: 'Material Symbols Outlined'; font-size: 14px; flex-shrink: 0; }
+       .browser-lock.secure { color: var(--accent); }
+       .browser-lock.insecure { color: var(--text-muted); }
+       #browserUrlInput {
+           flex: 1; background: none; border: none; outline: none;
+           color: var(--text); font-family: 'Space Mono', monospace;
+           font-size: 0.75rem; min-width: 0;
+       }
+       #browserUrlInput::placeholder { color: var(--text-muted); }
+       .browser-frame-wrap {
+           flex: 1; position: relative; overflow: hidden;
+           border: 1px solid var(--border-bright); border-radius: 0 0 6px 6px;
+           background: #fff;
+       }
+       #browserFrame {
+           width: 100%; height: 100%; border: none;
+           display: block;
+       }
+       .browser-loading-bar {
+           position: absolute; top: 0; left: 0; height: 2px;
+           background: var(--accent); width: 0%;
+           transition: width 0.3s ease; z-index: 10;
+           box-shadow: 0 0 8px var(--accent);
+       }
+       .browser-loading-bar.loading { animation: loadingPulse 1.2s ease-in-out infinite; }
+       @keyframes loadingPulse {
+           0% { width: 20%; opacity: 1; }
+           50% { width: 70%; opacity: 0.8; }
+           100% { width: 95%; opacity: 0.6; }
+       }
+       .browser-loading-bar.done { width: 100%; opacity: 0; transition: opacity 0.3s; }
+       .browser-setup-overlay {
+           position: absolute; inset: 0; background: var(--bg);
+           display: flex; flex-direction: column; align-items: center; justify-content: center;
+           gap: 16px; z-index: 20; padding: 2rem;
+       }
+       .browser-setup-overlay h2 {
+           font-family: 'Orbitron', monospace; color: var(--accent);
+           text-shadow: 0 0 12px var(--accent); font-size: 1.4rem;
+       }
+       .browser-setup-overlay p { color: var(--text-muted); font-size: 0.8rem; text-align: center; max-width: 400px; }
+       .browser-setup-input {
+           width: 100%; max-width: 420px; background: var(--bg2);
+           border: 1px solid var(--border-bright); color: var(--text);
+           font-family: 'Space Mono', monospace; font-size: 0.8rem;
+           padding: 10px 14px; border-radius: 4px; outline: none;
+       }
+       .browser-setup-input:focus { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-dim); }
+       .browser-setup-btn {
+           background: var(--accent-dim); border: 1px solid var(--accent);
+           color: var(--accent); font-family: 'Space Mono', monospace;
+           font-size: 0.8rem; padding: 10px 24px; border-radius: 4px;
+           cursor: pointer; letter-spacing: 0.1em; transition: all 0.15s;
+       }
+       .browser-setup-btn:hover { background: var(--accent-mid); }
        #editor {
            width: 100%; height: 60vh;
            background: var(--card-bg);
@@ -677,6 +766,7 @@
    <button class="nav-btn active" onclick="showTab('games')"><span class="material-symbols-outlined">sports_esports</span>GAMES</button>
    <button class="nav-btn" onclick="showTab('pinned')"><span class="material-symbols-outlined">push_pin</span>PINNED</button>
    <button class="nav-btn" onclick="showTab('compiler')"><span class="material-symbols-outlined">code</span>HTML COMPILER</button>
+   <button class="nav-btn" onclick="showTab('browser')"><span class="material-symbols-outlined">public</span>BROWSER</button>
 </nav>
 
 <div class="container">
@@ -723,6 +813,39 @@
                    <button class="control-btn" onclick="exportHTML()"><span class="material-symbols-outlined">download</span>EXPORT AS HTML</button>
                    <button class="control-btn" onclick="clearEditor()"><span class="material-symbols-outlined">delete</span>CLEAR</button>
                    <button class="control-btn" onclick="runInFullscreen()"><span class="material-symbols-outlined">open_in_full</span>OPEN FULLSCREEN</button>
+               </div>
+           </div>
+       </div>
+
+       <div id="browser" class="tab-content">
+           <div class="browser-wrapper">
+               <div class="browser-chrome">
+                   <button class="browser-btn" id="btnBack" title="Back" onclick="browserBack()">arrow_back</button>
+                   <button class="browser-btn" id="btnForward" title="Forward" onclick="browserForward()">arrow_forward</button>
+                   <button class="browser-btn" id="btnRefresh" title="Refresh" onclick="browserRefresh()">refresh</button>
+                   <button class="browser-btn" title="Home (SearXNG)" onclick="browserHome()">home</button>
+                   <div class="browser-url-bar">
+                       <span class="browser-lock insecure" id="browserLock">lock_open</span>
+                       <input type="text" id="browserUrlInput" placeholder="Search or enter URL..."
+                           onkeydown="if(event.key==='Enter')browserNavigate(this.value)"
+                           onclick="this.select()">
+                   </div>
+                   <button class="browser-btn" title="Settings" onclick="showBrowserSetup()">settings</button>
+               </div>
+               <div class="browser-frame-wrap">
+                   <div class="browser-loading-bar" id="browserLoadBar"></div>
+                   <iframe id="browserFrame"
+                       allow="autoplay; fullscreen"
+                       sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock"
+                   ></iframe>
+                   <div class="browser-setup-overlay" id="browserSetupOverlay" style="display:none">
+                       <h2>// BROWSER SETTINGS</h2>
+                       <p>Change the proxy worker URL if needed.</p>
+                       <input type="text" class="browser-setup-input" id="workerUrlInput"
+                           placeholder="https://untbrowser.untdocapis.workers.dev">
+                       <button class="browser-setup-btn" onclick="saveBrowserWorker()">SAVE & RECONNECT</button>
+                       <p style="font-size:0.7rem; opacity:0.5">Default search: SearXNG (paulgo.io)</p>
+                   </div>
                </div>
            </div>
        </div>
@@ -1136,6 +1259,9 @@ function openHomeInNewTab() {
        if (tabId === 'compiler') {
            document.getElementById('easterEggOverlay').classList.add('show');
        }
+       if (tabId === 'browser') {
+           setTimeout(initBrowser, 0);
+       }
    }
 
    async function launchGame(fileName, baseUrl, isPNG = false) {
@@ -1200,6 +1326,153 @@ function openHomeInNewTab() {
        if (logo) logo.style.filter = `drop-shadow(0 0 8px var(--accent)) drop-shadow(0 0 20px var(--accent)) brightness(${brightness})`;
    }
    let flickerInterval = setInterval(flickerLogo, 100);
+
+   // ─── BROWSER TAB ───────────────────────────────────────────────
+   const WORKER_STORAGE_KEY = 'untdoc_worker_url';
+   const SEARXNG_URL = 'https://lite.duckduckgo.com/lite';
+   const DEFAULT_WORKER_URL = 'https://untbrowser.untdocapis.workers.dev';
+   let browserHistory = [];
+   let browserHistoryIdx = -1;
+   let browserWorkerUrl = '';
+
+   function getBrowserWorkerUrl() {
+       return localStorage.getItem(WORKER_STORAGE_KEY) || DEFAULT_WORKER_URL;
+   }
+
+   function proxyUrl(url) {
+       return browserWorkerUrl + '/?url=' + encodeURIComponent(url);
+   }
+
+   function initBrowser() {
+       browserWorkerUrl = getBrowserWorkerUrl();
+       const overlay = document.getElementById('browserSetupOverlay');
+       const frame = document.getElementById('browserFrame');
+       overlay.style.display = 'none';
+       const savedInput = document.getElementById('workerUrlInput');
+       if (savedInput) savedInput.value = browserWorkerUrl;
+       if (!frame.src || frame.src === 'about:blank' || frame.src === window.location.href) {
+           browserHome();
+       }
+   }
+
+   function saveBrowserWorker() {
+       const input = document.getElementById('workerUrlInput').value.trim().replace(/\/$/, '');
+       if (!input) return;
+       browserWorkerUrl = input;
+       localStorage.setItem(WORKER_STORAGE_KEY, input);
+       document.getElementById('browserSetupOverlay').style.display = 'none';
+       browserHome();
+   }
+
+   function showBrowserSetup() {
+       const overlay = document.getElementById('browserSetupOverlay');
+       overlay.style.display = overlay.style.display === 'none' ? 'flex' : 'none';
+       const inp = document.getElementById('workerUrlInput');
+       if (inp && browserWorkerUrl) inp.value = browserWorkerUrl;
+   }
+
+   function browserSetLoading(on) {
+       const bar = document.getElementById('browserLoadBar');
+       if (on) {
+           bar.className = 'browser-loading-bar loading';
+       } else {
+           bar.className = 'browser-loading-bar done';
+           setTimeout(() => { bar.style.width = '0'; bar.className = 'browser-loading-bar'; }, 400);
+       }
+   }
+
+   function browserUpdateNav() {
+       document.getElementById('btnBack').disabled = browserHistoryIdx <= 0;
+       document.getElementById('btnForward').disabled = browserHistoryIdx >= browserHistory.length - 1;
+   }
+
+   function browserLoadUrl(url, pushHistory = true) {
+       if (!browserWorkerUrl) { showBrowserSetup(); return; }
+       const frame = document.getElementById('browserFrame');
+       const urlInput = document.getElementById('browserUrlInput');
+       const lock = document.getElementById('browserLock');
+
+       browserSetLoading(true);
+
+       let displayUrl = url;
+       try {
+           const inner = url.includes('/?url=') ? decodeURIComponent(url.split('/?url=')[1]) : url;
+           const parsed = new URL(inner);
+           displayUrl = parsed.href;
+           lock.className = 'browser-lock ' + (parsed.protocol === 'https:' ? 'secure' : 'insecure');
+           lock.textContent = parsed.protocol === 'https:' ? 'lock' : 'lock_open';
+       } catch(e) {}
+
+       urlInput.value = displayUrl;
+
+       const proxied = url.startsWith(browserWorkerUrl) ? url : proxyUrl(url);
+       frame.src = proxied;
+
+       if (pushHistory) {
+           browserHistory = browserHistory.slice(0, browserHistoryIdx + 1);
+           browserHistory.push({ proxied, display: displayUrl });
+           browserHistoryIdx = browserHistory.length - 1;
+       }
+       browserUpdateNav();
+       frame.onload = () => browserSetLoading(false);
+   }
+
+   function browserNavigate(input) {
+       if (!input) return;
+       input = input.trim();
+       let url;
+       if (/^https?:\/\//.test(input) || /^[\w-]+\.[\w.]+/.test(input)) {
+           url = /^https?:\/\//.test(input) ? input : 'https://' + input;
+       } else {
+           url = SEARXNG_URL + '/search?q=' + encodeURIComponent(input);
+       }
+       browserLoadUrl(url);
+   }
+
+   function browserHome() { browserLoadUrl(SEARXNG_URL); }
+
+   function browserBack() {
+       if (browserHistoryIdx <= 0) return;
+       browserHistoryIdx--;
+       const entry = browserHistory[browserHistoryIdx];
+       browserLoadUrl(entry.display, false);
+   }
+
+   function browserForward() {
+       if (browserHistoryIdx >= browserHistory.length - 1) return;
+       browserHistoryIdx++;
+       const entry = browserHistory[browserHistoryIdx];
+       browserLoadUrl(entry.display, false);
+   }
+
+   function browserRefresh() {
+       const frame = document.getElementById('browserFrame');
+       if (frame.src) {
+           browserSetLoading(true);
+           frame.src = frame.src;
+           frame.onload = () => browserSetLoading(false);
+       }
+   }
+
+   window.addEventListener('message', function(e) {
+       if (!e.data || !e.data.type) return;
+       if (e.data.type === 'navigate') {
+           const url = e.data.url;
+           const inner = url.startsWith(browserWorkerUrl) ? decodeURIComponent(url.split('/?url=')[1] || url) : url;
+           browserLoadUrl(inner);
+       }
+       if (e.data.type === 'urlchange') {
+           const urlInput = document.getElementById('browserUrlInput');
+           const lock = document.getElementById('browserLock');
+           if (urlInput && e.data.url) urlInput.value = e.data.url;
+           if (lock) {
+               lock.className = 'browser-lock ' + (e.data.secure ? 'secure' : 'insecure');
+               lock.textContent = e.data.secure ? 'lock' : 'lock_open';
+           }
+       }
+   });
+
+   // Browser auto-inits on first showTab('browser') call (patched into showTab above)
 
    // Color Picker
    const STORAGE_KEY = 'untdoc_accent_color';
