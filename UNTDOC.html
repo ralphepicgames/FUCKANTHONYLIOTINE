@@ -145,7 +145,8 @@
            background: var(--accent-dim);
            border-color: var(--accent-mid);
            color: var(--accent);
-           box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.2), inset 0 0 12px rgba(var(--accent-rgb), 0.05);
+           box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.3), inset 0 0 16px rgba(var(--accent-rgb), 0.07);
+           text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.6);
        }
        nav button.nav-btn.active::after {
            content: '';
@@ -208,9 +209,14 @@
        #gameSearch::placeholder { color: var(--text-muted); }
        #gameSearch:focus {
            border-color: var(--accent);
-           box-shadow: 0 0 0 1px var(--accent-mid), 0 0 20px rgba(var(--accent-rgb), 0.1);
+           box-shadow: 0 0 0 1px var(--accent-mid), 0 0 30px rgba(var(--accent-rgb), 0.15), inset 0 0 20px rgba(var(--accent-rgb), 0.04);
            background: var(--surface);
        }
+       @keyframes searchPulse {
+           0%, 100% { box-shadow: 0 0 0 1px var(--accent-mid), 0 0 30px rgba(var(--accent-rgb), 0.15); }
+           50%       { box-shadow: 0 0 0 1px var(--accent-mid), 0 0 45px rgba(var(--accent-rgb), 0.28); }
+       }
+       #gameSearch:focus { animation: searchPulse 2.5s ease-in-out infinite; }
        .search-count {
            font-size: 0.72rem;
            color: var(--text-muted);
@@ -219,15 +225,14 @@
 
        /* ─── Games Grid ─── */
        .games-grid {
-           display: flex;
-           flex-wrap: wrap;
-           gap: 8px;
-           align-items: start;
+           display: grid;
+           grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+           gap: 6px;
        }
        .game-card {
            background: var(--card-bg);
            border: 1px solid var(--border);
-           padding: 11px 14px;
+           padding: 13px 16px;
            cursor: pointer;
            transition: all 0.18s ease;
            position: relative;
@@ -236,9 +241,6 @@
            flex-direction: row;
            align-items: center;
            border-left: 3px solid transparent;
-           flex: 0 0 auto;
-           min-width: 120px;
-           max-width: 420px;
        }
        .game-card::before {
            content: '';
@@ -248,14 +250,55 @@
            opacity: 0;
            transition: opacity 0.2s;
        }
+       @keyframes gridWave {
+           0%   { transform: translateX(-100%) translateY(-100%); }
+           100% { transform: translateX(100%) translateY(100%); }
+       }
+       #gameGrid {
+           position: relative;
+       }
+       #gameGrid::after {
+           content: '';
+           position: fixed;
+           top: -50%;
+           left: -50%;
+           width: 60px;
+           height: 200vh;
+           background: linear-gradient(
+               to bottom,
+               transparent,
+               rgba(var(--accent-rgb), 0.04) 40%,
+               rgba(var(--accent-rgb), 0.08) 50%,
+               rgba(var(--accent-rgb), 0.04) 60%,
+               transparent
+           );
+           transform: rotate(35deg);
+           animation: gridWave 6s linear infinite;
+           pointer-events: none;
+           z-index: 3;
+       }
        .game-card:hover {
            border-color: var(--accent-mid);
            border-left-color: var(--accent);
            background: var(--surface);
-           transform: translateX(3px);
-           box-shadow: -3px 0 15px rgba(var(--accent-rgb), 0.2), 0 0 20px rgba(var(--accent-rgb), 0.05);
+           transform: translateX(4px) scale(1.03);
+           box-shadow: -4px 0 20px rgba(var(--accent-rgb), 0.35), 0 0 30px rgba(var(--accent-rgb), 0.08), inset 0 0 20px rgba(var(--accent-rgb), 0.03);
+           z-index: 10;
        }
        .game-card:hover::before { opacity: 1; }
+       .game-card::after {
+           content: '';
+           position: absolute;
+           top: 0; right: 0;
+           width: 0; height: 0;
+           border-style: solid;
+           border-width: 0 14px 14px 0;
+           border-color: transparent var(--border) transparent transparent;
+           transition: border-color 0.18s;
+       }
+       .game-card:hover::after {
+           border-color: transparent var(--accent) transparent transparent;
+       }
        .game-card-title-container {
            display: flex;
            flex-direction: row;
@@ -263,6 +306,7 @@
            justify-content: space-between;
            gap: 8px;
            width: 100%;
+           min-width: 0;
        }
        .game-card h3 {
            color: var(--text);
@@ -270,10 +314,55 @@
            font-family: 'Space Mono', monospace;
            letter-spacing: 0.04em;
            white-space: nowrap;
+           overflow: hidden;
+           text-overflow: ellipsis;
            opacity: 0.85;
            transition: opacity 0.15s;
        }
        .game-card:hover h3 { opacity: 1; color: var(--accent); }
+
+       /* ─── Letter Section Headers ─── */
+       .letter-section {
+           grid-column: 1 / -1;
+           display: flex;
+           align-items: center;
+           gap: 14px;
+           padding: 24px 0 8px;
+           margin-top: 4px;
+       }
+       .letter-section:first-child { padding-top: 6px; margin-top: 0; }
+       .letter-label {
+           font-family: 'Orbitron', monospace;
+           font-size: 1.1rem;
+           font-weight: 900;
+           color: var(--accent);
+           letter-spacing: 0.25em;
+           text-shadow: 0 0 10px var(--accent), 0 0 30px rgba(var(--accent-rgb), 0.4);
+           flex-shrink: 0;
+           background: var(--accent-dim);
+           border: 1px solid var(--accent-mid);
+           padding: 4px 14px;
+           min-width: 48px;
+           text-align: center;
+       }
+       .letter-divider {
+           flex: 1;
+           height: 1px;
+           background: linear-gradient(90deg, var(--accent-mid), transparent);
+           box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.15);
+       }
+
+       /* ─── Game Count ─── */
+       #gameCount {
+           font-size: 0.68rem;
+           color: var(--text-muted);
+           letter-spacing: 0.2em;
+           text-transform: uppercase;
+           background: var(--card-bg);
+           border: 1px solid var(--border);
+           padding: 3px 12px;
+           border-radius: 2px;
+       }
 
        /* ─── Pin Icon ─── */
        .pin-icon {
@@ -472,6 +561,68 @@
            cursor: pointer;
            transition: all 0.2s;
        }
+       /* ─── Source Filters ─── */
+       .source-filters {
+           display: flex;
+           gap: 12px;
+           flex-wrap: wrap;
+           justify-content: center;
+       }
+       .source-filter-label {
+           display: flex;
+           align-items: center;
+           gap: 6px;
+           cursor: pointer;
+           font-size: 0.7rem;
+           letter-spacing: 0.1em;
+           color: var(--text-muted);
+           text-transform: uppercase;
+           border: 1px solid var(--border);
+           padding: 4px 10px;
+           border-radius: 2px;
+           transition: all 0.2s;
+           user-select: none;
+       }
+       .source-filter-label:hover {
+           color: var(--text);
+           border-color: var(--border-bright);
+           background: var(--accent-dim);
+       }
+       .source-filter-label input[type="checkbox"] {
+           appearance: none;
+           -webkit-appearance: none;
+           width: 12px;
+           height: 12px;
+           border: 1px solid var(--accent-mid);
+           border-radius: 1px;
+           position: relative;
+           cursor: pointer;
+           flex-shrink: 0;
+           transition: all 0.15s;
+       }
+       .source-filter-label input[type="checkbox"]:checked {
+           background: var(--accent);
+           border-color: var(--accent);
+       }
+       .source-filter-label input[type="checkbox"]:checked::after {
+           content: '';
+           position: absolute;
+           left: 2px;
+           top: -1px;
+           width: 4px;
+           height: 8px;
+           border: 2px solid #000;
+           border-top: none;
+           border-left: none;
+           transform: rotate(45deg);
+       }
+       .source-filter-label:has(input:checked) {
+           color: var(--accent);
+           border-color: var(--accent-mid);
+           background: var(--accent-dim);
+           box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.15);
+       }
+
        #easterEggClose:hover {
            border-color: var(--accent);
            color: var(--accent);
@@ -532,10 +683,20 @@
    <div class="tabs-wrapper">
        <div id="games" class="tab-content active">
            <div class="search-wrapper">
-               <div id="gameCount" style="font-size:0.72rem;color:var(--text-muted);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:4px;"></div>
+               <div id="gameCount"></div>
                <div class="search-inner">
                    <span class="search-icon material-symbols-outlined">search</span>
                    <input type="text" id="gameSearch" placeholder="Search games..." onkeyup="filterGames()">
+               </div>
+               <div class="source-filters">
+                   <label class="source-filter-label">
+                       <input type="checkbox" id="filterRalph" checked onchange="filterGames()">
+                       Ralphs
+                   </label>
+                   <label class="source-filter-label">
+                       <input type="checkbox" id="filterOnefile" checked onchange="filterGames()">
+                       Onefile
+                   </label>
                </div>
            </div>
            <div class="games-grid" id="gameGrid"></div>
@@ -657,6 +818,7 @@ function openHomeInNewTab() {
        const rawGithubGames = [
            { name: "Snow Rider 3D", file: "SnowRider3D.html" },
            { name: "Paper.io 2", file: "Paper.io2.html" },
+           { name: "Acceleration City", file: "AccelerationCity.html" },
            { name: "Slope", file: "Slope.html" },
            { name: "Cookie Clicker", file: "CoockieClicker-2.052.html" },
            { name: "Retro Bowl", file: "RetroBowl.html" },
@@ -835,13 +997,51 @@ function openHomeInNewTab() {
    let currentFilteredGames = [];
    let currentRenderCount = 0;
 
+   function getGameLetter(game) {
+       const firstChar = game.name.charAt(0);
+       if (/[A-Za-z]/.test(firstChar)) return firstChar.toUpperCase();
+       if (/[0-9]/.test(firstChar)) return '#';
+       return '%';
+   }
+
+   function getSortKey(game) {
+       const l = getGameLetter(game);
+       if (l === '%') return '0';
+       if (l === '#') return '1';
+       return '2' + l;
+   }
+
    function renderNextChunk() {
        if (!currentFilteredGames.length) return;
+       const sorted = [...currentFilteredGames].sort((a, b) => {
+           const ka = getSortKey(a), kb = getSortKey(b);
+           if (ka !== kb) return ka.localeCompare(kb);
+           return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+       });
        const fragment = document.createDocumentFragment();
-       currentFilteredGames.forEach(game => fragment.appendChild(createGameCard(game)));
+       let currentLetter = null;
+       sorted.forEach(game => {
+           const letter = getGameLetter(game);
+           if (letter !== currentLetter) {
+               currentLetter = letter;
+               const section = document.createElement('div');
+               section.className = 'letter-section';
+               section.innerHTML = `<span class="letter-label">${letter}</span><div class="letter-divider"></div>`;
+               fragment.appendChild(section);
+           }
+           fragment.appendChild(createGameCard(game));
+       });
        grid.appendChild(fragment);
        currentRenderCount = currentFilteredGames.length;
        gamesLoadTrigger.style.display = 'none';
+   }
+
+   function getSourceFilter(game) {
+       const ralphChecked = document.getElementById('filterRalph') ? document.getElementById('filterRalph').checked : true;
+       const onefileChecked = document.getElementById('filterOnefile') ? document.getElementById('filterOnefile').checked : true;
+       if (game.baseUrl === BASE_URL) return ralphChecked;
+       if (game.baseUrl === onefileBaseUrl) return onefileChecked;
+       return true; // gfiles, emulators, external always shown
    }
 
    function renderAllGames() {
@@ -849,7 +1049,7 @@ function openHomeInNewTab() {
        const pinnedGames = getPinnedGames();
        
        const pinnedFilteredGames = allGames.filter(game => 
-           pinnedGames.includes(game.name) && game.name.toLowerCase().includes(query)
+           pinnedGames.includes(game.name) && game.name.toLowerCase().includes(query) && getSourceFilter(game)
        );
        
        pinnedGrid.innerHTML = '';
@@ -865,13 +1065,13 @@ function openHomeInNewTab() {
        }
 
        currentFilteredGames = allGames.filter(game => 
-           !pinnedGames.includes(game.name) && game.name.toLowerCase().includes(query)
+           !pinnedGames.includes(game.name) && game.name.toLowerCase().includes(query) && getSourceFilter(game)
        );
 
        // Update game count
        const countEl = document.getElementById('gameCount');
        if (countEl) {
-           const total = allGames.filter(g => !pinnedGames.includes(g.name)).length;
+           const total = allGames.filter(g => !pinnedGames.includes(g.name) && getSourceFilter(g)).length;
            countEl.textContent = query
                ? `[ ${currentFilteredGames.length} / ${total} games ]`
                : `[ ${total} games ]`;
