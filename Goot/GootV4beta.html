@@ -17152,7 +17152,15 @@ const ImageCacheAPI = {
             for (const url of this.memoryCache.values()) URL.revokeObjectURL(url);
             this.memoryCache.clear();
             this._cache = null;
-            return await caches.delete(this.cacheName);
+            this._lastValidated = 0;
+            // Delete all versioned stores, not just current — old versions persist otherwise
+            const allCacheNames = await caches.keys();
+            await Promise.all(
+                allCacheNames
+                    .filter(n => n.startsWith('goot-album-art'))
+                    .map(n => caches.delete(n))
+            );
+            return true;
         } catch (e) {
             console.error('[Cache API] clear failed:', e);
             return false;
@@ -29532,6 +29540,21 @@ async function clearAllCache() {
         // AlbumArtManager.clear() handles: cache, _albumArtIndex, blob revocation, Cache API
         await AlbumArtManager.clear();
         // Note: redundant ImageCacheAPI.clear() removed — AlbumArtManager.clear() calls it
+        // Nuke ALL versioned album art Cache API stores (v1–current)
+        // caches.delete(ImageCacheAPI.cacheName) only hits the current version —
+        // old versioned stores (goot-album-art-v1 through v4) survive and keep
+        // serving stale art. Delete every goot-album-art-* store found.
+        try {
+            const allCacheNames = await caches.keys();
+            await Promise.all(
+                allCacheNames
+                    .filter(n => n.startsWith('goot-album-art'))
+                    .map(n => caches.delete(n))
+            );
+        } catch (e) { console.warn('[Cache Clear] Failed to enumerate/delete album art caches:', e); }
+        // Reset ImageCacheAPI internal handle so next open() gets a fresh cache
+        ImageCacheAPI._cache = null;
+        ImageCacheAPI._lastValidated = 0;
         // Playlist custom covers (separate Cache API store)
         try { await caches.delete(PlaylistCoverManager.cacheName); } catch (e) {}
         // Folder covers (session memory only — no persistent cache store)
