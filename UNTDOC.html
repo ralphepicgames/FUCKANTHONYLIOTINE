@@ -462,16 +462,9 @@
        .browser-loading-bar {
            position: absolute; top: 0; left: 0; height: 2px;
            background: var(--accent); width: 0%;
-           transition: width 0.3s ease; z-index: 10;
-           box-shadow: 0 0 8px var(--accent);
+           transition: width 0.4s ease, opacity 0.3s ease; z-index: 10;
+           box-shadow: 0 0 8px var(--accent); opacity: 0;
        }
-       .browser-loading-bar.loading { animation: loadingPulse 1.2s ease-in-out infinite; }
-       @keyframes loadingPulse {
-           0% { width: 20%; opacity: 1; }
-           50% { width: 70%; opacity: 0.8; }
-           100% { width: 95%; opacity: 0.6; }
-       }
-       .browser-loading-bar.done { width: 100%; opacity: 0; transition: opacity 0.3s; }
        .browser-setup-overlay {
            position: absolute; inset: 0; background: var(--bg);
            display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -841,7 +834,6 @@
                            onclick="this.select()">
                    </div>
                    <button class="browser-btn" title="Fullscreen" id="btnFullscreen" onclick="browserToggleFullscreen()">fullscreen</button>
-                   <button class="browser-btn" title="Worker Settings" onclick="showBrowserSetup()">settings</button>
                </div>
                <div class="browser-frame-wrap">
                    <div class="browser-loading-bar" id="browserLoadBar"></div>
@@ -1471,13 +1463,27 @@ p{color:${accent};opacity:0.55;font-size:0.8rem;line-height:1.9;letter-spacing:0
        if (e.key === 'Escape' && browserIsFullscreen) browserToggleFullscreen();
    });
 
+   let loadProgressTimer = null;
+   let loadProgress = 0;
+
    function browserSetLoading(on) {
        const bar = document.getElementById('browserLoadBar');
        if (on) {
-           bar.className = 'browser-loading-bar loading';
+           loadProgress = 0;
+           bar.style.opacity = '1';
+           bar.style.width = '0%';
+           clearInterval(loadProgressTimer);
+           loadProgressTimer = setInterval(() => {
+               // Advance quickly at first, slow near 90%
+               const step = loadProgress < 30 ? 8 : loadProgress < 60 ? 4 : loadProgress < 85 ? 1 : 0;
+               loadProgress = Math.min(loadProgress + step, 90);
+               bar.style.width = loadProgress + '%';
+           }, 200);
        } else {
-           bar.className = 'browser-loading-bar done';
-           setTimeout(() => { bar.style.width = '0'; bar.className = 'browser-loading-bar'; }, 400);
+           clearInterval(loadProgressTimer);
+           loadProgressTimer = null;
+           bar.style.width = '100%';
+           setTimeout(() => { bar.style.opacity = '0'; setTimeout(() => { bar.style.width = '0%'; }, 300); }, 200);
        }
    }
 
@@ -1490,6 +1496,9 @@ p{color:${accent};opacity:0.55;font-size:0.8rem;line-height:1.9;letter-spacing:0
        const frame = document.getElementById('browserFrame');
        const urlInput = document.getElementById('browserUrlInput');
        const lock = document.getElementById('browserLock');
+
+       // Clear srcdoc so src takes over
+       frame.removeAttribute('srcdoc');
 
        browserSetLoading(true);
 
@@ -1505,6 +1514,15 @@ p{color:${accent};opacity:0.55;font-size:0.8rem;line-height:1.9;letter-spacing:0
        urlInput.value = displayUrl;
 
        const proxied = url.startsWith(browserWorkerUrl) ? url : proxyUrl(url);
+
+       // Fallback timeout — 12s max
+       let loadTimer = setTimeout(() => browserSetLoading(false), 12000);
+       const onLoad = () => {
+           clearTimeout(loadTimer);
+           browserSetLoading(false);
+           frame.removeEventListener('load', onLoad);
+       };
+       frame.addEventListener('load', onLoad);
        frame.src = proxied;
 
        if (pushHistory) {
@@ -1513,7 +1531,6 @@ p{color:${accent};opacity:0.55;font-size:0.8rem;line-height:1.9;letter-spacing:0
            browserHistoryIdx = browserHistory.length - 1;
        }
        browserUpdateNav();
-       frame.onload = () => browserSetLoading(false);
    }
 
    function browserNavigate(input) {
@@ -1542,10 +1559,14 @@ p{color:${accent};opacity:0.55;font-size:0.8rem;line-height:1.9;letter-spacing:0
 
    function browserRefresh() {
        const frame = document.getElementById('browserFrame');
-       if (frame.src) {
+       if (frame.src && frame.src !== 'about:blank') {
+           const current = frame.src;
+           frame.src = 'about:blank';
            browserSetLoading(true);
-           frame.src = frame.src;
-           frame.onload = () => browserSetLoading(false);
+           let loadTimer = setTimeout(() => browserSetLoading(false), 12000);
+           const onLoad = () => { clearTimeout(loadTimer); browserSetLoading(false); frame.removeEventListener('load', onLoad); };
+           frame.addEventListener('load', onLoad);
+           setTimeout(() => { frame.src = current; }, 50);
        }
    }
 
