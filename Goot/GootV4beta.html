@@ -14124,6 +14124,14 @@
 								</div>
 								<i class="fa-solid fa-chevron-right settings-nav-arrow"></i>
 							</button>
+							<button class="settings-nav-row" id="settings-nav-art-redirect" onclick="openSettingsSection('art-redirect')" style="display:none;">
+								<div class="settings-nav-icon"><i class="fa-solid fa-image"></i></div>
+								<div class="settings-nav-text">
+									<div class="settings-nav-title">Album Art Redirects</div>
+									<div class="settings-nav-sub">Replace album art with a new upload</div>
+								</div>
+								<i class="fa-solid fa-chevron-right settings-nav-arrow"></i>
+							</button>
 
 						</div>
 				</div><!-- /settings-menu-view -->
@@ -14491,7 +14499,57 @@
 							</div>
 							<div id="redirect-status" style="display:none;font-size:13px;padding:8px 12px;border-radius:8px;margin-top:8px;"></div>
 						</div>
-						<!-- ── Block Tracks ─────────────────────────────────────────────── -->
+																		<!-- ── Album Art Redirects Panel (secret admin) ── -->
+						<div class="m3-card" id="settings-panel-art-redirect" style="display:none;padding:20px 16px;margin-bottom:16px;">
+							<div style="margin-bottom:16px;">
+								<div style="font-size:13px;opacity:0.6;margin-bottom:12px;">Enter the album and artist, then upload a new image. Any request for the old art will serve your new version.</div>
+								<input id="art-redirect-album-input" type="text" placeholder="Album name (e.g. VULTURES 1)" autocomplete="off" oninput="artRedirectCheckExisting()" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:14px;outline:none;margin-bottom:8px;">
+								<input id="art-redirect-artist-input" type="text" placeholder="Artist (e.g. Kanye West)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:14px;outline:none;margin-bottom:12px;">
+							</div>
+							<div id="art-redirect-existing-banner" style="display:none;font-size:12px;padding:8px 12px;background:color-mix(in srgb,var(--md-sys-color-primary) 8%,transparent);border-radius:8px;margin-bottom:12px;">
+								<span style="opacity:0.6;">Active redirect → existing override art:</span>
+								<div style="margin-top:8px;text-align:center;">
+									<img id="art-redirect-existing-img" style="max-width:110px;max-height:110px;border-radius:8px;object-fit:cover;" src="" alt="Current redirect art">
+								</div>
+							</div>
+							<div style="margin-bottom:12px;">
+								<div style="font-size:13px;font-weight:600;margin-bottom:8px;">New Album Art</div>
+								<label id="art-redirect-upload-label" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;border-radius:10px;border:2px dashed color-mix(in srgb,var(--md-sys-color-primary) 40%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 30%,transparent);cursor:pointer;" ondragover="event.preventDefault()" ondrop="artRedirectHandleDrop(event)">
+									<i class="fa-solid fa-cloud-arrow-up" style="font-size:24px;opacity:0.5;"></i>
+									<span style="font-size:13px;opacity:0.6;">Click to upload or drag &amp; drop</span>
+									<input id="art-redirect-file-input" type="file" accept="image/*" style="display:none;" onchange="artRedirectFileSelected(this)">
+								</label>
+								<div id="art-redirect-new-preview" style="display:none;margin-top:10px;text-align:center;">
+									<img id="art-redirect-new-img" style="max-width:150px;max-height:150px;border-radius:10px;object-fit:cover;box-shadow:0 2px 12px rgba(0,0,0,0.18);" src="" alt="New art preview">
+									<div style="margin-top:6px;"><button class="m3-btn m3-btn-tonal" style="font-size:12px;padding:4px 12px;" onclick="artRedirectClearFile()"><i class="fa-solid fa-xmark"></i> Clear</button></div>
+								</div>
+							</div>
+							<div style="display:flex;gap:8px;margin-bottom:8px;">
+								<button class="m3-btn m3-btn-filled" style="flex:1;justify-content:center;" onclick="submitArtRedirect()"><i class="fa-solid fa-check"></i> Set Redirect</button>
+								<button class="m3-btn m3-btn-tonal" onclick="deleteArtRedirect()" title="Remove redirect"><i class="fa-solid fa-trash"></i></button>
+							</div>
+							<div id="art-redirect-status" style="display:none;font-size:13px;padding:8px 12px;border-radius:8px;"></div>
+						</div>
+						<!-- ── Album Art Versions ─────────────────────────────────────────── -->
+						<div class="m3-card" style="padding:20px 16px;margin-top:16px;">
+							<div style="margin-bottom:16px;">
+								<div style="font-weight:600;font-size:15px;margin-bottom:4px;">Album Art Versions</div>
+								<div style="font-size:13px;opacity:0.6;margin-bottom:12px;">Append <code style="font-family:monospace;font-size:12px;">?v=N</code> to bypass edge cache after uploading higher quality art.</div>
+								<input id="artver-album-input" type="text" placeholder="Album name (e.g. VULTURES 1)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:14px;outline:none;margin-bottom:8px;">
+								<input id="artver-artist-input" type="text" placeholder="Artist (e.g. ¥$, Kanye West, Ty Dolla $ign)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:14px;outline:none;margin-bottom:8px;">
+								<input id="artver-version-input" type="number" min="1" placeholder="Version number (e.g. 2)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:14px;outline:none;margin-bottom:12px;">
+							</div>
+							<div style="display:flex;gap:8px;margin-bottom:12px;">
+								<button class="m3-btn m3-btn-filled" style="flex:1;justify-content:center;" onclick="previewArtVersion()"><i class="fa-solid fa-eye"></i> Preview</button>
+								<button class="m3-btn m3-btn-tonal" style="flex:1;justify-content:center;" onclick="purgeArtCache()"><i class="fa-solid fa-trash-can"></i> Purge Cache</button>
+							</div>
+							<div id="artver-preview" style="display:none;margin-bottom:12px;text-align:center;">
+								<img id="artver-preview-img" style="max-width:100%;max-height:200px;border-radius:10px;object-fit:cover;" src="" alt="Album art preview">
+								<div id="artver-preview-url" style="font-size:11px;opacity:0.4;margin-top:6px;font-family:monospace;word-break:break-all;"></div>
+							</div>
+							<div id="artver-status" style="display:none;font-size:13px;padding:8px 12px;border-radius:8px;"></div>
+						</div>
+<!-- ── Block Tracks ─────────────────────────────────────────────── -->
 					</div>
 				</div>
 			</div>
@@ -16647,6 +16705,27 @@ const R2AlbumArt = {
      */
     async get(album, artist = '') {
         if (!album || album === 'Unknown') return null;
+
+        // ── Art redirect: bypass ALL local caches and fetch directly from worker ──
+        // _artRedirectRegistry is populated at startup from /art-redirect/list.
+        // The worker serves the redirect image with Cache-Control: no-store so it is
+        // never stored locally — every request hits the worker, which reads from R2.
+        if (typeof _artRedirectRegistry !== 'undefined' && _artRedirectRegistry.has(album.toLowerCase())) {
+            if (!artist || artist === 'Unknown Artist') artist = albumArtistIndex[album] || '';
+            const redirectUrl = this.getR2Url(album, artist);
+            try {
+                const r = await fetch(redirectUrl, { cache: 'no-store' });
+                if (r && r.ok) {
+                    const blob = await r.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    // Store only in albumArtCache (not Cache API / IndexedDB) so it's
+                    // gone next session and we fetch fresh again from the worker.
+                    albumArtCache[album] = blobUrl;
+                    return blobUrl;
+                }
+            } catch(_) {}
+            return null;
+        }
 
         // Tier 1: memory — synchronous, zero I/O
         if (albumArtCache[album]) return albumArtCache[album];
@@ -29746,8 +29825,10 @@ function _redirectTapUnlock() {
     if (_redirectUnlockTaps >= 5) {
         _redirectUnlockTaps = 0;
         const btn = document.getElementById('settings-nav-redirect');
+        const artBtn = document.getElementById('settings-nav-art-redirect');
         if (btn) {
             btn.style.display = '';
+            if (artBtn) artBtn.style.display = '';
             showNotification('🔓 Admin tools unlocked');
         }
     } else {
@@ -29901,6 +29982,142 @@ async function submitTrackRedirect() {
     }
 }
 // ── End Track Redirect Admin Panel ───────────────────────────────────────────
+
+// ── Album Art Redirect Admin Panel ────────────────────────────────────────────
+// Same secret unlock as Track Redirects. Uses PUT/GET/DELETE /art-redirect on the worker.
+// On PUT: uploads image file as multipart → worker stores in R2 + saves KV redirect key.
+// On GET (album art request): worker checks KV, serves redirect image if present.
+
+let _artRedirectSelectedFile = null;   // File object from the picker
+let _artRedirectCheckTimer   = null;   // Debounce timer for existing-redirect check
+
+function artRedirectCheckExisting() {
+    clearTimeout(_artRedirectCheckTimer);
+    _artRedirectCheckTimer = setTimeout(async () => {
+        const album  = document.getElementById('art-redirect-album-input').value.trim();
+        const artist = document.getElementById('art-redirect-artist-input').value.trim();
+        const banner = document.getElementById('art-redirect-existing-banner');
+        const img    = document.getElementById('art-redirect-existing-img');
+        if (!album) { banner.style.display = 'none'; return; }
+        try {
+            const params = new URLSearchParams({ album, artist });
+            const res  = await fetch(`${PLAYER_WORKER_URL}/art-redirect?${params}`);
+            const data = await res.json();
+            if (data.to) {
+                img.src = data.to + '&_cb=' + Date.now(); // cache-bust so we see the real current image
+                banner.style.display = '';
+            } else {
+                banner.style.display = 'none';
+            }
+        } catch(_) { banner.style.display = 'none'; }
+    }, 500);
+}
+
+function artRedirectFileSelected(input) {
+    const file = input.files[0];
+    if (!file) return;
+    _artRedirectSelectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const preview = document.getElementById('art-redirect-new-preview');
+        const img     = document.getElementById('art-redirect-new-img');
+        img.src = e.target.result;
+        preview.style.display = '';
+    };
+    reader.readAsDataURL(file);
+}
+
+function artRedirectHandleDrop(event) {
+    event.preventDefault();
+    const file = event.dataTransfer?.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    // Feed into the file input
+    const input = document.getElementById('art-redirect-file-input');
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    artRedirectFileSelected(input);
+}
+
+function artRedirectClearFile() {
+    _artRedirectSelectedFile = null;
+    const input   = document.getElementById('art-redirect-file-input');
+    const preview = document.getElementById('art-redirect-new-preview');
+    const img     = document.getElementById('art-redirect-new-img');
+    input.value = '';
+    img.src = '';
+    preview.style.display = 'none';
+}
+
+function _artRedirectShowStatus(msg, ok) {
+    const el = document.getElementById('art-redirect-status');
+    el.textContent = msg;
+    el.style.background = ok
+        ? 'color-mix(in srgb,#22c55e 15%,transparent)'
+        : 'color-mix(in srgb,#ef4444 15%,transparent)';
+    el.style.display = '';
+}
+
+async function submitArtRedirect() {
+    const album  = document.getElementById('art-redirect-album-input').value.trim();
+    const artist = document.getElementById('art-redirect-artist-input').value.trim();
+    if (!album) { _artRedirectShowStatus('Please enter an album name.', false); return; }
+    if (!_artRedirectSelectedFile) { _artRedirectShowStatus('Please select an image file.', false); return; }
+    const status = document.getElementById('art-redirect-status');
+    status.textContent = 'Uploading…';
+    status.style.background = 'color-mix(in srgb,var(--md-sys-color-primary) 12%,transparent)';
+    status.style.display = '';
+    try {
+        const formData = new FormData();
+        formData.append('album',  album);
+        formData.append('artist', artist);
+        formData.append('image',  _artRedirectSelectedFile, 'album-art.jpg');
+        const res = await fetch(PLAYER_WORKER_URL + '/art-redirect', {
+            method:  'PUT',
+            headers: { 'X-Admin-Key': 'penis' },
+            body:    formData
+        });
+        if (!res.ok) throw new Error('Worker returned ' + res.status);
+        const data = await res.json();
+        _artRedirectShowStatus('✓ Redirect set! Requests for "' + album + '" will now serve your new art.', true);
+        // Show the existing redirect banner with the freshly-uploaded art
+        const banner = document.getElementById('art-redirect-existing-banner');
+        const img    = document.getElementById('art-redirect-existing-img');
+        img.src = data.to + '&_cb=' + Date.now();
+        banner.style.display = '';
+        artRedirectClearFile();
+        // Apply immediately to this session — evict local caches and update registry
+        // so the current tab also sees the new art without a page reload.
+        _applyArtRedirectLocally(album.toLowerCase(), { artist, to: data.to });
+        // Force-refresh all UI that's currently showing this album's art
+        if (typeof updateAllUIForAlbum === 'function') {
+            const freshUrl = await R2AlbumArt.get(album, artist);
+            if (freshUrl) updateAllUIForAlbum(album, freshUrl);
+        }
+    } catch(e) {
+        _artRedirectShowStatus('✗ Failed: ' + e.message, false);
+    }
+}
+
+async function deleteArtRedirect() {
+    const album  = document.getElementById('art-redirect-album-input').value.trim();
+    const artist = document.getElementById('art-redirect-artist-input').value.trim();
+    if (!album) { _artRedirectShowStatus('Please enter an album name to remove its redirect.', false); return; }
+    if (!confirm('Remove the art redirect for "' + album + '"? The original album art will be served again.')) return;
+    try {
+        const params = new URLSearchParams({ album, artist });
+        const res = await fetch(`${PLAYER_WORKER_URL}/art-redirect?${params}`, {
+            method:  'DELETE',
+            headers: { 'X-Admin-Key': 'penis' }
+        });
+        if (!res.ok) throw new Error('Worker returned ' + res.status);
+        _artRedirectShowStatus('✓ Redirect removed. Original art will be served.', true);
+        document.getElementById('art-redirect-existing-banner').style.display = 'none';
+    } catch(e) {
+        _artRedirectShowStatus('✗ Failed: ' + e.message, false);
+    }
+}
+// ── End Album Art Redirect Admin Panel ───────────────────────────────────────
 
 // ── Track Block Admin Panel ───────────────────────────────────────────────────
 // Mirrors the redirect panel. Uses GET/PUT/DELETE /block on the worker.
@@ -30091,8 +30308,82 @@ const _origOpenSettingsSection = typeof openSettingsSection === 'function' ? ope
 // Hook: re-apply styles whenever redirect panel becomes visible
 document.addEventListener('DOMContentLoaded', () => {
     loadBlockedTracks();
+    loadArtRedirects();
 });
 // ── End Track Block Admin Panel ───────────────────────────────────────────────
+
+// ── Album Art Redirect Registry ───────────────────────────────────────────────
+// Fetched from the worker on every page load. Any album in this set bypasses ALL
+// local caches (memory, Cache API, IndexedDB blobs) and always fetches fresh from
+// the worker, which serves the redirected R2 image with no-store so it's never
+// re-cached at the old URL.
+
+let _artRedirectRegistry = new Set(); // lowercase album names that have an active redirect
+let _artRedirectFull = {};            // lowercase album → { artist, to } for direct URL use
+
+async function loadArtRedirects() {
+    try {
+        const res = await fetch(PLAYER_WORKER_URL + '/art-redirect/list', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        _artRedirectRegistry = new Set(Object.keys(data));
+        _artRedirectFull = data;
+        // Evict any locally cached art for redirected albums so the fresh version is used
+        for (const albumLower of _artRedirectRegistry) {
+            _evictLocalArtCache(albumLower);
+        }
+        console.log('[ArtRedirect] Loaded', _artRedirectRegistry.size, 'redirect(s):', [..._artRedirectRegistry]);
+    } catch(e) {
+        console.warn('[ArtRedirect] Failed to load redirects:', e);
+    }
+}
+
+function _evictLocalArtCache(albumLower) {
+    // Evict from all in-memory caches using case-insensitive match
+    for (const key of Object.keys(albumArtCache)) {
+        if (key.toLowerCase() === albumLower) {
+            const val = albumArtCache[key];
+            if (val && val.startsWith('blob:')) {
+                try { URL.revokeObjectURL(val); } catch(_) {}
+            }
+            delete albumArtCache[key];
+        }
+    }
+    // Evict from ImageCacheAPI memory cache
+    for (const [k] of ImageCacheAPI.memoryCache) {
+        if (k.toLowerCase().includes(albumLower)) {
+            const val = ImageCacheAPI.memoryCache.get(k);
+            if (val && val.startsWith('blob:')) {
+                try { URL.revokeObjectURL(val); } catch(_) {}
+            }
+            ImageCacheAPI.memoryCache.delete(k);
+        }
+    }
+    // Remove from R2AlbumArt negative cache so it re-fetches
+    for (const key of R2AlbumArt._notInR2) {
+        if (key.toLowerCase() === albumLower) R2AlbumArt._notInR2.delete(key);
+    }
+    // Remove from _ensuredSet so R2AlbumArt.ensureUploaded doesn't think it's done
+    for (const key of R2AlbumArt._ensuredSet) {
+        if (key.toLowerCase() === albumLower) R2AlbumArt._ensuredSet.delete(key);
+    }
+    // Evict from Cache API (best-effort, async)
+    caches.open('goot-album-art-v1').then(cache => {
+        cache.keys().then(keys => {
+            keys.forEach(req => {
+                if (req.url.toLowerCase().includes(albumLower)) cache.delete(req);
+            });
+        });
+    }).catch(() => {});
+}
+
+// Call this after setting a new redirect so the current session also sees it immediately
+function _applyArtRedirectLocally(albumLower, redirectInfo) {
+    _artRedirectRegistry.add(albumLower);
+    _artRedirectFull[albumLower] = redirectInfo;
+    _evictLocalArtCache(albumLower);
+}
+// ── End Album Art Redirect Registry ──────────────────────────────────────────
 
 // ── Drive Video Player ────────────────────────────────────────────────────────
 // Plays a Drive file ID (or redirect target) directly in the YT player UI.
@@ -40124,6 +40415,7 @@ async function loadLyrics(trackId, target = 'sidebar', options = {}) {
     const artist = (metadata.artist || 'Unknown Artist').split(';').map(a => a.trim()).filter(Boolean).join(', ');
     const album = metadata.album || '';
     const duration = Math.round((metadata.duration || 0) / 1000); // Convert ms to seconds
+    const isrc = metadata.isrc || metadata.ISRC || null;
 
     // Update header
     titleEl.textContent = title;
@@ -40157,7 +40449,7 @@ async function loadLyrics(trackId, target = 'sidebar', options = {}) {
     }
     try {
         // ── Primary: try LyricsPlus word-level API first ──────────────────
-        let data = await _tryLyricsplusAPI(title, artist, album, duration);
+        let data = await _tryLyricsplusAPI(title, artist, album, duration, isrc);
 
         if (!data) {
             // ── Fallback: Cloudflare worker (lrclib / D1 cache) ───────────
@@ -40237,33 +40529,25 @@ async function loadLyrics(trackId, target = 'sidebar', options = {}) {
 }
 
 // ── LyricsPlus word-level API fetcher ──────────────────────────────────────
+// Uses https://lyricsplus.prjktla.workers.dev/v2/lyrics/get
 // Returns a data object compatible with displayLyrics, or null on failure.
 //
-// Strategy (in priority order):
-//   1. Apple Music word-by-word  (only if it truly has syllabus arrays)
-//   2. Musixmatch word-by-word
-//   3. Any other source word-by-word (lyricsplus, spotify, deezer…)
-//   4. Apple Music line-synced   (array but no syllabus — kept as fallback)
-//   5. Any other line-synced source
-//
-// We achieve this by making up to two passes against the API:
-//   Pass A — word-by-word sources only: apple, musixmatch-word
-//   Pass B (only if A yielded nothing truly word-level) — broader: all sources
-// Within each pass we inspect the payload and accept/reject based on whether
-// it is genuinely word-level (has syllabus on at least one line).
+// The endpoint already selects the best available source internally (Apple Music
+// word-level via QQ sync is the top priority).  A single request is all we need.
+// isrc is passed when available in track metadata for maximum match accuracy.
 
-async function _tryLyricsplusAPI(title, artist, album, durationSecs) {
+async function _tryLyricsplusAPI(title, artist, album, durationSecs, isrc) {
 
     // Helper: fetch one LyricsPlus request with a 15 s timeout.
-    async function _lpFetch(sourceList) {
-        const base = 'https://lyricsplus.binimum.org/v2/lyrics/get';
+    async function _lpFetch() {
+        const base = 'https://lyricsplus.prjktla.workers.dev/v2/lyrics/get';
         const params = new URLSearchParams({
-            title: title,
-            artist: artist,
-            album: album || '',
+            title:    title,
+            artist:   artist,
+            album:    album || '',
             duration: durationSecs || 0,
-            source: sourceList
         });
+        if (isrc) params.set('isrc', isrc);
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000);
         try {
@@ -40326,46 +40610,13 @@ async function _tryLyricsplusAPI(title, artist, album, durationSecs) {
     }
 
     try {
-        // ── Pass A: word-by-word capable sources only ────────────────────────
-        // Apple is first because it is the preferred source, but we will only
-        // accept its result if it is genuinely word-level.  Musixmatch-word is
-        // included as a strong secondary.
-        const jsonA = await _lpFetch('apple,musixmatch-word,deezer');
-        console.log('[LyricsPlus] Pass A raw response:', JSON.stringify(jsonA).slice(0, 400));
-        const dataA = _parseLP(jsonA);
-
-        if (dataA && dataA._isWordLevel) {
-            // Got true word-by-word — return immediately (best possible result).
-            console.log(`[LyricsPlus] Pass A: true word-level from ${dataA._lpSource}`);
-            return dataA;
+        const json = await _lpFetch();
+        console.log('[LyricsPlus] raw response:', JSON.stringify(json).slice(0, 400));
+        const data = _parseLP(json);
+        if (data) {
+            console.log(`[LyricsPlus] ${data._isWordLevel ? 'word-level' : 'line-synced'} from ${data._lpSource}`);
         }
-
-        // Pass A returned something but it is only line-synced (e.g. Apple gave
-        // array-format lines without syllabus).  Save it as a candidate but keep
-        // trying for genuine word-by-word from other sources.
-        const lineCandidateA = dataA; // may be null
-
-        // ── Pass B: remaining word-by-word sources ───────────────────────────
-        // Exclude sources already tried in Pass A to avoid duplicate requests.
-        const jsonB = await _lpFetch('musixmatch-word,lyricsplus,spotify,musixmatch');
-        console.log('[LyricsPlus] Pass B raw response:', JSON.stringify(jsonB).slice(0, 400));
-        const dataB = _parseLP(jsonB);
-
-        if (dataB && dataB._isWordLevel) {
-            console.log(`[LyricsPlus] Pass B: true word-level from ${dataB._lpSource}`);
-            return dataB;
-        }
-
-        // ── Neither pass yielded true word-by-word ───────────────────────────
-        // Return the best line-synced result we have (prefer Pass A / Apple
-        // since it was the priority source, fall back to Pass B if A was null).
-        const bestLine = lineCandidateA || dataB;
-        if (bestLine) {
-            console.log(`[LyricsPlus] Settling for line-synced from ${bestLine._lpSource}`);
-            return bestLine;
-        }
-
-        return null;
+        return data || null;
     } catch (e) {
         console.warn('LyricsPlus API failed:', e);
         return null;
@@ -47208,6 +47459,13 @@ const SETTINGS_SECTIONS = {
     sub: 'Replace old Drive IDs with new ones',
     icon: '<i class="fa-solid fa-arrow-right-arrow-left"></i>',
     panel: 'settings-panel-redirect',
+    secret: true
+  },
+  'art-redirect': {
+    title: 'Album Art Redirects',
+    sub: 'Replace album art with a new upload',
+    icon: '<i class="fa-solid fa-image"></i>',
+    panel: 'settings-panel-art-redirect',
     secret: true
   },
 
