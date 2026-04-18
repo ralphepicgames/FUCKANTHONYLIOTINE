@@ -836,11 +836,12 @@
                    <button class="browser-btn" title="Home" onclick="browserHome()">home</button>
                    <div class="browser-url-bar">
                        <span class="browser-lock insecure" id="browserLock">lock_open</span>
-                       <input type="text" id="browserUrlInput" placeholder="Enter URL (e.g. https://example.com)"
+                       <input type="text" id="browserUrlInput" placeholder="https://..."
                            onkeydown="if(event.key==='Enter')browserNavigate(this.value)"
                            onclick="this.select()">
                    </div>
                    <button class="browser-btn" title="Fullscreen" id="btnFullscreen" onclick="browserToggleFullscreen()">fullscreen</button>
+                   <button class="browser-btn" title="Worker Settings" onclick="showBrowserSetup()">settings</button>
                </div>
                <div class="browser-frame-wrap">
                    <div class="browser-loading-bar" id="browserLoadBar"></div>
@@ -848,6 +849,13 @@
                        allow="autoplay; fullscreen"
                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock"
                    ></iframe>
+                   <div class="browser-setup-overlay" id="browserSetupOverlay" style="display:none">
+                       <h2>// WORKER SETTINGS</h2>
+                       <p>The default worker may be blocked on managed networks. Enter a custom worker URL to bypass this.</p>
+                       <input type="text" class="browser-setup-input" id="workerUrlInput"
+                           placeholder="https://your-worker.your-domain.com">
+                       <button class="browser-setup-btn" onclick="saveBrowserWorker()">SAVE & RECONNECT</button>
+                   </div>
                </div>
            </div>
        </div>
@@ -1417,6 +1425,22 @@ p{color:${accent};opacity:0.55;font-size:0.8rem;line-height:1.9;letter-spacing:0
        frame.srcdoc = welcomeHtml;
    }
 
+   function showBrowserSetup() {
+       const overlay = document.getElementById('browserSetupOverlay');
+       overlay.style.display = overlay.style.display === 'none' ? 'flex' : 'none';
+       const inp = document.getElementById('workerUrlInput');
+       if (inp && browserWorkerUrl) inp.value = browserWorkerUrl;
+   }
+
+   function saveBrowserWorker() {
+       const input = document.getElementById('workerUrlInput').value.trim().replace(/\/$/, '');
+       if (!input) return;
+       browserWorkerUrl = input;
+       localStorage.setItem(WORKER_STORAGE_KEY, input);
+       document.getElementById('browserSetupOverlay').style.display = 'none';
+       browserShowWelcome();
+   }
+
    function browserToggleFullscreen() {
        const wrapper = document.getElementById('browserWrapper');
        const btn = document.getElementById('btnFullscreen');
@@ -1463,8 +1487,11 @@ p{color:${accent};opacity:0.55;font-size:0.8rem;line-height:1.9;letter-spacing:0
    }
 
    function browserLoadUrl(url, pushHistory = true) {
+       const frame = document.getElementById('browserFrame');
        const urlInput = document.getElementById('browserUrlInput');
        const lock = document.getElementById('browserLock');
+
+       browserSetLoading(true);
 
        let displayUrl = url;
        try {
@@ -1478,7 +1505,7 @@ p{color:${accent};opacity:0.55;font-size:0.8rem;line-height:1.9;letter-spacing:0
        urlInput.value = displayUrl;
 
        const proxied = url.startsWith(browserWorkerUrl) ? url : proxyUrl(url);
-       window.open(proxied, '_blank');
+       frame.src = proxied;
 
        if (pushHistory) {
            browserHistory = browserHistory.slice(0, browserHistoryIdx + 1);
@@ -1486,6 +1513,7 @@ p{color:${accent};opacity:0.55;font-size:0.8rem;line-height:1.9;letter-spacing:0
            browserHistoryIdx = browserHistory.length - 1;
        }
        browserUpdateNav();
+       frame.onload = () => browserSetLoading(false);
    }
 
    function browserNavigate(input) {
