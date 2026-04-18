@@ -16421,6 +16421,11 @@ const AlbumArtManager = {
         for (const key of Object.keys(this.cache)) {
             delete this.cache[key];
         }
+        // Clear reverse index — otherwise get() immediately re-populates cache
+        // from stale index entries on the next lookup, undoing the clear.
+        for (const key of Object.keys(this._albumArtIndex)) {
+            delete this._albumArtIndex[key];
+        }
 
         // Clear Cache API storage
         try {
@@ -29503,20 +29508,27 @@ async function clearAllCache() {
 
         // ── In-memory: text metadata ──
         trackMetadata = {};
+        trackLoudnessCache = {};
         albumColorCache.clear();
         pendingAlbumArtSaves.clear();
         pendingMetadataLoads.clear();
         metadataLoadingState.clear();
+        if (typeof folderContentsCache !== 'undefined') folderContentsCache.clear();
+        // Zero accent mirror so stale colors aren't served until next reload
+        if (typeof _accentCacheMirror !== 'undefined') {
+            for (const k of Object.keys(_accentCacheMirror)) delete _accentCacheMirror[k];
+        }
+        // Cancel pending IDB writes — they would re-populate trackMetadata store post-clear
+        if (typeof _idbWriteQueue !== 'undefined') _idbWriteQueue.clear();
 
         // ── In-memory: album art + extraction state ──
         // Reset these so art gets re-extracted and re-uploaded on next load
         albumsWithArtLoaded.clear();
         artExtractionAttempted.clear();
         R2AlbumArt._ensuredSet.clear();
-        await AlbumArtManager.clear(); // clears albumArtCache / tempArtCache
-
-        // ── Cache API: album art ──
-        await ImageCacheAPI.clear();
+        // AlbumArtManager.clear() handles: cache, _albumArtIndex, blob revocation, Cache API
+        await AlbumArtManager.clear();
+        // Note: redundant ImageCacheAPI.clear() removed — AlbumArtManager.clear() calls it
 
         // ── IndexedDB: trackMetadata store (title/artist/album/albumArt fields) ──
         if (!metaDB) await initMetaDB();
