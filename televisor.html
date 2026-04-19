@@ -2416,7 +2416,7 @@
 
           if (typeof Hls !== 'undefined' && Hls.isSupported()) {
             const _tvStartHls = (url) => {
-              const hls = new Hls({ enableWorker: true, maxBufferLength: 30 });
+              const hls = new Hls({ enableWorker: true, maxBufferLength: 60, maxMaxBufferLength: 120, fragLoadingMaxRetry: 8, fragLoadingRetryDelay: 1000 });
               hls.loadSource(STREAM_PROXY + 'hls?url=' + encodeURIComponent(url));
               hls.attachMedia(vid());
               hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -2631,7 +2631,7 @@
           const wasPlaying = !v.paused;
           v._hls.destroy();
           v._hls = null;
-          const hls = new Hls({ enableWorker: true, maxBufferLength: 30 });
+          const hls = new Hls({ enableWorker: true, maxBufferLength: 60, maxMaxBufferLength: 120, fragLoadingMaxRetry: 8, fragLoadingRetryDelay: 1000 });
           hls.loadSource(STREAM_PROXY + 'hls?url=' + encodeURIComponent(d.muxed_url));
           hls.attachMedia(v);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -4068,15 +4068,21 @@
 
       if (typeof Hls !== 'undefined' && Hls.isSupported()) {
         const hls = new Hls({
-          enableWorker: false,
-          manifestLoadingMaxRetry: 3,
-          manifestLoadingRetryDelay: 1000,
-          levelLoadingMaxRetry: 4,
-          levelLoadingRetryDelay: 1000,
-          fragLoadingMaxRetry: 6,
-          fragLoadingRetryDelay: 1000,
-          // Don't give up on network errors — tunnel segments can be slow
-          xhrSetup: (xhr) => { xhr.timeout = 30000; },
+          enableWorker: true,
+          maxBufferLength: 120,
+          maxMaxBufferLength: 240,
+          maxBufferSize: 200 * 1000 * 1000,
+          maxBufferHole: 2,
+          highBufferWatchdogPeriod: 10,
+          nudgeMaxRetry: 10,
+          manifestLoadingMaxRetry: 5,
+          manifestLoadingRetryDelay: 1500,
+          levelLoadingMaxRetry: 6,
+          levelLoadingRetryDelay: 1500,
+          fragLoadingMaxRetry: 10,
+          fragLoadingRetryDelay: 1500,
+          fragLoadingMaxRetryTimeout: 60000,
+          xhrSetup: (xhr) => { xhr.timeout = 60000; },
         });
         video._mvHls = hls;
 
@@ -4111,7 +4117,23 @@
             _showLoading('Buffering…');
             hls.destroy();
             video._mvHls = null;
-            const hlsR = new Hls({ enableWorker: false, xhrSetup: (xhr) => { xhr.timeout = 30000; } });
+            const hlsR = new Hls({
+          enableWorker: true,
+          maxBufferLength: 120,
+          maxMaxBufferLength: 240,
+          maxBufferSize: 200 * 1000 * 1000,
+          maxBufferHole: 2,
+          highBufferWatchdogPeriod: 10,
+          nudgeMaxRetry: 10,
+          manifestLoadingMaxRetry: 5,
+          manifestLoadingRetryDelay: 1500,
+          levelLoadingMaxRetry: 6,
+          levelLoadingRetryDelay: 1500,
+          fragLoadingMaxRetry: 10,
+          fragLoadingRetryDelay: 1500,
+          fragLoadingMaxRetryTimeout: 60000,
+          xhrSetup: (xhr) => { xhr.timeout = 60000; },
+        });
             video._mvHls = hlsR;
             hlsR.loadSource(hlsUrl);
             hlsR.attachMedia(video);
@@ -4139,15 +4161,22 @@
             hls.destroy();
             video._mvHls = null;
             const hls2 = new Hls({
-              enableWorker: false,
-              manifestLoadingMaxRetry: 3,
-              manifestLoadingRetryDelay: 1000,
-              levelLoadingMaxRetry: 4,
-              levelLoadingRetryDelay: 1000,
-              fragLoadingMaxRetry: 6,
-              fragLoadingRetryDelay: 1000,
-              xhrSetup: (xhr) => { xhr.timeout = 30000; },
-            });
+          enableWorker: true,
+          maxBufferLength: 120,
+          maxMaxBufferLength: 240,
+          maxBufferSize: 200 * 1000 * 1000,
+          maxBufferHole: 2,
+          highBufferWatchdogPeriod: 10,
+          nudgeMaxRetry: 10,
+          manifestLoadingMaxRetry: 5,
+          manifestLoadingRetryDelay: 1500,
+          levelLoadingMaxRetry: 6,
+          levelLoadingRetryDelay: 1500,
+          fragLoadingMaxRetry: 10,
+          fragLoadingRetryDelay: 1500,
+          fragLoadingMaxRetryTimeout: 60000,
+          xhrSetup: (xhr) => { xhr.timeout = 60000; },
+        });
             video._mvHls = hls2;
             hls2.loadSource(hlsUrl);
             hls2.attachMedia(video);
