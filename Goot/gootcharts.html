@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Goot Charts</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="dns-prefetch" href="https://gootapimask.gootmedia.workers.dev">
-<link rel="preconnect" href="https://gootapimask.gootmedia.workers.dev" crossorigin>
+<link rel="dns-prefetch" href="https://gootapimask.goot-api.workers.dev">
+<link rel="preconnect" href="https://gootapimask.goot-api.workers.dev" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
 <style>
 /* ── Reset & root ─────────────────────────────────────────────── */
@@ -34,7 +34,7 @@
     --radius-sm:    8px;
     --shadow:       0 4px 24px rgba(0,0,0,0.45);
     --shadow-lg:    0 12px 48px rgba(0,0,0,0.6);
-    --chart-worker: https://gootapimask.gootmedia.workers.dev;
+    --chart-worker: https://gootapimask.goot-api.workers.dev;
 }
 
 body {
@@ -794,8 +794,8 @@ body {
 <script>
 'use strict';
 
-const WORKER = 'https://gootapimask.gootmedia.workers.dev';
-const R2_ART_BASE = 'https://gootapimask.gootmedia.workers.dev/r2/album-art';
+const WORKER = 'https://gootapimask.goot-api.workers.dev';
+const R2_ART_BASE = 'https://gootapimask.goot-api.workers.dev/r2/album-art';
 
 /**
  * Resolve album art URL for a chart item via R2.
@@ -1382,7 +1382,7 @@ function openInPlayer(trackId) {
 
     // Populate metadata + art once Goot is ready
     function tryPopulate(attempts) {
-        var workerUrl = typeof PLAYER_WORKER_URL !== 'undefined' ? PLAYER_WORKER_URL : 'https://gootapimask.gootmedia.workers.dev';
+        var workerUrl = typeof PLAYER_WORKER_URL !== 'undefined' ? PLAYER_WORKER_URL : 'https://gootapimask.goot-api.workers.dev';
 
         fetch(workerUrl + '/metadata/track/' + trackId)
             .then(function(r){ return r.ok ? r.json() : null; })
