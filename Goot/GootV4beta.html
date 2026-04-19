@@ -3075,6 +3075,30 @@
 			border-radius: 14px;
 		}
 
+		/* ── Desktop player bar: assign grid columns explicitly ── */
+		#playerBarControls {
+			grid-column: 1;
+			grid-row: 1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 6px;
+		}
+		#playerBarTrackInfo {
+			grid-column: 2;
+			grid-row: 1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 12px;
+			min-width: 0;
+			overflow: hidden;
+		}
+		.pb-right-actions {
+			grid-column: 3;
+			grid-row: 1;
+		}
+
 		/* ── Player Bar Layout: Classic ────────────────────────────────────── */
 		.pb-layout-classic .player-bar {
 			grid-template-columns: minmax(200px, 1fr) minmax(300px, 2fr) minmax(180px, 1fr) !important;
@@ -3122,6 +3146,7 @@
 		}
 		/* track info goes left in classic */
 		.pb-layout-classic #playerBarTrackInfo {
+			grid-column: 1 !important;
 			justify-content: flex-start !important;
 		}
 		/* right actions go to 3rd column in classic */
