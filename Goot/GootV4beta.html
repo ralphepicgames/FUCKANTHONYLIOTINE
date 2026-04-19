@@ -5294,55 +5294,48 @@
 			z-index: 100;
 		}
 
-		/* Asteroid crash animation */
+		/* Asteroid crash animation — flies in from top, no horizontal bleed */
 		@keyframes asteroidCrash {
 			0% {
-				transform: translate(200vw, -200vh) rotate(0deg) scale(0.1);
+				transform: translate(40px, -200vh) rotate(0deg) scale(0.1);
 				opacity: 0;
 				filter: blur(20px) brightness(5) saturate(2) hue-rotate(0deg);
 				box-shadow: 0 0 0px rgba(255, 77, 77, 0);
 			}
-
 			20% {
-				transform: translate(150vw, -100vh) rotate(360deg) scale(0.3);
+				transform: translate(30px, -120vh) rotate(360deg) scale(0.3);
 				opacity: 0.7;
 				filter: blur(15px) brightness(4) saturate(2) hue-rotate(20deg);
 				box-shadow: 0 0 100px rgba(255, 77, 77, 1), 0 0 200px rgba(255, 140, 0, 0.8);
 			}
-
 			40% {
-				transform: translate(100vw, -50vh) rotate(720deg) scale(0.5);
+				transform: translate(20px, -60vh) rotate(720deg) scale(0.5);
 				opacity: 0.8;
 				filter: blur(12px) brightness(3.5) saturate(2) hue-rotate(40deg);
 				box-shadow: 0 0 150px rgba(255, 77, 77, 1), 0 0 300px rgba(255, 140, 0, 1), 0 0 400px rgba(255, 200, 0, 0.6);
 			}
-
 			60% {
-				transform: translate(50vw, -20vh) rotate(1080deg) scale(0.8);
+				transform: translate(10px, -20vh) rotate(1080deg) scale(0.8);
 				opacity: 1;
 				filter: blur(8px) brightness(3) saturate(2) hue-rotate(60deg);
 				box-shadow: 0 0 200px rgba(255, 77, 77, 1), 0 0 400px rgba(255, 140, 0, 1), 0 0 600px rgba(255, 200, 0, 0.8);
 			}
-
 			70% {
-				transform: translate(20%, -10%) rotate(1440deg) scale(1.3);
+				transform: translate(5px, -5vh) rotate(1440deg) scale(1.3);
 				opacity: 1;
 				filter: blur(5px) brightness(2.5) saturate(2);
 				box-shadow: 0 0 250px rgba(255, 77, 77, 1), 0 0 500px rgba(255, 140, 0, 1), 0 0 800px rgba(255, 200, 0, 1);
 			}
-
 			85% {
 				transform: translate(0, 0) rotate(1800deg) scale(0.85);
 				filter: blur(2px) brightness(2);
 				box-shadow: 0 0 300px rgba(255, 77, 77, 1), 0 0 600px rgba(255, 140, 0, 1), 0 0 1000px rgba(255, 200, 0, 1);
 			}
-
 			92% {
 				transform: translate(0, 0) rotate(1800deg) scale(1.15);
 				filter: blur(0px) brightness(1.5);
 				box-shadow: 0 0 200px rgba(255, 77, 77, 0.8), 0 0 400px rgba(255, 140, 0, 0.6);
 			}
-
 			100% {
 				transform: translate(0, 0) rotate(1800deg) scale(1);
 				opacity: 1;
@@ -11978,33 +11971,43 @@
 		#mobileSearchOverlay{ display: none; }
 		@media (max-width: 768px) {
 
-			body{ overflow: hidden; }
-			.app-shell{ flex-direction: column; }
+			body{ overflow: hidden; overflow-x: hidden !important; }
+			html{ overflow-x: hidden !important; }
+			.app-shell{ flex-direction: column; overflow-x: hidden; }
 			.nav-rail{ display: none !important; }
 			.main-container {
 				padding-bottom: calc(160px + env(safe-area-inset-bottom)) !important;
 				width: 100% !important;
 				max-width: 100% !important;
+				overflow-x: hidden !important;
 			}
 
 			/* ── Mobile top header: clean floating bar ── */
 			.top-header-row {
-				margin: env(safe-area-inset-top, 0px) 12px 0 !important;
-				padding: 0 8px 0 4px !important;
+				margin: env(safe-area-inset-top, 0px) 10px 0 !important;
+				padding: 0 6px 0 6px !important;
 				border-radius: 100px !important;
-				min-height: 48px !important;
+				min-height: 50px !important;
 				top: 8px !important;
 				gap: 4px !important;
+				align-items: center !important;
 			}
 
 			.top-header-center{ display: none !important; }
 			.top-header-left {
 				flex: 1 !important;
 				gap: 6px !important;
-				height: 48px !important;
+				height: 50px !important;
+				align-items: center !important;
+				display: flex !important;
 			}
 
-			.top-header-right{ height: 48px !important; }
+			.top-header-right{
+				height: 50px !important;
+				display: flex !important;
+				align-items: center !important;
+				gap: 2px !important;
+			}
 			/* Mobile search pill — tighter */
 			#mobileSearchBtn {
 				height: 36px !important;
@@ -12018,9 +12021,15 @@
 			#mobileHamburger{ display: none !important; }
 			#gootLogo {
 				display: flex !important;
-				width: 36px !important;
-				height: 36px !important;
+				width: 40px !important;
+				height: 40px !important;
+				min-width: 40px !important;
 				flex-shrink: 0 !important;
+				cursor: pointer !important;
+				padding: 4px !important;
+				margin: -4px !important;
+				-webkit-tap-highlight-color: transparent !important;
+				touch-action: manipulation !important;
 			}
 
 			.header-logo-text{ display: none !important; }
@@ -12032,17 +12041,17 @@
 				display: flex !important;
 				flex: 1;
 				align-items: center;
-				gap: 10px;
-				height: 38px;
-				background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
-				border: 1px solid color-mix(in srgb, var(--md-sys-color-outline) 30%, transparent);
+				gap: 8px;
+				height: 36px;
+				background: color-mix(in srgb, var(--md-sys-color-on-surface) 7%, transparent);
+				border: 1px solid color-mix(in srgb, var(--md-sys-color-outline) 25%, transparent);
 				border-radius: 100px;
-				color: color-mix(in srgb, var(--md-sys-color-on-surface) 50%, transparent);
+				color: color-mix(in srgb, var(--md-sys-color-on-surface) 45%, transparent);
 				font-family: inherit;
 				font-size: 14px;
 				font-weight: 500;
 				cursor: pointer;
-				padding: 0 14px;
+				padding: 0 12px;
 				-webkit-tap-highlight-color: transparent;
 				transition: background 0.15s, border-color 0.15s;
 			}
@@ -12156,7 +12165,7 @@
 				padding: 8px 0 calc(20px + env(safe-area-inset-bottom));
 			}
 
-			/* ── Mini player: simple relative container, controls absolutely right ── */
+			/* ── Mini player: flexbox — track info left, controls right ── */
 			.player-bar {
 				position: fixed !important;
 				bottom: calc(60px + env(safe-area-inset-bottom)) !important;
@@ -12164,7 +12173,11 @@
 				right: 0 !important;
 				border-radius: 0 !important;
 				height: 64px !important;
-				display: block !important;
+				display: flex !important;
+				flex-direction: row !important;
+				align-items: center !important;
+				padding: 0 8px 0 10px !important;
+				gap: 0 !important;
 				z-index: 299 !important;
 				border: none !important;
 				border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -12188,46 +12201,66 @@
 				transition: width 0.5s linear;
 			}
 
-			/* Track info — left side, occupies full height, right-padded to leave room for buttons */
+			/* Track info — takes all remaining space, flex child */
 			#playerBarTrackInfo {
-				position: absolute !important;
-				left: 12px !important;
-				top: 0 !important;
-				bottom: 0 !important;
-				right: 120px !important;
+				flex: 1 !important;
+				min-width: 0 !important;
+				order: 1 !important;
+				position: static !important;
 				display: flex !important;
 				align-items: center !important;
-				gap: 12px !important;
+				justify-content: flex-start !important;
+				gap: 10px !important;
 				overflow: hidden !important;
+				pointer-events: auto !important;
 			}
 
-			/* Art */
+			/* Art — override hardcoded 74px inline style */
 			#npArt {
-				width: 44px !important;
-				height: 44px !important;
-				min-width: 44px !important;
-				border-radius: 6px !important;
+				width: 46px !important;
+				height: 46px !important;
+				min-width: 46px !important;
+				max-width: 46px !important;
+				border-radius: 8px !important;
 				flex-shrink: 0 !important;
-				box-shadow: none !important;
+				box-shadow: 0 2px 8px rgba(0,0,0,0.45) !important;
+				overflow: hidden !important;
+			}
+			/* Make sure the music note placeholder is centred inside the smaller art */
+			#npArt > div:first-child {
+				width: 100% !important;
+				height: 100% !important;
+				display: flex !important;
+				align-items: center !important;
+				justify-content: center !important;
+			}
+			#npArt > div:first-child i { font-size: 18px !important; }
+
+			/* Text block — must not shrink past its container */
+			#playerBarTrackInfo > div:last-child {
+				min-width: 0 !important;
+				overflow: hidden !important;
+				flex: 1 !important;
 			}
 
 			/* Hide album line in mini player */
 			#npAlbum{ display: none !important; }
-			/* Controls — absolutely pinned to right edge */
+
+			/* Controls — fixed-width flex child on the right */
 			#playerBarControls {
-				position: absolute !important;
-				right: 0 !important;
-				top: 0 !important;
-				bottom: 0 !important;
+				position: static !important;
+				order: 2 !important;
+				flex-shrink: 0 !important;
+				width: 128px !important;
 				display: flex !important;
 				flex-direction: row !important;
 				align-items: center !important;
-				gap: 0 !important;
-				padding-right: 8px !important;
-				width: auto !important;
+				justify-content: center !important;
+				gap: 2px !important;
+				padding: 0 !important;
 			}
 
-			/* Hide everything except play + next */
+			/* Hide everything except skip-back, play, next */
 			#playerBarProgressBg,
 			#playerBarArtBg,
 			#curTime,
@@ -12240,27 +12273,37 @@
 			.player-bar-utility-btn,
 			#btnShuffle,
 			#btnRepeat,
-			#btnSkipBack,
-			.player-bar-icon-btn{ display: none !important; }
+			.player-bar-icon-btn,
+			.pb-rate-wrap,
+			.pb-classic-progress,
+			.pb-right-actions { display: none !important; }
+
+			/* Skip-back button — show it so user has prev/play/next */
+			#btnSkipBack {
+				display: flex !important;
+			}
+
 			/* Play button */
 			.player-bar-play-btn {
-				width: 40px !important;
-				height: 40px !important;
-				font-size: 18px !important;
+				width: 44px !important;
+				height: 44px !important;
+				font-size: 19px !important;
 				background: transparent !important;
 				box-shadow: none !important;
 				border: none !important;
 				color: var(--md-sys-color-on-surface) !important;
+				flex-shrink: 0 !important;
 			}
 
-			/* Next button */
+			/* Prev / Next buttons */
 			.player-bar-control-btn {
 				width: 36px !important;
 				height: 36px !important;
-				font-size: 18px !important;
+				font-size: 17px !important;
 				background: transparent !important;
 				box-shadow: none !important;
 				color: var(--md-sys-color-on-surface) !important;
+				flex-shrink: 0 !important;
 			}
 
 			/* ── Bottom nav bar ── */
@@ -12524,61 +12567,74 @@
 			}
 
 			.clean-close-fab:active{ background: rgba(255, 255, 255, 0.16) !important; }
-			/* Main scroll container */
+			/* Main scroll container — no scroll, fixed column layout */
 			.clean-player {
 				position: relative !important;
 				z-index: 2 !important;
 				flex-direction: column !important;
 				height: 100% !important;
-				overflow-y: auto !important;
-				-webkit-overflow-scrolling: touch !important;
-				padding: calc(env(safe-area-inset-top) + 64px) 24px calc(env(safe-area-inset-bottom) + 24px) !important;
+				overflow: hidden !important;
+				padding: 0 !important;
 				gap: 0 !important;
 				align-items: stretch !important;
+				display: flex !important;
 			}
 
 			.clean-left-section {
 				flex-direction: column !important;
 				align-items: stretch !important;
 				width: 100% !important;
+				height: 100% !important;
 				padding: 0 !important;
 				gap: 0 !important;
-				overflow: visible !important;
+				overflow: hidden !important;
+				display: flex !important;
+				flex: 1 !important;
 			}
 
-			/* ── Album Art ── */
+			/* ── Album Art — square, sized so controls always fit below ── */
 			.desktop-extended-art {
-				width: 100% !important;
-				max-width: 100% !important;
-				aspect-ratio: auto !important;
-				border-radius: 16px !important;
-				margin-bottom: 32px !important;
-				box-shadow:
-					0 8px 16px rgba(0, 0, 0, 0.3),
-					0 24px 64px rgba(0, 0, 0, 0.6) !important;
 				flex-shrink: 0 !important;
-				overflow: visible !important;
+				flex: 0 0 auto !important;
+				width: calc(100vw - 40px) !important;
+				height: calc(100vw - 40px) !important;
+				max-width: calc(100vw - 40px) !important;
+				max-height: 42vh !important;
+				aspect-ratio: 1 / 1 !important;
+				align-self: center !important;
+				margin: calc(env(safe-area-inset-top) + 56px) 20px 16px !important;
+				border-radius: 16px !important;
+				overflow: hidden !important;
+				box-shadow:
+					0 8px 24px rgba(0, 0, 0, 0.4),
+					0 24px 64px rgba(0, 0, 0, 0.6) !important;
 			}
 
 			.desktop-extended-art-img {
 				border-radius: 16px !important;
 				width: 100% !important;
-				height: auto !important;
-				max-height: 70vh !important;
-				object-fit: contain !important;
+				height: 100% !important;
+				max-height: none !important;
+				object-fit: cover !important;
 			}
 
-			/* ── Controls Panel ── */
+			/* ── Controls panel — fills remaining space below art ── */
 			.clean-controls-panel {
+				flex: 1 !important;
+				min-height: 0 !important;
 				width: 100% !important;
 				max-width: none !important;
 				background: transparent !important;
 				border: none !important;
 				backdrop-filter: none !important;
-				padding: 0 !important;
+				padding: 0 20px calc(env(safe-area-inset-bottom) + 12px) !important;
 				border-radius: 0 !important;
 				box-shadow: none !important;
-				overflow: visible !important;
+				overflow: hidden !important;
+				display: flex !important;
+				flex-direction: column !important;
+				justify-content: flex-end !important;
+				box-sizing: border-box !important;
 			}
 
 			/* ── Track Info ── */
@@ -12588,29 +12644,31 @@
 				width: 100% !important;
 				display: flex !important;
 				flex-direction: column !important;
-				gap: 4px !important;
+				gap: 0 !important;
+				flex: 1 !important;
+				justify-content: flex-end !important;
 			}
 
 			.clean-title {
-				font-size: 26px !important;
+				font-size: 22px !important;
 				font-weight: 700 !important;
-				letter-spacing: -0.5px !important;
+				letter-spacing: -0.4px !important;
 				color: #fff !important;
 				white-space: nowrap !important;
 				overflow: hidden !important;
 				text-overflow: ellipsis !important;
-				margin: 0 !important;
+				margin: 0 0 3px !important;
 				line-height: 1.2 !important;
 			}
 
 			.clean-artist {
-				font-size: 15px !important;
-				color: rgba(255, 255, 255, 0.65) !important;
+				font-size: 14px !important;
+				color: rgba(255, 255, 255, 0.6) !important;
 				font-weight: 500 !important;
 				white-space: nowrap !important;
 				overflow: hidden !important;
 				text-overflow: ellipsis !important;
-				margin: 0 !important;
+				margin: 0 0 14px !important;
 			}
 
 			/* ── M3 Seek Bar ── */
@@ -12619,7 +12677,7 @@
 				flex-direction: column !important;
 				gap: 0 !important;
 				width: 100% !important;
-				margin: 24px 0 8px !important;
+				margin: 0 0 4px !important;
 				box-sizing: border-box !important;
 			}
 
@@ -12707,19 +12765,19 @@
 			#deCurTime {
 				order: 2 !important;
 				position: absolute !important;
-				bottom: -20px !important;
+				bottom: -18px !important;
 				left: 0 !important;
 			}
 
 			#deDurTime {
 				order: 3 !important;
 				position: absolute !important;
-				bottom: -20px !important;
+				bottom: -18px !important;
 				right: 0 !important;
 			}
 
-			/* Extra space below progress for timestamps */
-			.clean-progress{ margin-bottom: 32px !important; }
+			/* Space below progress for timestamps */
+			.clean-progress{ margin-bottom: 26px !important; }
 			/* Hide fs duplicate times */
 			#fsCurTime,
 			#fsDurTime{ display: none !important; }
@@ -12731,8 +12789,8 @@
 				justify-content: space-between !important;
 				width: 100% !important;
 				gap: 0 !important;
-				margin-bottom: 24px !important;
-				padding: 0 4px !important;
+				margin-bottom: 14px !important;
+				padding: 0 2px !important;
 			}
 
 			/* Button styles handled by .desktop-extended .clean-btn rules above */
@@ -12766,8 +12824,8 @@
 			/* ── Up Next / Lyrics action buttons ── */
 			.mobile-expanded-action-row {
 				display: flex !important;
-				gap: 12px !important;
-				margin-top: 8px !important;
+				gap: 10px !important;
+				margin-top: 0 !important;
 			}
 
 			/* M3 Tonal Button */
@@ -39743,6 +39801,19 @@ function handleLogoClick(event) {
 }
 function revealSecretFolder() {
      // Debug log
+    // On mobile, ensure library screen is active so folder cards are rendered
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        const libNav = document.querySelector('.nav-item[data-screen="library"]');
+        if (libNav) nav(libNav);
+        const mobileLibBtn = document.querySelector('.mobile-nav-btn[data-screen="library"]');
+        if (mobileLibBtn) mobileBottomNav('library', mobileLibBtn);
+        setTimeout(() => _doRevealSecretFolder(), 400);
+        return;
+    }
+    _doRevealSecretFolder();
+}
+function _doRevealSecretFolder() {
     const secretFolder = document.querySelector('.folder-card.secret-folder');
      // Debug log
     if (secretFolder) {
@@ -39752,7 +39823,7 @@ function revealSecretFolder() {
         secretFolder.scrollIntoView({
             behavior: 'smooth',
             block: 'center',
-            inline: 'center'
+            inline: 'nearest'
         });
         setTimeout(() => {
             secretFolder.style.opacity = '1';
@@ -47246,16 +47317,7 @@ document.addEventListener('keydown', e => {
     }
 });
 
-// ── Mini player: absolute positioning handles layout, just fix controls inner div ──
-function fixMiniPlayerLayout() {
-    if (window.innerWidth > 768) return;
-    const controls = document.getElementById('playerBarControls');
-    const btnsRow = controls && controls.querySelector('div');
-    if (controls) controls.style.cssText = 'position:absolute;right:0;top:0;bottom:0;display:flex;flex-direction:row;align-items:center;gap:0;padding-right:8px;width:auto;';
-    if (btnsRow) btnsRow.style.cssText = 'display:flex;flex-direction:row;align-items:center;gap:0;';
-}
-document.addEventListener('DOMContentLoaded', fixMiniPlayerLayout);
-window.addEventListener('resize', fixMiniPlayerLayout);
+// ── Mini player layout handled entirely by CSS flexbox ──
 
 								// ── Mobile drawer ──
 function toggleMobileDrawer() {
