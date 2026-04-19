@@ -4013,6 +4013,22 @@
     let _mvSources  = [];
     let _mvActiveIdx = 0;
 
+    // Force English audio track on HLS instance — providers often default to non-English
+    function _forceEnglishAudio(hlsInstance) {
+      try {
+        const tracks = hlsInstance.audioTracks;
+        if (!tracks || tracks.length <= 1) return;
+        const en = tracks.findIndex(t =>
+          t.lang?.toLowerCase().startsWith('en') ||
+          t.name?.toLowerCase().includes('english') ||
+          t.name?.toLowerCase() === 'en'
+        );
+        if (en >= 0 && en !== hlsInstance.audioTrack) {
+          hlsInstance.audioTrack = en;
+        }
+      } catch(_) {}
+    }
+
     async function loadMoviesEmbed(id, type, season, episode) {
       document.getElementById('mvPlayerPlaceholder').style.display = 'none';
       document.getElementById('moviesIframeWrap').style.display = '';
@@ -4093,9 +4109,11 @@
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          _forceEnglishAudio(hls);
           document.getElementById('mvIframeLoading').style.display = 'none';
           video.play().catch(() => {});
         });
+        hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => { _forceEnglishAudio(hls); });
 
         hls.on(Hls.Events.ERROR, (_, d) => {
           if (!d.fatal) return;
@@ -4138,9 +4156,11 @@
             hlsR.loadSource(hlsUrl);
             hlsR.attachMedia(video);
             hlsR.on(Hls.Events.MANIFEST_PARSED, () => {
+              _forceEnglishAudio(hlsR);
               document.getElementById('mvIframeLoading').style.display = 'none';
               video.play().catch(() => {});
             });
+            hlsR.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => { _forceEnglishAudio(hlsR); });
             hlsR.on(Hls.Events.ERROR, (_, d2) => {
               if (!d2.fatal) return;
               hlsR.destroy();
@@ -4181,9 +4201,11 @@
             hls2.loadSource(hlsUrl);
             hls2.attachMedia(video);
             hls2.on(Hls.Events.MANIFEST_PARSED, () => {
+              _forceEnglishAudio(hls2);
               document.getElementById('mvIframeLoading').style.display = 'none';
               video.play().catch(() => {});
             });
+            hls2.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => { _forceEnglishAudio(hls2); });
             hls2.on(Hls.Events.ERROR, (_, d2) => {
               if (!d2.fatal) return;
               hls2.destroy();
