@@ -603,7 +603,7 @@
     .bar-icon-btn svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
 
     /* Volume slider */
-    input[type=range]#volSlider {
+    <input type="range" id="volSlider" tabindex="-1" onfocus="this.blur()" {
       -webkit-appearance: none;
       width: 88px; height: 4px;
       background: color-mix(in srgb, var(--md-sys-color-outline-variant) 60%, transparent);
