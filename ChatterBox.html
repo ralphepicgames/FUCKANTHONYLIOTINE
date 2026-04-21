@@ -6010,13 +6010,21 @@ const CALL_RTC_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
-    // Add TURN servers here for reliability on firewalled/Chromebook networks:
-    // { urls: 'turn:your-turn-server.com:3478', username: 'user', credential: 'pass' }
+    { urls: 'stun:openrelay.metered.ca:80' },
+    // Free TURN relay — covers firewalled networks, Chromebooks, school/corp proxies
+    { urls: 'turn:openrelay.metered.ca:80',             username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443',            username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:80?transport=tcp',  username: 'openrelayproject', credential: 'openrelayproject' },
   ],
-  iceCandidatePoolSize: 4,
+  iceCandidatePoolSize: 10,
   bundlePolicy: 'max-bundle',
   rtcpMuxPolicy: 'require',
+  iceTransportPolicy: 'all',
 };
 
 // Init mic settings UI (must be after callState)
@@ -6059,6 +6067,15 @@ document.addEventListener('click', (e) => {
 
 async function callJoin() {
   if (callState.inCall) return;
+  // Check for WebRTC support — blocked on some managed/administered devices
+  if (!window.RTCPeerConnection) {
+    showToast('<span class="material-icons-round" style="font-size:14px;vertical-align:middle;">warning</span> WebRTC is disabled on this device. Voice calls may be blocked by your administrator.');
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('<span class="material-icons-round" style="font-size:14px;vertical-align:middle;">warning</span> Microphone access is not available on this device. Check browser permissions or device policy.');
+    return;
+  }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: {
       noiseSuppression: micNoiseCancelEnabled,
@@ -6127,7 +6144,16 @@ async function callJoin() {
     if (!callPanelOpen) toggleCallPanel();
   } catch (err) {
     console.error('Call join error:', err);
-    showToast('<span class="material-icons-round" style="font-size:14px;vertical-align:middle;">warning</span> Could not access microphone. Check permissions.');
+    const name = err.name || '';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      showToast('<span class="material-icons-round" style="font-size:14px;vertical-align:middle;">warning</span> Microphone blocked. Check browser permissions — or your administrator may have disabled it.');
+    } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      showToast('<span class="material-icons-round" style="font-size:14px;vertical-align:middle;">warning</span> No microphone found on this device.');
+    } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+      showToast('<span class="material-icons-round" style="font-size:14px;vertical-align:middle;">warning</span> Microphone is in use by another app.');
+    } else {
+      showToast('<span class="material-icons-round" style="font-size:14px;vertical-align:middle;">warning</span> Could not access microphone. Check permissions.');
+    }
   }
 }
 
@@ -6610,7 +6636,22 @@ async function callHandleOffer(signal) {
     }
   };
 
-  // Answerer does NOT renegotiate — only the offerer side does
+  // Answerer CAN renegotiate — needed when tracks added/removed after initial handshake
+  let _answerRenego = null;
+  pc.onnegotiationneeded = async () => {
+    if (pc.signalingState !== 'stable') return;
+    clearTimeout(_answerRenego);
+    _answerRenego = setTimeout(async () => {
+      if (pc.signalingState !== 'stable') return;
+      try {
+        callState.offererPeers.add(targetUser); // take offerer role for this renegotiation
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        callSendSignal({ type: 'call_offer', target: targetUser, sdp: pc.localDescription });
+      } catch (err) { console.error('Answerer renegotiation error:', err); }
+    }, 250);
+  };
+
   callState.peerStreams[targetUser] = callState.peerStreams[targetUser] || new MediaStream();
   pc.ontrack = (e) => {
     const stream = callState.peerStreams[targetUser];
@@ -6701,21 +6742,36 @@ async function callHandleIce(signal) {
   }
 }
 
+function _callAudioId(username) {
+  return 'call-audio-' + username.replace(/[^a-z0-9_-]/gi, '_');
+}
+
 function callPlayRemoteAudio(username, stream) {
-  // Remove any existing audio element for this user
-  const existing = document.getElementById('call-audio-' + CSS.escape(username));
-  if (existing) existing.remove();
-  // Only attach if stream has audio tracks
+  // Consistent ID — fix: old code used CSS.escape() for removal but replace() for creation
+  const existing = document.getElementById(_callAudioId(username));
+  if (existing) { existing.srcObject = null; existing.remove(); }
   const audioTracks = stream.getAudioTracks();
   if (audioTracks.length === 0) return;
   const audio = document.createElement('audio');
-  audio.id = 'call-audio-' + username.replace(/[^a-z0-9_-]/gi, '_');
+  audio.id = _callAudioId(username);
   audio.autoplay = true;
   audio.controls = false;
+  audio.playsInline = true;
   audio.style.display = 'none';
   audio.srcObject = stream;
   document.body.appendChild(audio);
-  audio.play().catch(() => {});
+  // If autoplay blocked (Chromebook / managed device), retry on next user gesture
+  audio.play().catch(() => {
+    const retry = () => {
+      audio.play().catch(() => {});
+      document.removeEventListener('click', retry);
+      document.removeEventListener('touchend', retry);
+      document.removeEventListener('keydown', retry);
+    };
+    document.addEventListener('click', retry);
+    document.addEventListener('touchend', retry);
+    document.addEventListener('keydown', retry);
+  });
 }
 
 function callClosePeer(username) {
@@ -6730,7 +6786,7 @@ function callClosePeer(username) {
   }
   callState.offererPeers.delete(username);
   // Remove remote audio element
-  const audioEl = document.getElementById('call-audio-' + username.replace(/[^a-z0-9_-]/gi, '_'));
+  const audioEl = document.getElementById(_callAudioId(username));
   if (audioEl) { audioEl.srcObject = null; audioEl.remove(); }
   delete callState.peerStreams[username];
   delete callState.peerVideoTracks[username];
