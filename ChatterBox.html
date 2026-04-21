@@ -6636,22 +6636,6 @@ async function callHandleOffer(signal) {
     }
   };
 
-  // Answerer CAN renegotiate — needed when tracks added/removed after initial handshake
-  let _answerRenego = null;
-  pc.onnegotiationneeded = async () => {
-    if (pc.signalingState !== 'stable') return;
-    clearTimeout(_answerRenego);
-    _answerRenego = setTimeout(async () => {
-      if (pc.signalingState !== 'stable') return;
-      try {
-        callState.offererPeers.add(targetUser); // take offerer role for this renegotiation
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        callSendSignal({ type: 'call_offer', target: targetUser, sdp: pc.localDescription });
-      } catch (err) { console.error('Answerer renegotiation error:', err); }
-    }, 250);
-  };
-
   callState.peerStreams[targetUser] = callState.peerStreams[targetUser] || new MediaStream();
   pc.ontrack = (e) => {
     const stream = callState.peerStreams[targetUser];
@@ -6701,6 +6685,23 @@ async function callHandleOffer(signal) {
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     callSendSignal({ type: 'call_answer', target: targetUser, sdp: pc.localDescription });
+
+    // Set onnegotiationneeded NOW — after initial handshake — so addTrack() during setup
+    // never triggers a competing offer while setRemoteDescription is in flight
+    let _answerRenego = null;
+    pc.onnegotiationneeded = async () => {
+      if (pc.signalingState !== 'stable') return;
+      clearTimeout(_answerRenego);
+      _answerRenego = setTimeout(async () => {
+        if (pc.signalingState !== 'stable') return;
+        try {
+          callState.offererPeers.add(targetUser);
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          callSendSignal({ type: 'call_offer', target: targetUser, sdp: pc.localDescription });
+        } catch (e) { console.error('Answerer renegotiation error:', e); }
+      }, 300);
+    };
   } catch (err) {
     console.error('Handle offer error:', err);
   }
