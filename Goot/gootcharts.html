@@ -1183,9 +1183,9 @@ function fmtPlays(n) {
 
 // ── Deep-link into Goot player ───────────────────────────────────
 
-const PLAYER_URL = window.location.origin === 'https://gootchart.untitleddoc.workers.dev'
-    ? 'https://gootv4.untitleddoc.workers.dev'
-    : 'https://raw.githubusercontent.com/RalphEG/KevinNair/refs/heads/main/Goot/GootV4beta.html';
+const PLAYER_URL = window.location.origin === 'https://gootchart.untdocwebsites.workers.dev'
+    ? 'https://gootv4.untdocwebsites.workers.dev'
+    : 'https://raw.githubusercontent.com/ralphepicgames/fuckanthonyliotine/refs/heads/main/Goot/GootV4beta.html';
 
 /** Extract the Drive ID from a track object — try every field the API might use */
 function getTrackId(item) {
@@ -1200,7 +1200,7 @@ function openInPlayer(trackId) {
     // due to CORS. Instead, drop the track token into localStorage (same origin)
     // and open the player directly — it will pick it up on load via the search
     // box share-token handler.
-    if (window.location.origin === 'https://gootchart.untitleddoc.workers.dev') {
+    if (window.location.origin === 'https://gootchart.untdocwebsites.workers.dev') {
         const newWin = window.open(PLAYER_URL + '#goot-track:' + encodeURIComponent(trackId), '_blank');
         if (!newWin) showToast('⚠ Pop-ups blocked — please allow pop-ups', 3500);
         return;
