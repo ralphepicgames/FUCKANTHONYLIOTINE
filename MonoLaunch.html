@@ -507,7 +507,7 @@ function launch(url,msg,e){
     const w=window.open('about:blank','_blank');
     if(!w){hideLoad();alert('Pop-up blocked!');return}
     w.document.write(`<style>body{background:#06060a;color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;margin:0;font-family:sans-serif}.s{border:3px solid rgba(255,255,255,0.08);border-top-color:#a78bfa;border-radius:50%;width:40px;height:40px;animation:sp 0.9s linear infinite;margin-bottom:16px}@keyframes sp{to{transform:rotate(360deg)}}</style><div class="s"></div><p style="color:rgba(255,255,255,0.4);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase">${msg}</p>`);
-    fetch(url+Date.now())
+    fetch(url)
       .then(r=>r.text())
       .then(html=>{hideLoad();w.document.open();w.document.write(html);w.document.close()})
       .catch(()=>{hideLoad();w.document.body.innerHTML='<h2 style="color:#ef4444;font-family:sans-serif;text-align:center;margin-top:40vh">Failed to load.</h2>'});
@@ -515,13 +515,13 @@ function launch(url,msg,e){
 }
 
 // ── PUBLIC LINKS ── add new public apps here ──────────────────
-function launchGoot(e){launch('https://raw.githubusercontent.com/ralphepicgames/FUCKANTHONYLIOTINE/refs/heads/main/Goot/GootLauncher.html?t=','Loading Goot…',e)}
-function launchUntDoc(e){launch('https://raw.githubusercontent.com/ralphepicgames/FUCKANTHONYLIOTINE/refs/heads/main/UNTDOC.html?t=','Loading UntDoc…',e)}
-function launchChatterBox(e){launch('https://raw.githubusercontent.com/ralphepicgames/FUCKANTHONYLIOTINE/refs/heads/main/ChatterBox.html?t=','Loading ChatterBox…',e)}
-function launchTelevisor(e){launch('https://raw.githubusercontent.com/ralphepicgames/FUCKANTHONYLIOTINE/refs/heads/main/televisor.html?t=','Loading Televisor…',e)}
+function launchGoot(e){launch('https://gootlauncher.untdocwebsites.workers.dev/','Loading Goot…',e)}
+function launchUntDoc(e){launch('https://untdoc.untdocwebsites.workers.dev/','Loading UntDoc…',e)}
+function launchChatterBox(e){launch('https://chatterbox.untdocwebsites.workers.dev/','Loading ChatterBox…',e)}
+function launchTelevisor(e){launch('https://televisor.untdocwebsites.workers.dev/','Loading Televisor…',e)}
 
 // 🔒 SECRET LINKS ── add new dev/secret apps here ─────────────
-function launchChatterBoxDev(e){launch('https://raw.githubusercontent.com/ralphepicgames/FUCKANTHONYLIOTINE/refs/heads/main/ChatterBox_DEV.html?t=','Loading ChatterBox Dev…',e)}
+function launchChatterBoxDev(e){launch('https://chatterbox.untdocwebsites.workers.dev/dev','Loading ChatterBox Dev…',e)}
 // 🔒 END SECRET LINKS ─────────────────────────────────────────
 
 /* ── Konami Code ── */
