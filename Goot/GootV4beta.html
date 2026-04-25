@@ -19846,8 +19846,11 @@ function initMediaSession() {
         }
     });
     mediaSession.setActionHandler('seekto', (details) => {
-        if (details.seekTime && currentPlayer.duration) {
-            currentPlayer.currentTime = Math.min(details.seekTime, currentPlayer.duration);
+        const dur = currentPlayer.duration;
+        if (details.seekTime != null && dur && isFinite(dur) && dur > 0) {
+            // Ignore bogus seeks at track start (duration not yet stable)
+            if (currentPlayer.currentTime < 0.5 && details.seekTime < 0.1) return;
+            currentPlayer.currentTime = Math.max(0, Math.min(details.seekTime, dur));
         }
     });
     try {
@@ -19950,17 +19953,20 @@ function updateMediaSessionPlaybackState() {
 }
 function updateMediaSessionPositionState() {
     if (!mediaSession || !mediaSession.setPositionState) return;
-
-    const state = {
-        duration: currentPlayer.duration || 0,
-        position: currentPlayer.currentTime || 0,
-        playbackRate: currentPlayer.playbackRate || 1
-    };
-
+    const dur = currentPlayer.duration;
+    // Don't set position state until duration is known and valid — otherwise the OS
+    // sends bogus seekto events back at us which causes random seeking at track start.
+    if (!dur || !isFinite(dur) || dur <= 0) return;
+    const pos = currentPlayer.currentTime || 0;
+    // Also guard against position > duration which triggers OS seek events
+    if (pos > dur) return;
     try {
-        mediaSession.setPositionState(state);
-    } catch (e) {
-    }
+        mediaSession.setPositionState({
+            duration: dur,
+            position: pos,
+            playbackRate: currentPlayer.playbackRate || 1
+        });
+    } catch (e) {}
 }
 function _makeDistortionCurve(amount) {
     const n = 256, curve = new Float32Array(n);
@@ -33650,7 +33656,7 @@ async function analyzeTrackLoudness(trackId) {
     }
     const p = (async () => {
         try {
-            const ctx = await initAudioContext();
+            const ctx = initAudioContext();
             const buf = await fetchTrackBytes(trackId);
             if (!buf || buf.byteLength === 0) return normTargetLUFS;
             const audioBuffer = await ctx.decodeAudioData(buf.slice(0));
@@ -33727,7 +33733,7 @@ async function processLoudnessQueue() {
     if (!normEnabled || loudnessAnalysisRunning || queueLoudnessAnalysis.length === 0) return;
 
     loudnessAnalysisRunning = true;
-    const ctx = await initAudioContext();
+    const ctx = initAudioContext();
 
     while (queueLoudnessAnalysis.length > 0) {
         const item = queueLoudnessAnalysis.shift();
@@ -37625,45 +37631,12 @@ player.onended = () => {
     }
     const nextTrack = queue[next];
     const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
-    const _blobUrl = nextTrack ? (_clientAudioBlobUrls[nextTrack.id] || null) : null;
-    const hasPreloadedTrack = nextTrack && nextPlayer.src && (nextPlayer.src === expectedUrl || (_blobUrl && nextPlayer.src === _blobUrl));
-    if (hasPreloadedTrack) {
+    const hasPreloadedTrack = nextPlayer.src === expectedUrl;
+    if (hasPreloadedTrack && nextTrack) {
         qIndex = next;
         const temp = currentPlayer;
         currentPlayer = nextPlayer;
         nextPlayer = temp;
-        // Helper: resume AudioContext then call play(), with NotAllowedError recovery.
-        // Mirrors the cold-start play() path so lock screen / background behaves identically.
-        const _gaplessDoPlay = () => {
-            const _ctx = audioCtx || audioContext;
-            const _doPlay = () => {
-                currentPlayer.play().catch(err => {
-                    if (err && err.name === 'NotAllowedError') {
-                        const _resumeOnce = () => {
-                            const _c = audioCtx || audioContext;
-                            if (_c && _c.state === 'suspended') {
-                                _c.resume().then(() => currentPlayer.play().catch(() => {}));
-                            } else {
-                                currentPlayer.play().catch(() => {});
-                            }
-                            ['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
-                                document.removeEventListener(ev, _resumeOnce, { capture: true })
-                            );
-                        };
-                        ['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
-                            document.addEventListener(ev, _resumeOnce, { once: true, capture: true })
-                        );
-                    } else {
-                        console.error('Gapless playback error:', err);
-                    }
-                });
-            };
-            if (_ctx && _ctx.state === 'suspended') {
-                _ctx.resume().then(_doPlay).catch(_doPlay);
-            } else {
-                _doPlay();
-            }
-        };
         const _doGaplessPlay = () => {
             if (effectsState && effectsState.speed && !_isPartyGuest()) {
                 currentPlayer.preservesPitch = false;
@@ -37671,7 +37644,7 @@ player.onended = () => {
                 currentPlayer.webkitPreservesPitch = false;
                 currentPlayer.playbackRate = (effectsState.speed || 100) / 100;
             }
-            _gaplessDoPlay();
+            currentPlayer.play().catch(err => console.error('Gapless playback error:', err));
             updateNowPlayingWithData(nextTrack);
             updateLyricsForTrackChange(nextTrack.id);
             updateQueueActiveState(qIndex);
@@ -37679,13 +37652,16 @@ player.onended = () => {
             if (lastfm) { lastfm.resetScrobbleState(); lastfm.currentScrobbleTrackId = nextTrack.id; }
         };
         if (currentPlayer.readyState >= 2) {
+            // Already buffered enough — play instantly (the happy path)
             _doGaplessPlay();
         } else {
-            updateNowPlayingWithData(nextTrack);
+            // Preloaded but not yet buffered — wait for canplay instead of cold-restarting.
+            // This fires as soon as the browser has enough data to begin playback.
+            updateNowPlayingWithData(nextTrack); // update UI immediately while we wait
             currentPlayer.addEventListener('canplay', _doGaplessPlay, { once: true });
-            // Safety net: if canplay never fires (e.g. network error), fall back to normal skip
+            // Safety net: if canplay doesn't fire within 4s, tear down and do a normal skip
             setTimeout(() => {
-                if (currentPlayer.paused) {
+                if (currentPlayer.paused && currentPlayer.currentTime === 0) {
                     currentPlayer.removeEventListener('canplay', _doGaplessPlay);
                     skip(1, false);
                 }
@@ -37738,43 +37714,12 @@ player2.onended = () => {
     }
     const nextTrack = queue[next];
     const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
-    const _blobUrl2 = nextTrack ? (_clientAudioBlobUrls[nextTrack.id] || null) : null;
-    const hasPreloadedTrack = nextTrack && nextPlayer.src && (nextPlayer.src === expectedUrl || (_blobUrl2 && nextPlayer.src === _blobUrl2));
-    if (hasPreloadedTrack) {
+    const hasPreloadedTrack = nextPlayer.src === expectedUrl;
+    if (hasPreloadedTrack && nextTrack) {
         qIndex = next;
         const temp = currentPlayer;
         currentPlayer = nextPlayer;
         nextPlayer = temp;
-        const _gaplessDoPlay2 = () => {
-            const _ctx = audioCtx || audioContext;
-            const _doPlay = () => {
-                currentPlayer.play().catch(err => {
-                    if (err && err.name === 'NotAllowedError') {
-                        const _resumeOnce = () => {
-                            const _c = audioCtx || audioContext;
-                            if (_c && _c.state === 'suspended') {
-                                _c.resume().then(() => currentPlayer.play().catch(() => {}));
-                            } else {
-                                currentPlayer.play().catch(() => {});
-                            }
-                            ['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
-                                document.removeEventListener(ev, _resumeOnce, { capture: true })
-                            );
-                        };
-                        ['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
-                            document.addEventListener(ev, _resumeOnce, { once: true, capture: true })
-                        );
-                    } else {
-                        console.error('Gapless playback error:', err);
-                    }
-                });
-            };
-            if (_ctx && _ctx.state === 'suspended') {
-                _ctx.resume().then(_doPlay).catch(_doPlay);
-            } else {
-                _doPlay();
-            }
-        };
         const _doGaplessPlay2 = () => {
             if (effectsState && effectsState.speed && !_isPartyGuest()) {
                 currentPlayer.preservesPitch = false;
@@ -37782,7 +37727,7 @@ player2.onended = () => {
                 currentPlayer.webkitPreservesPitch = false;
                 currentPlayer.playbackRate = (effectsState.speed || 100) / 100;
             }
-            _gaplessDoPlay2();
+            currentPlayer.play().catch(err => console.error('Gapless playback error:', err));
             updateNowPlayingWithData(nextTrack);
             updateLyricsForTrackChange(nextTrack.id);
             updateQueueActiveState(qIndex);
@@ -37795,7 +37740,7 @@ player2.onended = () => {
             updateNowPlayingWithData(nextTrack);
             currentPlayer.addEventListener('canplay', _doGaplessPlay2, { once: true });
             setTimeout(() => {
-                if (currentPlayer.paused) {
+                if (currentPlayer.paused && currentPlayer.currentTime === 0) {
                     currentPlayer.removeEventListener('canplay', _doGaplessPlay2);
                     skip(1, false);
                 }
