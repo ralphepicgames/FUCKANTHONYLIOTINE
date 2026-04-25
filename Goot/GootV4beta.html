@@ -19816,7 +19816,6 @@ registerProcessor('bitcrusher-processor', BitcrusherProcessor);`;
     }
 }
 let mediaSession = null;
-let _lastMediaSessionSeekto = 0; // Throttle Android seekto feedback loop
 function initMediaSession() {
     if (!('mediaSession' in navigator)) {
         return;
@@ -19847,17 +19846,9 @@ function initMediaSession() {
         }
     });
     mediaSession.setActionHandler('seekto', (details) => {
-        const dur = currentPlayer.duration;
-        if (details.seekTime == null || !dur || !isFinite(dur) || dur <= 0) return;
-        // Android Chrome fires rapid bogus seekto events (including seekTime=0..1) at track
-        // start before the OS has a stable position. Widen the dead zone to 3s / 1s.
-        if (currentPlayer.currentTime < 3 && details.seekTime < 1) return;
-        // Throttle: ignore burst seekto calls faster than 300ms — Android notification
-        // scrubber can fire them continuously and cause a feedback loop with setPositionState.
-        const _now = Date.now();
-        if (_now - _lastMediaSessionSeekto < 300) return;
-        _lastMediaSessionSeekto = _now;
-        currentPlayer.currentTime = Math.max(0, Math.min(details.seekTime, dur));
+        if (details.seekTime && currentPlayer.duration) {
+            currentPlayer.currentTime = Math.min(details.seekTime, currentPlayer.duration);
+        }
     });
     try {
         mediaSession.setActionHandler('volumechange', (details) => {
@@ -19957,28 +19948,19 @@ function updateMediaSessionPlaybackState() {
     if (!mediaSession) return;
     mediaSession.playbackState = currentPlayer.paused ? 'paused' : 'playing';
 }
-let _lastPositionStateTime = 0; // Throttle: Android fires seekto on every setPositionState
 function updateMediaSessionPositionState() {
     if (!mediaSession || !mediaSession.setPositionState) return;
-    const dur = currentPlayer.duration;
-    // Don't set position state until duration is known and valid — otherwise the OS
-    // sends bogus seekto events back at us which causes random seeking at track start.
-    if (!dur || !isFinite(dur) || dur <= 0) return;
-    const pos = currentPlayer.currentTime || 0;
-    // Also guard against position > duration which triggers OS seek events
-    if (pos > dur) return;
-    // Throttle to 1Hz max — Android Chromium can fire seekto for every setPositionState call
-    // when the notification scrubber is visible, creating a rapid seek feedback loop.
-    const _now = Date.now();
-    if (_now - _lastPositionStateTime < 1000) return;
-    _lastPositionStateTime = _now;
+
+    const state = {
+        duration: currentPlayer.duration || 0,
+        position: currentPlayer.currentTime || 0,
+        playbackRate: currentPlayer.playbackRate || 1
+    };
+
     try {
-        mediaSession.setPositionState({
-            duration: dur,
-            position: pos,
-            playbackRate: currentPlayer.playbackRate || 1
-        });
-    } catch (e) {}
+        mediaSession.setPositionState(state);
+    } catch (e) {
+    }
 }
 function _makeDistortionCurve(amount) {
     const n = 256, curve = new Float32Array(n);
