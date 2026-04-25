@@ -15205,8 +15205,8 @@
 									</div>
 
 								</footer>
-								<audio id="player" crossorigin="anonymous" preload="auto"></audio>
-								<audio id="player2" crossorigin="anonymous" preload="auto"></audio>
+								<audio id="player" crossorigin="anonymous" preload="auto" preservesPitch="false"></audio>
+								<audio id="player2" crossorigin="anonymous" preload="auto" preservesPitch="false"></audio>
 								<div id="desktopExtended" class="desktop-extended collapsed">
 									<canvas id="vizBgCanvas"></canvas>
 									<div id="desktopExtendedArtBg" class="desktop-extended-art-bg"></div>
@@ -19543,15 +19543,6 @@ async function initAudioContext() {
             if (audioCtx.state === 'suspended' && currentPlayer && !currentPlayer.paused) {
                 audioCtx.resume().catch(() => {});
             }
-            // When AudioContext transitions back to running (audio focus returned after
-            // interruption by another app), re-stamp playbackRate on both players.
-            // Android resets the media pipeline during audio focus loss, so the rate
-            // must be re-applied or you get chipmunk/electric distortion on resume.
-            if (audioCtx.state === 'running' && typeof _applyPlaybackRate === 'function') {
-                const _rate = (effectsState && effectsState.speed ? effectsState.speed : 100) / 100;
-                if (typeof player !== 'undefined') _applyPlaybackRate(player, _rate);
-                if (typeof player2 !== 'undefined') _applyPlaybackRate(player2, _rate);
-            }
         };
         sourceNode = audioCtx.createMediaElementSource(player);
         const sourceNode2 = audioCtx.createMediaElementSource(player2);
@@ -19825,7 +19816,6 @@ function initMediaSession() {
     }
     mediaSession = navigator.mediaSession;
     mediaSession.setActionHandler('play', () => {
-        _restampRateBeforePlay();
         currentPlayer.play().catch(() => {});
     });
     mediaSession.setActionHandler('pause', () => {
@@ -19968,7 +19958,7 @@ function updateMediaSessionPositionState() {
         mediaSession.setPositionState({
             duration: dur,
             position: pos,
-            playbackRate: currentPlayer.playbackRate || 1
+            playbackRate: (effectsState && effectsState.speed ? effectsState.speed : 100) / 100
         });
     } catch (e) {}
 }
@@ -37484,12 +37474,6 @@ player.onplay = () => {
         audioCtx.resume();
     }
     initAudioContext();
-    // Re-apply playback rate on every play/resume — Android Chrome resets the media
-    // pipeline state (preservesPitch, playbackRate) when another app steals audio
-    // focus (e.g. YouTube), causing the chipmunk/4x speed + electric distortion on return.
-    if (!_isPartyGuest()) {
-        _applyPlaybackRate(player, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
-    }
     if (queue[qIndex]?.id) {
         setTimeout(() => analyzeAndApplyNormalization(queue[qIndex].id), 10);
     }
@@ -37558,12 +37542,6 @@ player2.onplay = () => {
         audioCtx.resume();
     }
     initAudioContext();
-    // Re-apply playback rate on every play/resume — Android Chrome resets the media
-    // pipeline state (preservesPitch, playbackRate) when another app steals audio
-    // focus (e.g. YouTube), causing the chipmunk/4x speed + electric distortion on return.
-    if (!_isPartyGuest()) {
-        _applyPlaybackRate(player2, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
-    }
     if (queue[qIndex]?.id) {
         setTimeout(() => analyzeAndApplyNormalization(queue[qIndex].id), 10);
     }
@@ -37621,33 +37599,6 @@ player2.onpause = () => {
 // Null out listen-time timestamp on seek so scrubbed-over time is never counted
 player.addEventListener('seeking', () => { if (lastfm) lastfm._lastListenTimestamp = null; });
 player2.addEventListener('seeking', () => { if (lastfm) lastfm._lastListenTimestamp = null; });
-
-// ── Android pipeline reset guard ───────────────────────────────────────────────
-// Android Chrome asynchronously resets preservesPitch=true and sometimes resets
-// playbackRate after pause/interruption/audio-focus-loss — AFTER .play() resolves,
-// so pre-stamping alone is not enough. We listen to ratechange on both players and
-// immediately re-apply the correct state whenever Android resets it under us.
-// A short debounce prevents infinite loops if our own _applyPlaybackRate triggers ratechange.
-let _rateChangeGuardActive = false;
-function _onRateChange(el) {
-    if (_rateChangeGuardActive) return;
-    if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
-    const expectedRate = (effectsState && effectsState.speed ? effectsState.speed : 100) / 100;
-    const actualRate = el.playbackRate;
-    // If rate drifted more than 1% from expected, or preservesPitch got reset to true
-    // at a non-1x rate — re-apply immediately
-    const needPitchShift = Math.abs(expectedRate - 1.0) > 0.01;
-    const pitchWrong = needPitchShift && el.preservesPitch !== false;
-    const rateWrong = Math.abs(actualRate - expectedRate) > 0.05;
-    if (pitchWrong || rateWrong) {
-        _rateChangeGuardActive = true;
-        _applyPlaybackRate(el, expectedRate);
-        setTimeout(() => { _rateChangeGuardActive = false; }, 100);
-    }
-}
-player.addEventListener('ratechange', () => _onRateChange(player));
-player2.addEventListener('ratechange', () => _onRateChange(player2));
-
 player.onended = () => {
     if (isCrossfading || currentPlayer !== player) return;
     // Party guests: never advance the track locally — the controller does it
