@@ -36675,7 +36675,6 @@ function togglePlay() {
         if (isCrossfading) {
             resumeCrossfade();
         } else {
-            _restampRateBeforePlay();
             currentPlayer.play().then(() => {
                 const sidebar = document.getElementById("sidebar");
                 if (sidebar) {
