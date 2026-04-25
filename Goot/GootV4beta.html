@@ -37621,6 +37621,33 @@ player2.onpause = () => {
 // Null out listen-time timestamp on seek so scrubbed-over time is never counted
 player.addEventListener('seeking', () => { if (lastfm) lastfm._lastListenTimestamp = null; });
 player2.addEventListener('seeking', () => { if (lastfm) lastfm._lastListenTimestamp = null; });
+
+// ── Android pipeline reset guard ───────────────────────────────────────────────
+// Android Chrome asynchronously resets preservesPitch=true and sometimes resets
+// playbackRate after pause/interruption/audio-focus-loss — AFTER .play() resolves,
+// so pre-stamping alone is not enough. We listen to ratechange on both players and
+// immediately re-apply the correct state whenever Android resets it under us.
+// A short debounce prevents infinite loops if our own _applyPlaybackRate triggers ratechange.
+let _rateChangeGuardActive = false;
+function _onRateChange(el) {
+    if (_rateChangeGuardActive) return;
+    if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
+    const expectedRate = (effectsState && effectsState.speed ? effectsState.speed : 100) / 100;
+    const actualRate = el.playbackRate;
+    // If rate drifted more than 1% from expected, or preservesPitch got reset to true
+    // at a non-1x rate — re-apply immediately
+    const needPitchShift = Math.abs(expectedRate - 1.0) > 0.01;
+    const pitchWrong = needPitchShift && el.preservesPitch !== false;
+    const rateWrong = Math.abs(actualRate - expectedRate) > 0.05;
+    if (pitchWrong || rateWrong) {
+        _rateChangeGuardActive = true;
+        _applyPlaybackRate(el, expectedRate);
+        setTimeout(() => { _rateChangeGuardActive = false; }, 100);
+    }
+}
+player.addEventListener('ratechange', () => _onRateChange(player));
+player2.addEventListener('ratechange', () => _onRateChange(player2));
+
 player.onended = () => {
     if (isCrossfading || currentPlayer !== player) return;
     // Party guests: never advance the track locally — the controller does it
