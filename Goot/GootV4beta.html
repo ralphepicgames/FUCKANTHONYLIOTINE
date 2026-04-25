@@ -15205,10 +15205,8 @@
 									</div>
 
 								</footer>
-								<audio id="player" crossorigin="anonymous" preload="auto"
-									preservesPitch="false"></audio>
-								<audio id="player2" crossorigin="anonymous" preload="auto"
-									preservesPitch="false"></audio>
+								<audio id="player" crossorigin="anonymous" preload="auto"></audio>
+								<audio id="player2" crossorigin="anonymous" preload="auto"></audio>
 								<div id="desktopExtended" class="desktop-extended collapsed">
 									<canvas id="vizBgCanvas"></canvas>
 									<div id="desktopExtendedArtBg" class="desktop-extended-art-bg"></div>
@@ -18449,10 +18447,7 @@ function startCrossfade() {
         };
         newPlayer.volume = 0;
         if (typeof effectsState !== 'undefined' && effectsState.speed && !_isPartyGuest()) {
-            newPlayer.preservesPitch = false;
-            newPlayer.mozPreservesPitch = false;
-            newPlayer.webkitPreservesPitch = false;
-            newPlayer.playbackRate = (effectsState.speed || 100) / 100;
+            _applyPlaybackRate(newPlayer, (effectsState.speed || 100) / 100);
         }
         newPlayer.play().catch(err => {
             console.error('❌ Failed to start next track:', err);
@@ -18484,10 +18479,7 @@ function startCrossfade() {
             crossfadeState.oldPlayer.volume = crossfadeState.userVolume;
             crossfadeState.newPlayer.volume = crossfadeState.userVolume;
             if (typeof effectsState !== 'undefined' && effectsState.speed && !_isPartyGuest()) {
-                currentPlayer.preservesPitch = false;
-                currentPlayer.mozPreservesPitch = false;
-                currentPlayer.webkitPreservesPitch = false;
-                currentPlayer.playbackRate = (effectsState.speed || 100) / 100;
+                _applyPlaybackRate(currentPlayer, (effectsState.speed || 100) / 100);
             }
             if (audioContext && audioContext.state === 'suspended') {
                 audioContext.resume();
@@ -20428,22 +20420,13 @@ function applyCurrentEffects() {
     // Party guests: skip speed — drift-correction loop controls rate from host.
     if (!_isPartyGuest()) {
         if (typeof player !== 'undefined' && player) {
-            player.preservesPitch = false;
-            player.mozPreservesPitch = false;
-            player.webkitPreservesPitch = false;
-            player.playbackRate = playbackRate;
+            _applyPlaybackRate(player, playbackRate);
         }
         if (typeof player2 !== 'undefined' && player2) {
-            player2.preservesPitch = false;
-            player2.mozPreservesPitch = false;
-            player2.webkitPreservesPitch = false;
-            player2.playbackRate = playbackRate;
+            _applyPlaybackRate(player2, playbackRate);
         }
         if (typeof currentPlayer !== 'undefined' && currentPlayer) {
-            currentPlayer.preservesPitch = false;
-            currentPlayer.mozPreservesPitch = false;
-            currentPlayer.webkitPreservesPitch = false;
-            currentPlayer.playbackRate = playbackRate;
+            _applyPlaybackRate(currentPlayer, playbackRate);
         }
     }
     if (audioCtx) {
@@ -27039,10 +27022,7 @@ function play(idxOrId) {
         nextPlayer.src = '';
         nextPlayer.currentTime = 0;
         if (effectsState && !_isPartyGuest()) {
-            currentPlayer.preservesPitch = false;
-            currentPlayer.mozPreservesPitch = false;
-            currentPlayer.webkitPreservesPitch = false;
-            currentPlayer.playbackRate = (effectsState.speed || 100) / 100;
+            _applyPlaybackRate(currentPlayer, (effectsState.speed || 100) / 100);
         }
         initAudioContext();
         initNormalizationAudio();
@@ -27102,10 +27082,7 @@ function play(idxOrId) {
     player.src = _instantBlob || _streamUrl;
 
     if (effectsState && !_isPartyGuest()) {
-        player.preservesPitch = false;
-        player.mozPreservesPitch = false;
-        player.webkitPreservesPitch = false;
-        player.playbackRate = (effectsState.speed || 100) / 100;
+        _applyPlaybackRate(player, (effectsState.speed || 100) / 100);
     }
     initAudioContext();
     initNormalizationAudio();
@@ -37272,7 +37249,7 @@ player.ontimeupdate = () => {
     (document.getElementById("classicProgFill") || {}).style.width = p + "%";
     (document.getElementById("curTime") || {}).textContent = cur;
     (document.getElementById("durTime") || {}).textContent = dur;
-    updateMediaSessionPositionState();
+    // MediaSession position updated in _doLogic block (throttled) to avoid Android OS seek feedback
     // Update mini player progress bar (mobile)
     document.documentElement.style.setProperty('--mini-progress', p + '%');
     const deFill = document.getElementById("deProgFill");
@@ -37341,6 +37318,13 @@ player.ontimeupdate = () => {
     }
     if (isCurrentPlayer && activePlayer.duration > 0) {
         if (repeatMode === 1) return;
+        // Update MediaSession position state at most every 2s — throttled to prevent
+        // Android OS from sending bogus seekto events back in a feedback loop
+        const _nowPos = performance.now();
+        if (!window._msPositionLastUpdate || (_nowPos - window._msPositionLastUpdate) >= 2000) {
+            window._msPositionLastUpdate = _nowPos;
+            updateMediaSessionPositionState();
+        }
         const timeLeft = activePlayer.duration - activePlayer.currentTime;
         const PRELOAD_THRESHOLD = 60; // Preload 60s before end for near-instant gapless
         if (isCrossfading && timeLeft > crossfadeDuration) {
@@ -37355,10 +37339,7 @@ player.ontimeupdate = () => {
         if (timeLeft <= PRELOAD_THRESHOLD && !hasCorrectNextTrack && nextTrack) {
                         nextPlayer.src = _preloadSrc;
             if (effectsState && effectsState.speed && !_isPartyGuest()) {
-                nextPlayer.preservesPitch = false;
-                nextPlayer.mozPreservesPitch = false;
-                nextPlayer.webkitPreservesPitch = false;
-                nextPlayer.playbackRate = (effectsState.speed || 100) / 100;
+                _applyPlaybackRate(nextPlayer, (effectsState.speed || 100) / 100);
             }
             nextPlayer.load();
             if (!trackMetadata[nextTrack.id] && !METADATA_POOL.get(nextTrack.id) && !pendingMetadataDbFetches.has(nextTrack.id)) {
@@ -37417,6 +37398,13 @@ player2.ontimeupdate = () => {
     }
     if (isCurrentPlayer && activePlayer.duration > 0) {
         if (repeatMode === 1) return;
+        // Update MediaSession position state at most every 2s — throttled to prevent
+        // Android OS from sending bogus seekto events back in a feedback loop
+        const _nowPos = performance.now();
+        if (!window._msPositionLastUpdate || (_nowPos - window._msPositionLastUpdate) >= 2000) {
+            window._msPositionLastUpdate = _nowPos;
+            updateMediaSessionPositionState();
+        }
         const timeLeft = activePlayer.duration - activePlayer.currentTime;
         const PRELOAD_THRESHOLD = 60; // Preload 60s before end for near-instant gapless
         if (isCrossfading && timeLeft > crossfadeDuration) {
@@ -37431,10 +37419,7 @@ player2.ontimeupdate = () => {
         if (timeLeft <= PRELOAD_THRESHOLD && !hasCorrectNextTrack && nextTrack) {
                         nextPlayer.src = _preloadSrc;
             if (effectsState && effectsState.speed && !_isPartyGuest()) {
-                nextPlayer.preservesPitch = false;
-                nextPlayer.mozPreservesPitch = false;
-                nextPlayer.webkitPreservesPitch = false;
-                nextPlayer.playbackRate = (effectsState.speed || 100) / 100;
+                _applyPlaybackRate(nextPlayer, (effectsState.speed || 100) / 100);
             }
             nextPlayer.load();
             if (!trackMetadata[nextTrack.id] && !METADATA_POOL.get(nextTrack.id) && !pendingMetadataDbFetches.has(nextTrack.id)) {
@@ -37639,10 +37624,7 @@ player.onended = () => {
         nextPlayer = temp;
         const _doGaplessPlay = () => {
             if (effectsState && effectsState.speed && !_isPartyGuest()) {
-                currentPlayer.preservesPitch = false;
-                currentPlayer.mozPreservesPitch = false;
-                currentPlayer.webkitPreservesPitch = false;
-                currentPlayer.playbackRate = (effectsState.speed || 100) / 100;
+                _applyPlaybackRate(currentPlayer, (effectsState.speed || 100) / 100);
             }
             currentPlayer.play().catch(err => console.error('Gapless playback error:', err));
             updateNowPlayingWithData(nextTrack);
@@ -37659,13 +37641,14 @@ player.onended = () => {
             // This fires as soon as the browser has enough data to begin playback.
             updateNowPlayingWithData(nextTrack); // update UI immediately while we wait
             currentPlayer.addEventListener('canplay', _doGaplessPlay, { once: true });
-            // Safety net: if canplay doesn't fire within 4s, tear down and do a normal skip
+            // Safety net: if canplay doesn't fire within 15s (longer on Android background),
+            // tear down and do a normal skip — but only if still not buffered
             setTimeout(() => {
-                if (currentPlayer.paused && currentPlayer.currentTime === 0) {
+                if (currentPlayer.paused && currentPlayer.currentTime === 0 && currentPlayer.readyState < 2) {
                     currentPlayer.removeEventListener('canplay', _doGaplessPlay);
                     skip(1, false);
                 }
-            }, 4000);
+            }, 15000);
         }
     } else {
         skip(1, false);
@@ -37722,10 +37705,7 @@ player2.onended = () => {
         nextPlayer = temp;
         const _doGaplessPlay2 = () => {
             if (effectsState && effectsState.speed && !_isPartyGuest()) {
-                currentPlayer.preservesPitch = false;
-                currentPlayer.mozPreservesPitch = false;
-                currentPlayer.webkitPreservesPitch = false;
-                currentPlayer.playbackRate = (effectsState.speed || 100) / 100;
+                _applyPlaybackRate(currentPlayer, (effectsState.speed || 100) / 100);
             }
             currentPlayer.play().catch(err => console.error('Gapless playback error:', err));
             updateNowPlayingWithData(nextTrack);
@@ -37739,12 +37719,13 @@ player2.onended = () => {
         } else {
             updateNowPlayingWithData(nextTrack);
             currentPlayer.addEventListener('canplay', _doGaplessPlay2, { once: true });
+            // Safety net: 15s on Android background — only skip if still not buffered
             setTimeout(() => {
-                if (currentPlayer.paused && currentPlayer.currentTime === 0) {
+                if (currentPlayer.paused && currentPlayer.currentTime === 0 && currentPlayer.readyState < 2) {
                     currentPlayer.removeEventListener('canplay', _doGaplessPlay2);
                     skip(1, false);
                 }
-            }, 4000);
+            }, 15000);
         }
     } else {
         skip(1, false);
@@ -43212,9 +43193,7 @@ async function _doSyncGuestToState(roomState) {
 
     player.pause();
     player.src = STREAMING_URL + '?id=' + encodeURIComponent(remoteTrack.id);
-    player.preservesPitch = false;
-    player.mozPreservesPitch = false;
-    player.webkitPreservesPitch = false;
+    // preservesPitch handled by _applyPlaybackRate below
     player.load();
     updateNowPlayingWithData(queue[idx]);
     updateQueueActiveState(idx);
@@ -47864,14 +47843,18 @@ if (_isAndroidChrome) {
         if (audioCtx.state === 'suspended') {
             audioCtx.resume().catch(() => {});
         } else if (audioCtx.state === 'running') {
-            // Schedule a no-op param event to keep the audio thread awake
+            // Schedule a tiny silent buffer on the destination to keep the Android audio thread alive.
+            // A disconnected GainNode does nothing — we need an actual graph event.
             try {
-                const _keepAlive = audioCtx.createGain();
-                _keepAlive.gain.setValueAtTime(_keepAlive.gain.value, audioCtx.currentTime);
-                _keepAlive.disconnect();
+                const _buf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+                const _src = audioCtx.createBufferSource();
+                _src.buffer = _buf;
+                _src.connect(audioCtx.destination);
+                _src.start(audioCtx.currentTime);
+                _src.disconnect(audioCtx.destination); // disconnect after scheduling, before it plays
             } catch(e) {}
         }
-    }, 25000);
+    }, 20000);
 }
 
 // ── 8D Audio toggle ──────────────────────────────────────────────────────────
