@@ -14216,6 +14216,14 @@
 								</div>
 								<i class="fa-solid fa-chevron-right settings-nav-arrow"></i>
 							</button>
+							<button class="settings-nav-row" id="settings-nav-chart-rename" onclick="openSettingsSection('chart-rename')" style="display:none;">
+								<div class="settings-nav-icon"><i class="fa-solid fa-chart-simple"></i></div>
+								<div class="settings-nav-text">
+									<div class="settings-nav-title">Chart Album Rename</div>
+									<div class="settings-nav-sub">Rename an album in the charts without losing plays</div>
+								</div>
+								<i class="fa-solid fa-chevron-right settings-nav-arrow"></i>
+							</button>
 
 						</div>
 				</div><!-- /settings-menu-view -->
@@ -14633,8 +14641,21 @@
 							</div>
 							<div id="artver-status" style="display:none;font-size:13px;padding:8px 12px;border-radius:8px;"></div>
 						</div>
-<!-- ── Block Tracks ─────────────────────────────────────────────── -->
+<!-- ── Chart Album Rename Panel (secret admin) ── -->
+				<div class="m3-card" id="settings-panel-chart-rename" style="display:none;padding:20px 16px;margin-bottom:16px;">
+					<div style="margin-bottom:16px;">
+						<div style="font-size:13px;opacity:0.6;margin-bottom:12px;">Rename an album in the Goot Charts Durable Object. All play counts (day / week / month / alltime) are preserved — only the name changes.</div>
+						<input id="chart-rename-artist-input" type="text" placeholder="Artist (e.g. Mr. Yeast Music)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:14px;outline:none;margin-bottom:8px;">
+						<input id="chart-rename-old-input" type="text" placeholder="Current album name (e.g. Subliminal)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:14px;outline:none;margin-bottom:8px;">
+						<input id="chart-rename-new-input" type="text" placeholder="New album name (e.g. In a Perfect World)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:14px;outline:none;margin-bottom:12px;">
 					</div>
+					<div style="display:flex;gap:8px;margin-bottom:8px;">
+						<button class="m3-btn m3-btn-filled" style="flex:1;justify-content:center;" onclick="submitChartAlbumRename()"><i class="fa-solid fa-pen-to-square"></i> Rename in Charts</button>
+					</div>
+					<div id="chart-rename-status" style="display:none;font-size:13px;padding:8px 12px;border-radius:8px;"></div>
+				</div>
+<!-- ── Block Tracks ─────────────────────────────────────────────── -->
+				</div>
 				</div>
 			</div>
 
@@ -17558,7 +17579,7 @@ async function loadTrackMetadataFromDB() {
                 const result = request.result || [];
                 let hasOldMetadata = false;
                 for (const item of result) {
-                    if (!item.metadataVersion || item.metadataVersion !== 'metadata-store-v13') {
+                    if (!item.metadataVersion || item.metadataVersion !== 'metadata-store-v14') {
                         hasOldMetadata = true;
                                                 break; // Found at least one old entry, that's enough
                     }
@@ -17670,7 +17691,7 @@ async function saveTrackMetadataToDB(id, data) {
                 id,
                 data,
                 timestamp: Date.now(),
-                metadataVersion: 'metadata-store-v13' // GootV4 Beta metadata store version
+                metadataVersion: 'metadata-store-v14' // GootV4 Beta metadata store version
             });
             transaction.oncomplete = () => resolve(true);
             transaction.onerror = () => reject(transaction.error);
@@ -18851,7 +18872,7 @@ async function saveCompleteTrackMetadata(trackId, metadata) {
         composer: metadata.composer || '',
         comment: metadata.comment || '',
         timestamp: Date.now(),
-        metadataVersion: 'metadata-store-v13'
+        metadataVersion: 'metadata-store-v14'
     };
     _idbWriteQueue.set(trackId, record);
     _scheduleIDBFlush();
@@ -29949,6 +29970,8 @@ function _redirectTapUnlock() {
         if (btn) {
             btn.style.display = '';
             if (artBtn) artBtn.style.display = '';
+            const chartRenameBtn = document.getElementById('settings-nav-chart-rename');
+            if (chartRenameBtn) chartRenameBtn.style.display = '';
             showNotification('🔓 Admin tools unlocked');
         }
     } else {
@@ -30176,6 +30199,46 @@ function _artRedirectShowStatus(msg, ok) {
         ? 'color-mix(in srgb,#22c55e 15%,transparent)'
         : 'color-mix(in srgb,#ef4444 15%,transparent)';
     el.style.display = '';
+}
+
+async function submitChartAlbumRename() {
+    const artist   = document.getElementById('chart-rename-artist-input').value.trim();
+    const oldAlbum = document.getElementById('chart-rename-old-input').value.trim();
+    const newAlbum = document.getElementById('chart-rename-new-input').value.trim();
+    const statusEl = document.getElementById('chart-rename-status');
+
+    function showStatus(msg, ok) {
+        statusEl.textContent = msg;
+        statusEl.style.display = '';
+        statusEl.style.background = ok
+            ? 'color-mix(in srgb,var(--md-sys-color-primary) 12%,transparent)'
+            : 'color-mix(in srgb,#ef4444 12%,transparent)';
+        statusEl.style.color = ok ? '' : '#ef4444';
+    }
+
+    if (!oldAlbum) { showStatus('Please enter the current album name.', false); return; }
+    if (!newAlbum) { showStatus('Please enter the new album name.', false); return; }
+    if (oldAlbum === newAlbum) { showStatus('Old and new names are the same.', false); return; }
+
+    showStatus('Renaming…', true);
+
+    try {
+        const res = await fetch('https://gootapimask.goot-api.workers.dev/charts/rename-album', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ oldArtist: artist, oldAlbum, newAlbum }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+            showStatus('Error: ' + (data.error || res.status), false);
+        } else {
+            showStatus(`✓ Renamed "${oldAlbum}" → "${newAlbum}" (plays preserved)`, true);
+            document.getElementById('chart-rename-old-input').value = '';
+            document.getElementById('chart-rename-new-input').value = '';
+        }
+    } catch (e) {
+        showStatus('Network error: ' + e.message, false);
+    }
 }
 
 async function submitArtRedirect() {
@@ -36984,7 +37047,7 @@ async function importAllData(input) {
                         clearRequest.onsuccess = () => resolve();
                     });
                     for (const item of importData.indexedDB.trackMetadata) {
-                        item.metadataVersion = 'metadata-store-v13';
+                        item.metadataVersion = 'metadata-store-v14';
                         store.put(item);
                     }
                     await new Promise((resolve) => {
@@ -47604,6 +47667,13 @@ const SETTINGS_SECTIONS = {
     sub: 'Replace album art with a new upload',
     icon: '<i class="fa-solid fa-image"></i>',
     panel: 'settings-panel-art-redirect',
+    secret: true
+  },
+  'chart-rename': {
+    title: 'Chart Album Rename',
+    sub: 'Rename an album in the charts without losing plays',
+    icon: '<i class="fa-solid fa-chart-simple"></i>',
+    panel: 'settings-panel-chart-rename',
     secret: true
   },
 
