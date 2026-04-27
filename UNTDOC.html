@@ -397,6 +397,55 @@
 
        /* ─── Compiler ─── */
        .compiler-container { display: flex; flex-direction: column; gap: 12px; }
+       #editor {
+           width: 100%;
+           min-height: 420px;
+           background: var(--card-bg);
+           border: 1px solid var(--border-bright);
+           border-left: 3px solid var(--accent-mid);
+           color: var(--accent);
+           font-family: 'Space Mono', 'Courier New', monospace;
+           font-size: 0.82rem;
+           line-height: 1.6;
+           letter-spacing: 0.03em;
+           padding: 16px;
+           resize: vertical;
+           outline: none;
+           transition: border-color 0.2s, box-shadow 0.2s;
+       }
+       #editor::placeholder { color: var(--text-muted); opacity: 0.6; }
+       #editor:focus {
+           border-color: var(--accent);
+           border-left-color: var(--accent);
+           box-shadow: 0 0 0 1px var(--accent-mid), 0 0 24px rgba(var(--accent-rgb), 0.12), inset 0 0 16px rgba(var(--accent-rgb), 0.03);
+       }
+       .controls {
+           display: flex;
+           flex-wrap: wrap;
+           gap: 8px;
+       }
+       .control-btn {
+           background: transparent;
+           border: 1px solid var(--border-bright);
+           color: var(--text-muted);
+           padding: 9px 16px;
+           cursor: pointer;
+           font-family: 'Space Mono', monospace;
+           font-size: 0.72rem;
+           letter-spacing: 0.08em;
+           transition: all 0.2s;
+           display: flex;
+           align-items: center;
+           gap: 6px;
+       }
+       .control-btn:hover {
+           border-color: var(--accent);
+           color: var(--accent);
+           background: var(--accent-dim);
+           box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.2);
+       }
+       .control-btn .material-symbols-outlined { font-size: 15px; }
+       #fileInput { display: none; }
 
        /* ─── Back button ─── */
        .back-to-mono {
