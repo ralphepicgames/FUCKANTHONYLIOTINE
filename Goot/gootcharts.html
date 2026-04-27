@@ -959,13 +959,15 @@ function connectWS() {
                     // Refetch all on any change
                     fetchAllPeriods();
                 } else if (msg.type === 'chart-state') {
-                    // Initial full state from WS
+                    // Full state pushed from DO on connect — use it directly, no extra fetches needed
                     window._chartsCache = {
-                        tracks: { day: [], week: msg.weekTracks||[], month: msg.monthTracks||[], alltime: msg.alltimeTracks||[] },
-                        albums: { day: [], week: [], month: [], alltime: [] },
+                        tracks: { day: msg.dayTracks||[], week: msg.weekTracks||[], month: msg.monthTracks||[], alltime: msg.alltimeTracks||[] },
+                        albums: { day: msg.dayAlbums||[], week: msg.weekAlbums||[], month: msg.monthAlbums||[], alltime: msg.alltimeAlbums||[] },
                     };
-                    // Albums not sent over WS — fetch separately
-                    fetchAlbums();
+                    tracksData = window._chartsCache.tracks[currentPeriod] || [];
+                    albumsData = window._chartsCache.albums[currentPeriod] || [];
+                    document.getElementById('lastUpdated').textContent = 'Live';
+                    render();
                 }
             } catch (_) {}
         };
