@@ -3606,6 +3606,14 @@ function showBanScreen(until_ms) {
   clearSession();
 
   clearInterval(_banTimer);
+
+  // Treat anything more than 50 years from now as permanent
+  const isPermanent = until_ms - Date.now() > 50 * 365 * 24 * 3600000;
+  if (isPermanent) {
+    document.getElementById('ban-countdown').textContent = 'Permanent';
+    return;
+  }
+
   function tick() {
     const ms = until_ms - Date.now();
     if (ms <= 0) {
@@ -4368,9 +4376,15 @@ function connectWS() {
   };
 
   socket.onclose = (e) => {
-    console.log('[WS] closed, reconnecting in 2s…');
     clearInterval(socket._heartbeat);
     ws = null;
+    if (e.code === 1008) {
+      clearTimeout(wsReconnectTimer);
+      const until = parseInt(e.reason) || (Date.now() + 100 * 365 * 24 * 3600000);
+      showBanScreen(until);
+      return;
+    }
+    console.log('[WS] closed, reconnecting in 2s…');
     if (curUser) wsReconnectTimer = setTimeout(connectWS, 2000);
   };
 
