@@ -4002,11 +4002,7 @@
         fn: async () => {
           if (!tunnel) throw new Error('No MOVIE_TUNNEL configured');
           const pipeUrl = `${tunnel}/pipe?${qs}`;
-          // Follow the redirect to see if pipe resolved to a direct video or m3u8
-          const probe = await fetch(pipeUrl, { method: 'HEAD', redirect: 'follow' });
-          const finalUrl = probe.url;
-          const isVideo = /\/video\?/.test(finalUrl) || /\.(mp4|mkv|avi|mov|webm)(\?|$)/i.test(finalUrl);
-          return { url: isVideo ? finalUrl : pipeUrl, source: 'tunnel', isVideo };
+          return { url: pipeUrl, source: 'tunnel' };
         },
       }];
     }
