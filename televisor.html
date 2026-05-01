@@ -2416,7 +2416,7 @@
 
           if (typeof Hls !== 'undefined' && Hls.isSupported()) {
             const _tvStartHls = (url) => {
-              const hls = new Hls({ enableWorker: true, maxBufferLength: 60, maxMaxBufferLength: 120, fragLoadingMaxRetry: 8, fragLoadingRetryDelay: 1000 });
+              const hls = new Hls({ enableWorker: true, maxBufferLength: 30, maxMaxBufferLength: 60, fragLoadingMaxRetry: 8, fragLoadingRetryDelay: 1000 });
               hls.loadSource(STREAM_PROXY + 'hls?url=' + encodeURIComponent(url));
               hls.attachMedia(vid());
               hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -2631,7 +2631,7 @@
           const wasPlaying = !v.paused;
           v._hls.destroy();
           v._hls = null;
-          const hls = new Hls({ enableWorker: true, maxBufferLength: 60, maxMaxBufferLength: 120, fragLoadingMaxRetry: 8, fragLoadingRetryDelay: 1000 });
+          const hls = new Hls({ enableWorker: true, maxBufferLength: 30, maxMaxBufferLength: 60, fragLoadingMaxRetry: 8, fragLoadingRetryDelay: 1000 });
           hls.loadSource(STREAM_PROXY + 'hls?url=' + encodeURIComponent(d.muxed_url));
           hls.attachMedia(v);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -4001,10 +4001,12 @@
         name: 'Tunnel',
         fn: async () => {
           if (!tunnel) throw new Error('No MOVIE_TUNNEL configured');
-          // Use tunnel's /pipe endpoint directly — it resolves the stream, rewrites the
-          // m3u8, and proxies all segments itself. No CF worker involved, no blocklists.
           const pipeUrl = `${tunnel}/pipe?${qs}`;
-          return { url: pipeUrl, source: 'tunnel' };
+          // Follow the redirect to see if pipe resolved to a direct video or m3u8
+          const probe = await fetch(pipeUrl, { method: 'HEAD', redirect: 'follow' });
+          const finalUrl = probe.url;
+          const isVideo = /\/video\?/.test(finalUrl) || /\.(mp4|mkv|avi|mov|webm)(\?|$)/i.test(finalUrl);
+          return { url: isVideo ? finalUrl : pipeUrl, source: 'tunnel', isVideo };
         },
       }];
     }
@@ -4082,12 +4084,23 @@
       const badge = document.getElementById('mvSourceBadge');
       if (badge) badge.textContent = streamData.source || src.name;
 
+
+      // /pipe may redirect to /video for direct mp4 — detect by URL path or isVideo flag
+      if (streamData.isVideo || hlsUrl.includes('/video?') || /\.(mp4|mkv|avi|mov|webm)(\?|$)/i.test(hlsUrl)) {
+        console.log("[movies] direct video via /video proxy — using native <video>");
+        if (video._mvHls) { video._mvHls.destroy(); video._mvHls = null; }
+        document.getElementById("mvIframeLoading").style.display = "none";
+        video.src = hlsUrl;
+        video.load();
+        video.play().catch(() => {});
+        return;
+      }
       if (typeof Hls !== 'undefined' && Hls.isSupported()) {
         const hls = new Hls({
           enableWorker: true,
-          maxBufferLength: 120,
-          maxMaxBufferLength: 240,
-          maxBufferSize: 200 * 1000 * 1000,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          maxBufferSize: 30 * 1000 * 1000,
           maxBufferHole: 2,
           highBufferWatchdogPeriod: 10,
           nudgeMaxRetry: 10,
@@ -4137,9 +4150,9 @@
             video._mvHls = null;
             const hlsR = new Hls({
           enableWorker: true,
-          maxBufferLength: 120,
-          maxMaxBufferLength: 240,
-          maxBufferSize: 200 * 1000 * 1000,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          maxBufferSize: 30 * 1000 * 1000,
           maxBufferHole: 2,
           highBufferWatchdogPeriod: 10,
           nudgeMaxRetry: 10,
@@ -4182,9 +4195,9 @@
             video._mvHls = null;
             const hls2 = new Hls({
           enableWorker: true,
-          maxBufferLength: 120,
-          maxMaxBufferLength: 240,
-          maxBufferSize: 200 * 1000 * 1000,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          maxBufferSize: 30 * 1000 * 1000,
           maxBufferHole: 2,
           highBufferWatchdogPeriod: 10,
           nudgeMaxRetry: 10,
