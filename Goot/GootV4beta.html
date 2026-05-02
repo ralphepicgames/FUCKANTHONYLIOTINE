@@ -19562,7 +19562,11 @@ async function initAudioContext() {
         // onstatechange fires when it suspends — immediately resume so playback continues.
         audioCtx.onstatechange = function() {
             if (audioCtx.state === 'suspended' && currentPlayer && !currentPlayer.paused) {
-                audioCtx.resume().catch(() => {});
+                audioCtx.resume().then(function() {
+                    // Restamp rate after context resumes — Android resets the element's
+                    // playbackRate when the audio pipeline is reconstructed on unlock.
+                    if (typeof _restampRateBeforePlay === 'function') _restampRateBeforePlay();
+                }).catch(() => {});
             }
         };
         sourceNode = audioCtx.createMediaElementSource(player);
@@ -19837,7 +19841,18 @@ function initMediaSession() {
     }
     mediaSession = navigator.mediaSession;
     mediaSession.setActionHandler('play', () => {
-        currentPlayer.play().catch(() => {});
+        // Android: restamp playbackRate BEFORE play — the OS media session resume path
+        // resets the HTMLMediaElement pipeline state, causing chipmunk/fast audio until
+        // the rate is explicitly re-applied. Must happen before .play(), not after.
+        if (typeof _restampRateBeforePlay === 'function') _restampRateBeforePlay();
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().then(() => {
+                if (typeof _restampRateBeforePlay === 'function') _restampRateBeforePlay();
+                currentPlayer.play().catch(() => {});
+            }).catch(() => { currentPlayer.play().catch(() => {}); });
+        } else {
+            currentPlayer.play().catch(() => {});
+        }
     });
     mediaSession.setActionHandler('pause', () => {
         currentPlayer.pause();
@@ -20315,18 +20330,23 @@ function _isPartyGuest() {
            partyState.active && partyState.role === 'guest' && !_isPartyDJ();
 }
 
-// Android Chrome bugfix: setting preservesPitch=false at playbackRate=1.0 on a
-// streaming URL causes the audio pipeline to play at wrong speed (chipmunk/5x effect).
-// Only disable pitch preservation when actually changing speed away from 1.0.
+// Android Chrome resets HTMLMediaElement.playbackRate AND preservesPitch to bad values
+// when the audio pipeline is reconstructed (lock/unlock, interruptions, media key resume).
+// The app never detects this because effectsState.speed is still correct — only the
+// underlying element is wrong. Fix: always write both properties unconditionally so
+// Android can never leave them in a stale state after a pipeline reset.
+// Previous behaviour of skipping preservesPitch at 1x was wrong — the bug manifests
+// at 1x too (raw ~5x speed, no pitch shift), proving preservesPitch=false is the cause.
 const _isAndroidChrome = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 function _applyPlaybackRate(el, rate) {
     if (!el) return;
     const needPitchShift = Math.abs(rate - 1.0) > 0.01;
-    if (!_isAndroidChrome || needPitchShift) {
-        el.preservesPitch = !needPitchShift;
-        el.mozPreservesPitch = !needPitchShift;
-        el.webkitPreservesPitch = !needPitchShift;
-    }
+    // Always write preservesPitch — never skip it, even at 1x on Android.
+    // Android resets it to false after pipeline reconstruction; skipping the write
+    // means it never gets corrected, producing full-speed audio with no pitch shift.
+    el.preservesPitch = !needPitchShift;
+    el.mozPreservesPitch = !needPitchShift;
+    el.webkitPreservesPitch = !needPitchShift;
     // Clamp rate to safe range — Android HAL can behave unpredictably outside 0.5-4.0
     el.playbackRate = Math.max(0.1, Math.min(4.0, rate));
 }
@@ -27125,6 +27145,7 @@ function play(idxOrId) {
     if (ctx && ctx.state === 'suspended') {
         ctx.resume().then(() => { _restampRateBeforePlay(player); player.play().catch(()=>{}); });
     } else {
+        _restampRateBeforePlay(player);
         player.play().catch(err => {
             // Autoplay blocked (common when tab opens with no prior user gesture).
             // Queue a one-shot resume on the very next interaction anywhere on the page.
@@ -36738,6 +36759,9 @@ function togglePlay() {
         if (isCrossfading) {
             resumeCrossfade();
         } else {
+            // Android: restamp rate before every .play() — the element's playbackRate
+            // is silently reset by the browser on lock/unlock and audio interruptions.
+            _restampRateBeforePlay();
             currentPlayer.play().then(() => {
                 const sidebar = document.getElementById("sidebar");
                 if (sidebar) {
@@ -37529,6 +37553,10 @@ document.addEventListener('input', (e) => {
 player.addEventListener('progress', updateBuffer);
 player.onplay = () => {
     if (currentPlayer !== player) return;
+    // Android: restamp playbackRate on every play event — the browser silently resets
+    // the element's rate during audio interruptions, lock/unlock, and media-key resumes.
+    // This is the last-line-of-defence fix that catches anything the pre-play stamps miss.
+    if (typeof _restampRateBeforePlay === 'function') _restampRateBeforePlay(player);
     if (audioContext && audioContext.state === 'suspended') {
         audioContext.resume();
     }
@@ -37597,6 +37625,9 @@ player.onpause = () => {
 };
 player2.onplay = () => {
     if (currentPlayer !== player2) return;
+    // Android: restamp playbackRate on every play event — the browser silently resets
+    // the element's rate during audio interruptions, lock/unlock, and media-key resumes.
+    if (typeof _restampRateBeforePlay === 'function') _restampRateBeforePlay(player2);
     if (audioContext && audioContext.state === 'suspended') {
         audioContext.resume();
     }
@@ -47905,7 +47936,17 @@ document.addEventListener('keydown', function(e) {
 // Keep AudioContext alive when tab is backgrounded / refocused (Firefox)
 document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'visible' && audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        audioCtx.resume().then(function() {
+            // Restamp rate after AudioContext resumes on unlock/foreground — Android
+            // resets HTMLMediaElement.playbackRate when the pipeline is reconstructed.
+            if (typeof _restampRateBeforePlay === 'function' && currentPlayer && !currentPlayer.paused) {
+                _restampRateBeforePlay();
+            }
+        }).catch(() => {});
+    } else if (document.visibilityState === 'visible' && currentPlayer && !currentPlayer.paused) {
+        // AudioContext already running but element rate may have been reset by OS —
+        // restamp unconditionally on every foreground transition while playing.
+        if (typeof _restampRateBeforePlay === 'function') _restampRateBeforePlay();
     }
     if (document.visibilityState === 'visible') {
         updateMediaSessionMetadata();
@@ -47940,7 +47981,13 @@ if (_isAndroidChrome) {
     setInterval(function() {
         if (!audioCtx || !currentPlayer || currentPlayer.paused) return;
         if (audioCtx.state === 'suspended') {
-            audioCtx.resume().catch(() => {});
+            audioCtx.resume().then(function() {
+                // Restamp rate after keepalive resume — element pipeline may have been
+                // reset by Android while the context was suspended in background.
+                if (typeof _restampRateBeforePlay === 'function' && currentPlayer && !currentPlayer.paused) {
+                    _restampRateBeforePlay();
+                }
+            }).catch(() => {});
         } else if (audioCtx.state === 'running') {
             // Schedule a tiny silent buffer on the destination to keep the Android audio thread alive.
             // A disconnected GainNode does nothing — we need an actual graph event.
@@ -47954,6 +48001,26 @@ if (_isAndroidChrome) {
             } catch(e) {}
         }
     }, 20000);
+
+    // Android playbackRate watchdog — polls every 2s while playing to detect when
+    // Android silently resets el.playbackRate underneath the app (the app sees the
+    // correct effectsState.speed but the element itself is at a wrong rate).
+    // This is the only reliable catch-all since there is no browser event for this reset.
+    setInterval(function() {
+        if (!currentPlayer || currentPlayer.paused) return;
+        if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return; // guest rate managed by host
+        const expectedRate = (effectsState && effectsState.speed ? effectsState.speed : 100) / 100;
+        const actualRate = currentPlayer.playbackRate;
+        // If the element's rate has drifted more than 1% from what we expect, correct it.
+        // Also correct if preservesPitch is wrong (false at 1x = causes the fast-audio bug).
+        const rateDrifted = Math.abs(actualRate - expectedRate) > 0.01;
+        const needsPitchOn = Math.abs(expectedRate - 1.0) <= 0.01; // should be true at 1x
+        const pitchDrifted = needsPitchOn && currentPlayer.preservesPitch === false;
+        if (rateDrifted || pitchDrifted) {
+            console.warn('[Android watchdog] playbackRate/preservesPitch drift detected — expected', expectedRate, 'got', actualRate, 'preservesPitch:', currentPlayer.preservesPitch, '— correcting');
+            _applyPlaybackRate(currentPlayer, expectedRate);
+        }
+    }, 2000);
 }
 
 // ── 8D Audio toggle ──────────────────────────────────────────────────────────
