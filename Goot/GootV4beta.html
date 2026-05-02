@@ -19563,9 +19563,14 @@ async function initAudioContext() {
         audioCtx.onstatechange = function() {
             if (audioCtx.state === 'suspended' && currentPlayer && !currentPlayer.paused) {
                 audioCtx.resume().then(function() {
-                    // Restamp rate after context resumes — Android resets the element's
-                    // playbackRate when the audio pipeline is reconstructed on unlock.
-                    if (typeof _restampRateBeforePlay === 'function') _restampRateBeforePlay();
+                    // Restamp rate on BOTH players after context resumes — Android resets
+                    // playbackRate and preservesPitch on the element when the audio pipeline
+                    // is reconstructed on unlock. Restamp both to cover the swap window
+                    // during song changes where inactive player may also be loading.
+                    if (typeof _restampRateBeforePlay === 'function') {
+                        if (typeof player !== 'undefined') _restampRateBeforePlay(player);
+                        if (typeof player2 !== 'undefined') _restampRateBeforePlay(player2);
+                    }
                 }).catch(() => {});
             }
         };
@@ -19843,11 +19848,18 @@ function initMediaSession() {
     mediaSession.setActionHandler('play', () => {
         // Android: restamp playbackRate BEFORE play — the OS media session resume path
         // resets the HTMLMediaElement pipeline state, causing chipmunk/fast audio until
-        // the rate is explicitly re-applied. Must happen before .play(), not after.
-        if (typeof _restampRateBeforePlay === 'function') _restampRateBeforePlay();
+        // the rate is explicitly re-applied. Stamp BOTH players — during song changes
+        // the inactive player may be preloading and also needs its rate corrected.
+        if (typeof _restampRateBeforePlay === 'function') {
+            if (typeof player !== 'undefined') _restampRateBeforePlay(player);
+            if (typeof player2 !== 'undefined') _restampRateBeforePlay(player2);
+        }
         if (audioCtx && audioCtx.state === 'suspended') {
             audioCtx.resume().then(() => {
-                if (typeof _restampRateBeforePlay === 'function') _restampRateBeforePlay();
+                if (typeof _restampRateBeforePlay === 'function') {
+                    if (typeof player !== 'undefined') _restampRateBeforePlay(player);
+                    if (typeof player2 !== 'undefined') _restampRateBeforePlay(player2);
+                }
                 currentPlayer.play().catch(() => {});
             }).catch(() => { currentPlayer.play().catch(() => {}); });
         } else {
@@ -20346,18 +20358,21 @@ function _isPartyGuest() {
 // The app never detects this because effectsState.speed is still correct — only the
 // underlying element is wrong. Fix: always write both properties unconditionally so
 // Android can never leave them in a stale state after a pipeline reset.
-// Previous behaviour of skipping preservesPitch at 1x was wrong — the bug manifests
-// at 1x too (raw ~5x speed, no pitch shift), proving preservesPitch=false is the cause.
+// CRITICAL Android fix: preservesPitch must ALWAYS be false on Android Chrome.
+// Setting it to true (even at 1x) causes the OS to apply its own pitch-correction pass
+// on top of the already-correct audio pipeline, which manifests as burst fast-speed
+// playback after lock/unlock, media-key resume, song changes, and interruptions.
+// V3.9 never had this bug because it always set preservesPitch=false unconditionally.
 const _isAndroidChrome = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 function _applyPlaybackRate(el, rate) {
     if (!el) return;
-    const needPitchShift = Math.abs(rate - 1.0) > 0.01;
-    // Always write preservesPitch — never skip it, even at 1x on Android.
-    // Android resets it to false after pipeline reconstruction; skipping the write
-    // means it never gets corrected, producing full-speed audio with no pitch shift.
-    el.preservesPitch = !needPitchShift;
-    el.mozPreservesPitch = !needPitchShift;
-    el.webkitPreservesPitch = !needPitchShift;
+    // On Android Chrome: always preservesPitch=false regardless of rate.
+    // On other platforms: use true at 1x so the browser applies pitch correction
+    // when the user hasn't changed speed (natural behaviour on desktop/iOS).
+    const preservePitch = _isAndroidChrome ? false : (Math.abs(rate - 1.0) <= 0.01);
+    el.preservesPitch = preservePitch;
+    el.mozPreservesPitch = preservePitch;
+    el.webkitPreservesPitch = preservePitch;
     // Clamp rate to safe range — Android HAL can behave unpredictably outside 0.5-4.0
     el.playbackRate = Math.max(0.1, Math.min(4.0, rate));
 }
@@ -47948,16 +47963,21 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'visible' && audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume().then(function() {
-            // Restamp rate after AudioContext resumes on unlock/foreground — Android
-            // resets HTMLMediaElement.playbackRate when the pipeline is reconstructed.
-            if (typeof _restampRateBeforePlay === 'function' && currentPlayer && !currentPlayer.paused) {
-                _restampRateBeforePlay();
+            // Restamp rate on BOTH players after AudioContext resumes on unlock/foreground —
+            // Android resets HTMLMediaElement.playbackRate and preservesPitch when the
+            // pipeline is reconstructed. Restamp both to cover the crossfade swap window.
+            if (typeof _restampRateBeforePlay === 'function') {
+                if (typeof player !== 'undefined') _restampRateBeforePlay(player);
+                if (typeof player2 !== 'undefined') _restampRateBeforePlay(player2);
             }
         }).catch(() => {});
-    } else if (document.visibilityState === 'visible' && currentPlayer && !currentPlayer.paused) {
+    } else if (document.visibilityState === 'visible') {
         // AudioContext already running but element rate may have been reset by OS —
-        // restamp unconditionally on every foreground transition while playing.
-        if (typeof _restampRateBeforePlay === 'function') _restampRateBeforePlay();
+        // restamp both players unconditionally on every foreground transition.
+        if (typeof _restampRateBeforePlay === 'function') {
+            if (typeof player !== 'undefined') _restampRateBeforePlay(player);
+            if (typeof player2 !== 'undefined') _restampRateBeforePlay(player2);
+        }
     }
     if (document.visibilityState === 'visible') {
         updateMediaSessionMetadata();
@@ -47993,10 +48013,11 @@ if (_isAndroidChrome) {
         if (!audioCtx || !currentPlayer || currentPlayer.paused) return;
         if (audioCtx.state === 'suspended') {
             audioCtx.resume().then(function() {
-                // Restamp rate after keepalive resume — element pipeline may have been
-                // reset by Android while the context was suspended in background.
-                if (typeof _restampRateBeforePlay === 'function' && currentPlayer && !currentPlayer.paused) {
-                    _restampRateBeforePlay();
+                // Restamp rate on BOTH players after keepalive resume — element pipeline
+                // may have been reset by Android while context was suspended in background.
+                if (typeof _restampRateBeforePlay === 'function') {
+                    if (typeof player !== 'undefined') _restampRateBeforePlay(player);
+                    if (typeof player2 !== 'undefined') _restampRateBeforePlay(player2);
                 }
             }).catch(() => {});
         } else if (audioCtx.state === 'running') {
@@ -48028,7 +48049,10 @@ if (_isAndroidChrome) {
         [player, player2].forEach(function(el) {
             if (!el || el.paused) return;
             const rateDrifted = Math.abs(el.playbackRate - expectedRate) > 0.01;
-            const pitchDrifted = el.preservesPitch !== (Math.abs(expectedRate - 1.0) > 0.01 ? false : true);
+            // On Android Chrome preservesPitch must always be false — if it's true the
+            // OS applies a second pitch-correction pass causing burst fast-speed audio.
+            const expectedPitch = false; // always false on Android (this block is Android-only)
+            const pitchDrifted = el.preservesPitch !== expectedPitch;
             if (rateDrifted || pitchDrifted) {
                 if (window._watchdogDebug && typeof showShareToast === 'function') {
                     showShareToast('🐛 watchdog: ' + el.id + ' rate=' + el.playbackRate.toFixed(2) + ' pitch=' + el.preservesPitch + ' → fixing', 'error');
