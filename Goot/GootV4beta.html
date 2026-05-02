@@ -13422,7 +13422,7 @@
 							</defs>
 						</svg>
 					</div>
-					<div class="header-logo-text">GootV4</div>
+					<div class="header-logo-text" id="goot-logo-text" onclick="(function(){window._watchdogDebugTaps=(window._watchdogDebugTaps||0)+1;if(window._watchdogDebugTaps>=5){window._watchdogDebugTaps=0;window._watchdogDebug=!window._watchdogDebug;if(typeof showShareToast==='function')showShareToast(window._watchdogDebug?'🐛 Watchdog debug ON':'Watchdog debug off','info');}})()">GootV4</div>
 				</div>
 				<div class="top-header-center">
 					<div class="top-search-bar">
@@ -15226,8 +15226,8 @@
 									</div>
 
 								</footer>
-								<audio id="player" crossorigin="anonymous" preload="auto"></audio>
-								<audio id="player2" crossorigin="anonymous" preload="auto"></audio>
+								<audio id="player" crossorigin="anonymous" preload="auto" preservesPitch="false"></audio>
+								<audio id="player2" crossorigin="anonymous" preload="auto" preservesPitch="false"></audio>
 								<div id="desktopExtended" class="desktop-extended collapsed">
 									<canvas id="vizBgCanvas"></canvas>
 									<div id="desktopExtendedArtBg" class="desktop-extended-art-bg"></div>
@@ -48002,25 +48002,30 @@ if (_isAndroidChrome) {
         }
     }, 20000);
 
-    // Android playbackRate watchdog — polls every 2s while playing to detect when
-    // Android silently resets el.playbackRate underneath the app (the app sees the
-    // correct effectsState.speed but the element itself is at a wrong rate).
-    // This is the only reliable catch-all since there is no browser event for this reset.
+    // Android playbackRate watchdog — every 500ms, unconditionally re-stamp playbackRate
+    // and preservesPitch on any playing element. Android silently resets both after
+    // lock/unlock, interruptions, and media key resumes with no event fired. The 500ms
+    // interval means worst-case the glitch lasts half a second before being corrected.
+    // Checks both player elements (not just currentPlayer) to cover the swap window
+    // during song changes.
+    // Debug mode: add ?watchdog_debug to URL, or tap the version string 5x, to get
+    // on-screen toasts whenever the watchdog corrects a drift.
+    window._watchdogDebug = new URLSearchParams(window.location.search).has('watchdog_debug');
     setInterval(function() {
-        if (!currentPlayer || currentPlayer.paused) return;
-        if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return; // guest rate managed by host
+        if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
         const expectedRate = (effectsState && effectsState.speed ? effectsState.speed : 100) / 100;
-        const actualRate = currentPlayer.playbackRate;
-        // If the element's rate has drifted more than 1% from what we expect, correct it.
-        // Also correct if preservesPitch is wrong (false at 1x = causes the fast-audio bug).
-        const rateDrifted = Math.abs(actualRate - expectedRate) > 0.01;
-        const needsPitchOn = Math.abs(expectedRate - 1.0) <= 0.01; // should be true at 1x
-        const pitchDrifted = needsPitchOn && currentPlayer.preservesPitch === false;
-        if (rateDrifted || pitchDrifted) {
-            console.warn('[Android watchdog] playbackRate/preservesPitch drift detected — expected', expectedRate, 'got', actualRate, 'preservesPitch:', currentPlayer.preservesPitch, '— correcting');
-            _applyPlaybackRate(currentPlayer, expectedRate);
-        }
-    }, 2000);
+        [player, player2].forEach(function(el) {
+            if (!el || el.paused) return;
+            const rateDrifted = Math.abs(el.playbackRate - expectedRate) > 0.01;
+            const pitchDrifted = el.preservesPitch !== (Math.abs(expectedRate - 1.0) > 0.01 ? false : true);
+            if (rateDrifted || pitchDrifted) {
+                if (window._watchdogDebug && typeof showShareToast === 'function') {
+                    showShareToast('🐛 watchdog: ' + el.id + ' rate=' + el.playbackRate.toFixed(2) + ' pitch=' + el.preservesPitch + ' → fixing', 'error');
+                }
+                _applyPlaybackRate(el, expectedRate);
+            }
+        });
+    }, 500);
 }
 
 // ── 8D Audio toggle ──────────────────────────────────────────────────────────
