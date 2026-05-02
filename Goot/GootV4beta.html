@@ -19880,6 +19880,10 @@ function initMediaSession() {
         if (details.seekTime != null && dur && isFinite(dur) && dur > 0) {
             // Ignore bogus seeks at track start (duration not yet stable)
             if (currentPlayer.currentTime < 0.5 && details.seekTime < 0.1) return;
+            // Debug: show toast so we can see if Android fires this on unlock
+            if (window._watchdogDebug && typeof showShareToast === 'function') {
+                showShareToast('🐛 seekto fired: ' + details.seekTime.toFixed(1) + 's (cur=' + currentPlayer.currentTime.toFixed(1) + ')', 'error');
+            }
             currentPlayer.currentTime = Math.max(0, Math.min(details.seekTime, dur));
         }
     });
@@ -19994,7 +19998,14 @@ function updateMediaSessionPositionState() {
         mediaSession.setPositionState({
             duration: dur,
             position: pos,
-            playbackRate: (effectsState && effectsState.speed ? effectsState.speed : 100) / 100
+            // Always report playbackRate:1 — on Android, passing the real rate causes
+            // the OS to extrapolate position using that rate on lock/unlock, then fire
+            // a seekto back at us. That seekto sets currentTime which reconstructs the
+            // Web Audio pipeline, and on Android that reconstruction produces audio at
+            // the wrong speed even though el.playbackRate still reads as correct.
+            // V3.9 never had this bug. Passing 1 makes the OS extrapolate correctly
+            // at normal rate regardless of actual speed setting.
+            playbackRate: 1
         });
     } catch (e) {}
 }
