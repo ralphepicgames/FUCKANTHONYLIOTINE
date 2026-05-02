@@ -48010,7 +48010,7 @@ if (_isAndroidChrome) {
     // during song changes.
     // Debug mode: add ?watchdog_debug to URL, or tap the version string 5x, to get
     // on-screen toasts whenever the watchdog corrects a drift.
-    window._watchdogDebug = new URLSearchParams(window.location.search).has('watchdog_debug');
+    window._watchdogDebug = true; // always on until bug is diagnosed
     setInterval(function() {
         if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
         const expectedRate = (effectsState && effectsState.speed ? effectsState.speed : 100) / 100;
