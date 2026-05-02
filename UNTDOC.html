@@ -1053,6 +1053,10 @@
                        <input type="checkbox" id="filterOnefile" checked onchange="filterGames()">
                        Onefile
                    </label>
+                   <label class="source-filter-label">
+                       <input type="checkbox" id="filterSeraph" checked onchange="filterGames()">
+                       SERAPH
+                   </label>
                </div>
            </div>
            <div class="games-grid" id="gameGrid"></div>
@@ -1093,6 +1097,7 @@
 const pinIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="m640-480 80 80v80H520v240l-40 40-40-40v-240H240v-80l80-80v-280h-40v-80h400v80h-40v280Zm-286 80h252l-46-46v-314H400v314l-46 46Zm126 0Z"/></svg>`;
 
 const PINNED_GAMES_STORAGE_KEY = 'untdoc_pinned_games';
+let cachedAccentColor = '#ff2b9e';
 
 
    // Matrix Rain Effect - OPTIMIZED
@@ -1137,8 +1142,7 @@ const PINNED_GAMES_STORAGE_KEY = 'untdoc_pinned_games';
        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-       const accentColor = getComputedStyle(root).getPropertyValue('--accent').trim() || '#ff2b9e';
-       ctx.fillStyle = accentColor;
+       ctx.fillStyle = cachedAccentColor;
        ctx.font = fontSize + 'px Courier New';
 
        for (let i = 0; i < drops.length; i++) {
@@ -1157,6 +1161,7 @@ const PINNED_GAMES_STORAGE_KEY = 'untdoc_pinned_games';
 
    const BASE_URL = "https://raw.githubusercontent.com/ralphepicgames/FUCKANTHONYLIOTINE/refs/heads/main/Untitled%20Document%20Files/";
    const onefileBaseUrl = 'https://raw.githubusercontent.com/bubbls/ugs-singlefile/refs/heads/main/UGS-Files/';
+   const seraphBaseUrl = 'https://cdn.jsdelivr.net/gh/a456pur/seraph@ae2fcc6d6a9cd051654fcc0519080db1f79cf2a7/games/';
 
    // OPTIMIZATION: Initialize allGames immediately by processing raw data and then deleting raw data to free memory.
    let allGames = [];
@@ -1259,138 +1264,253 @@ const PINNED_GAMES_STORAGE_KEY = 'untdoc_pinned_games';
        isPNG: false
    });
 
-   // Sort in place
-   allGames.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+   // Seraph Games
+   {
+       const rawSeraphGames = [
+           '10minutestilldawn','1on1soccer','1v1lol','2048','3line','abudathealien',
+           'aceattorney','achievementunlocked','achievementunlocked2','achievementunlocked3',
+           'adofai','advancewars','advancewars2','advancewarsdayofruin','adventurecapitalist',
+           'adventuretime','ageofwar','ageofwar2','alteredbeast','amazingropepolice',
+           'amongus','amorphous','animalcrossingwildworld','aquaparkslides','backrooms2d',
+           'badicecream','badicecream2','badicecream3','badpiggies','badtimesimulator',
+           'baldisbasics','ballisticchickens','balloonrun','banjokazooie','banjopilot',
+           'banjotooie','basketbrosio','basketrandom','battlebeavers','battleships',
+           'battletoads','bigredbutton','bikechamp','bikechamp2','bitlife','bloxors',
+           'bobtherobber2','bomberman','bowsersinsidestory','boxingphysics2','boxingrandom',
+           'breakingthebank','btd','bubblespinner','bubbletanks2','burgerandfrights',
+           'burritobison','cactusmccoy','cactusmccoy2','canopy','cars2','castlevania',
+           'castlevaniaariaofsorrow','castlevaniadawnofsorrow','castlevaniaiii',
+           'castlevaniaorderofecclesia','cavechaos','celeste','cellmachine','championisland',
+           'changetype','cheesedreams','chess','chibiknight','chisel','chisel2',
+           'chooseyourweapon','chooseyourweapon2','chooseyourweapon3','chronotrigger',
+           'clickerheroes','clusterrush','colorswitch','comixzone','connect4','contra',
+           'contraiii','controlcraft2','cookieclicker','cookingmama','corporationinc',
+           'crazytunnel3d','crimsonfantasia','crossy','crushthecastle','crushthecastle2',
+           'csgoclicker','cubefield','cuttherope','dadish','dadish2','dadish3',
+           'dbzsupersonicwarriors','deathrun3d','defendthetank','diddykongracing',
+           'dinogame','ditto','dogeminer','donkeykong','donkeykong64','donkeykongcountry',
+           'donkeykongcountry2','donkeykongcountry3','donkeykongland','doodledefender',
+           'doodlejump','doom','doom2','doom64','dragonboy2','driftboss','drifthunters',
+           'driftmania','drilldozer','drmario','ducklife','ducklife2','ducklife3',
+           'ducklife4','ducklife5','ducklife6','ducktales','dukenukem64','dukenukemadvance',
+           'eagler1.8','earthbound','eccothedolphin','electricbox','electricman2',
+           'epicbattlefantasy','epicbattlefantasy2','epicbattlefantasy3','escapingtheprison',
+           'excitebike64','factoryballs','fancypantsadventure','fancypantsadventure2',
+           'fancypantsadventure3','feedme','finalfantasytacticsadvance','finalfantasyvi',
+           'finalninja','fireboywatergirl','fireemblem','flappy','fleeingthecomplex',
+           'flippyfish','floodrunner2','floodrunner3','fnaf-2','fnaf-3','fnaf-4','fnaf',
+           'fnf','fnfmidfight','fortnite','frostbite','frostbite2','fruitninja',
+           'funnymadracing','funnyshooter2','fzero','fzerox','garfieldgetsreal','gdlite',
+           'geometrydashsky','geometryrash','getawayshootout','gex64','goball',
+           'golddiggerfrvr','goldenaxe','goldeneye007','goldensun','grandtheftgrotto',
+           'gunfest','gunmayhem','gunmayhem2','gunmayhemredux','gunstarheroes','happywheels',
+           'harvestmoon','harvestmoon64','helixjump','hexgl','holeio','houseofhazards',
+           'icebreaker','iceclimber','illusionofgaia','infiltratingtheairship','infinitecraft',
+           'jetforcegemini','jetpackjoyride','justfalllol','kidicarus','kirby64',
+           'kirbyamazingmirror','kirbymassattack','kirbypowerpaintbrush','kirbysdreamland',
+           'kirbysdreamland2','knifehit','lazyjump3d','learntofly','learntofly2','learntofly3',
+           'legobatman','linerider','linksawakeningdx','linktothepast','lowsadventures2',
+           'majorasmask','marioandluigipartnersintime','mariocombat','mariogolf','mariokart64',
+           'mariokartds','mariokartsupercircuit','mariopaint','marioparty','marioparty2',
+           'marioparty3','mariopartyadvance','mariopartyds','mariopinballland','mariotennis',
+           'mc','mcclassic','mctowerdefence2','megaman2','megamanx','megamanzero',
+           'metalgearsolid','metroid','metroidfusion','metroidii','minesweeper','monkeymart',
+           'monopoly','monsterbrawl','mortalkombat4','mother3','motox3m','motox3mpool',
+           'motox3mspooky','motox3mwinter','multitask','mutiny','mysticalninja','neonrider',
+           'newsupermariobros','ngon','ninjagaiden','nintendogs','nitromemustdie',
+           'ocarinaoftime','offlineparadise','oodlegobs','osumania','ovo','pacman',
+           'pacmanworld','pakohighway','pandemic2','papalouie','papalouie2','papalouie3',
+           'papasbakeria','papasburgeria','papascheeseria','papascupcakeria','papasdonuteria',
+           'papasfreezeria','papashotdoggeria','papaspancakeria','papaspastaria',
+           'papaspizzaria','papasscooperia','papassushiria','papastacomia','papaswingeria',
+           'paperio2','paperio3d','papermario','phantasystariv','pickcrafter','picrossds',
+           'pizzatower','pokemondiamond','pokemonemerald','pokemonfirered','pokemonleafgreen',
+           'pokemonmysterydungeon','pokemonplatinum','pokemonruby','pokemonsapphire',
+           'pokemonsnap','pokemonsoulsilver','pokemonstadium','pokemonunbound','pokemonyellow',
+           'pool','portal','portal2','precisionclient','professorlayton','punchout','quest64',
+           'rabbitsamurai','raftwars','raftwars2','rangerx','rayman3','recoil','redball1',
+           'redball3','redball4','redballv2','redballv3','retrobowl','riddleschool',
+           'risehigher','ristar','roblox','rocketsoccer','rooftop','rooftop2','roughdino',
+           'run','run2','run3','run3plus','sandtrix','scribblenauts','shapeshipper',
+           'shift','shift2','shift3','shift4','shiningforce','shinobiiii','shopempire',
+           'shopempirefable','shrek2','simcity','simpsonsroadrage','skibidi1v100',
+           'skibiditoiletattack','skywire','skywire2','slope','slope2','slopeball',
+           'slopecity','sm64','sm64ds','snake','snowbattleio','snowrider3d','soccerrandom',
+           'solitaire','sonicadvance','sonicadvance2','sonicandknuckles','sonicrush',
+           'sonicspinball','sonicthehedgehog','sonicthehedgehog2','sonicthehedgehog3',
+           'sortthecourt','spaceinvaders','spirittracks','sprinter','stack','stairrace3d',
+           'starfox64','stateio','steakandjake','steakandjakemidnightmarch','stealingthediamond',
+           'stickmanboost','stickmanclimb','stickmangolf','stickmanhook','stickwar','stickwar2',
+           'streetfighter2','streetsofrage','streetsofrage2','subwayrunner','subwaysurfers',
+           'sudoku','superbomberman','superherodrop','superhot','supermariobros',
+           'supermariobros2','supermariobros3','supermarioconstruct','supermarioflash',
+           'supermarioflash2','supermariokart','supermarioland','supermarioland2',
+           'supermariorpg','supermarioworld','supermeatboy','supermetroid','supermonkeyballjr',
+           'superprincesspeach','supersmashbros','supersmashflash','superstarsaga',
+           'supertennis','supertreadmill','surf','swindler','swordsandsandals',
+           'swordsandsandals2','tabs','tanukisunset','templerun2','territorialio',
+           'testsubjectarena','testsubjectcomplete','tetris','tetrisds','thebindingofisaac',
+           'theimpossiblequiz','theimpossiblequiz2','thelegendofzelda','themehotel',
+           'thereisnogame','thesims2','thesims3','thisistheonlylevel','thumbfighter',
+           'timeshooter1','timeshooter2','timeshooter3','tinyfishing','townscaper','tron',
+           'tubejumpers','tunnelrush','turokdinosaurhunter','twinshot','twinshot2',
+           'ultimateflashsonic','unfairmario','vectorman','vectorman2','vex','vex2','vex3',
+           'vex4','vex5','vex6','vex7','volleyrandom','wallsmash','warioland4','wariolandii',
+           'warioswoods','warioware','wariowarediy','wariowaretouched','watermelongame',
+           'waterworks','waverace64','wordle','worldshardestgame','worldshardestgame2',
+           'wormsworldparty','wubzzysamazingadventure','xx142-b2.exe','yohoho','yoshisisland',
+           'yoshisstory','zombocalypse','zombotron','zombotron2'
+       ];
+       for(let i=0; i<rawSeraphGames.length; i++) {
+           const slug = rawSeraphGames[i];
+           const name = slug.charAt(0).toUpperCase() + slug.slice(1);
+           allGames.push({
+               name: name,
+               file: slug + '/index.html',
+               baseUrl: seraphBaseUrl,
+               isPNG: false
+           });
+       }
+   }
 
+   // Precompute letter, sort key, and lowercase name on every game once at startup
+   for (let i = 0; i < allGames.length; i++) {
+       const g = allGames[i];
+       const c = g.name.charAt(0);
+       g._letter = /[A-Za-z]/.test(c) ? c.toUpperCase() : (/[0-9]/.test(c) ? '#' : '%');
+       g._sortKey = g._letter === '%' ? '0' : g._letter === '#' ? '1' : '2' + g._letter;
+       g._nameLower = g.name.toLowerCase();
+   }
+
+   // Sort once by sort-key + name — renderNextChunk never needs to sort again
+   allGames.sort((a, b) => {
+       if (a._sortKey !== b._sortKey) return a._sortKey < b._sortKey ? -1 : 1;
+       return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+   });
+
+   // Cache all DOM references up front — no more getElementById per render
    const grid = document.getElementById('gameGrid');
    const pinnedGrid = document.getElementById('pinnedGrid');
    const pinnedEmptyMessage = document.getElementById('pinnedEmptyMessage');
    const gamesLoadTrigger = document.getElementById('gamesLoadTrigger');
+   const gameCountEl = document.getElementById('gameCount');
+   const gameSearch = document.getElementById('gameSearch');
+   const filterRalph = document.getElementById('filterRalph');
+   const filterOnefile = document.getElementById('filterOnefile');
+   const filterSeraph = document.getElementById('filterSeraph');
 
-   function getPinnedGames() {
-       const stored = localStorage.getItem(PINNED_GAMES_STORAGE_KEY);
-       if (stored) {
-           try {
-               return JSON.parse(stored);
-           } catch (e) {
-               return [];
-           }
-       }
-       return [];
-   }
+   // Pinned games as a Set — O(1) lookup vs O(n) array.includes + JSON.parse per card
+   let pinnedSet = new Set();
+   try { pinnedSet = new Set(JSON.parse(localStorage.getItem(PINNED_GAMES_STORAGE_KEY) || '[]')); } catch(e) {}
 
-   function savePinnedGames(pinned) {
-       localStorage.setItem(PINNED_GAMES_STORAGE_KEY, JSON.stringify(pinned));
+   function savePinnedGames() {
+       localStorage.setItem(PINNED_GAMES_STORAGE_KEY, JSON.stringify([...pinnedSet]));
    }
 
    function togglePin(gameName) {
-       let pinnedGames = getPinnedGames();
-       const index = pinnedGames.indexOf(gameName);
-
-       if (index === -1) {
-           pinnedGames.push(gameName);
-       } else {
-           pinnedGames.splice(index, 1);
-       }
-
-       savePinnedGames(pinnedGames);
-       currentRenderCount = 0;
+       if (pinnedSet.has(gameName)) pinnedSet.delete(gameName);
+       else pinnedSet.add(gameName);
+       savePinnedGames();
        renderAllGames();
    }
 
-   function isGamePinned(gameName) {
-       const pinnedGames = getPinnedGames();
-       return pinnedGames.includes(gameName);
-   }
-
+   // createElement instead of innerHTML — skips HTML parser, faster card creation
    function createGameCard(game) {
        const card = document.createElement('div');
        card.className = 'game-card';
-       const isPinned = isGamePinned(game.name);
-       
-       card.innerHTML = `
-           <div class="game-card-title-container">
-               <h3>${game.name}</h3>
-               <div class="pin-icon ${isPinned ? 'pinned' : ''}" title="${isPinned ? 'Unpin' : 'Pin'}">
-                   ${pinIconSVG}
-               </div>
-           </div>
-       `;
-       
-       const pinBtn = card.querySelector('.pin-icon');
-       pinBtn.onclick = (e) => {
-           e.stopPropagation();
-           togglePin(game.name);
-       };
-
+       const isPinned = pinnedSet.has(game.name);
+       const container = document.createElement('div');
+       container.className = 'game-card-title-container';
+       const h3 = document.createElement('h3');
+       h3.textContent = game.name;
+       const pinBtn = document.createElement('div');
+       pinBtn.className = isPinned ? 'pin-icon pinned' : 'pin-icon';
+       pinBtn.title = isPinned ? 'Unpin' : 'Pin';
+       pinBtn.innerHTML = pinIconSVG;
+       container.appendChild(h3);
+       container.appendChild(pinBtn);
+       card.appendChild(container);
+       pinBtn.onclick = (e) => { e.stopPropagation(); togglePin(game.name); };
        card.onclick = () => launchGame(game.file, game.baseUrl, game.isPNG);
        return card;
    }
 
-   // OPTIMIZATION: Lazy Loading / Infinite Scroll Variables
+   // Chunk rendering — renders 80 cards at a time, IntersectionObserver loads more on scroll
+   const CHUNK_SIZE = 80;
    let currentFilteredGames = [];
-   let currentRenderCount = 0;
-
-   function getGameLetter(game) {
-       const firstChar = game.name.charAt(0);
-       if (/[A-Za-z]/.test(firstChar)) return firstChar.toUpperCase();
-       if (/[0-9]/.test(firstChar)) return '#';
-       return '%';
-   }
-
-   function getSortKey(game) {
-       const l = getGameLetter(game);
-       if (l === '%') return '0';
-       if (l === '#') return '1';
-       return '2' + l;
-   }
+   let renderOffset = 0;
+   let lastRenderedLetter = null;
 
    function renderNextChunk() {
-       if (!currentFilteredGames.length) return;
-       const sorted = [...currentFilteredGames].sort((a, b) => {
-           const ka = getSortKey(a), kb = getSortKey(b);
-           if (ka !== kb) return ka.localeCompare(kb);
-           return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-       });
+       const end = Math.min(renderOffset + CHUNK_SIZE, currentFilteredGames.length);
+       if (renderOffset >= currentFilteredGames.length) {
+           gamesLoadTrigger.style.display = 'none';
+           return;
+       }
        const fragment = document.createDocumentFragment();
-       let currentLetter = null;
-       sorted.forEach(game => {
-           const letter = getGameLetter(game);
-           if (letter !== currentLetter) {
-               currentLetter = letter;
+       for (let i = renderOffset; i < end; i++) {
+           const game = currentFilteredGames[i];
+           if (game._letter !== lastRenderedLetter) {
+               lastRenderedLetter = game._letter;
                const section = document.createElement('div');
                section.className = 'letter-section';
-               section.innerHTML = `<span class="letter-label">${letter}</span><div class="letter-divider"></div>`;
+               const label = document.createElement('span');
+               label.className = 'letter-label';
+               label.textContent = game._letter;
+               const divider = document.createElement('div');
+               divider.className = 'letter-divider';
+               section.appendChild(label);
+               section.appendChild(divider);
                fragment.appendChild(section);
            }
            fragment.appendChild(createGameCard(game));
-       });
+       }
        grid.appendChild(fragment);
-       currentRenderCount = currentFilteredGames.length;
-       gamesLoadTrigger.style.display = 'none';
+       renderOffset = end;
+       gamesLoadTrigger.style.display = renderOffset < currentFilteredGames.length ? 'block' : 'none';
    }
 
-   function getSourceFilter(game) {
-       const ralphChecked = document.getElementById('filterRalph') ? document.getElementById('filterRalph').checked : true;
-       const onefileChecked = document.getElementById('filterOnefile') ? document.getElementById('filterOnefile').checked : true;
-       if (game.baseUrl === BASE_URL) return ralphChecked;
-       if (game.baseUrl === onefileBaseUrl) return onefileChecked;
-       return true; // gfiles, emulators, external always shown
-   }
+   // Trigger next chunk whenever the load sentinel scrolls into view
+   new IntersectionObserver(entries => {
+       if (entries[0].isIntersecting) renderNextChunk();
+   }, { rootMargin: '300px' }).observe(gamesLoadTrigger);
 
+   // Single-pass filter — one loop handles pinned, unpinned, source filter, search, and count
    function renderAllGames() {
-       const query = document.getElementById('gameSearch').value.toLowerCase();
-       const pinnedGames = getPinnedGames();
-       
-       const pinnedFilteredGames = allGames.filter(game => 
-           pinnedGames.includes(game.name) && game.name.toLowerCase().includes(query) && getSourceFilter(game)
-       );
-       
+       const query = gameSearch.value.toLowerCase();
+       const ralphOn = filterRalph.checked;
+       const onefileOn = filterOnefile.checked;
+       const seraphOn = filterSeraph ? filterSeraph.checked : true;
+       const pinnedArr = [];
+       const unpinnedArr = [];
+       let sourceTotal = 0;
+
+       for (let i = 0; i < allGames.length; i++) {
+           const g = allGames[i];
+           let show;
+           if (g.baseUrl === BASE_URL) show = ralphOn;
+           else if (g.baseUrl === onefileBaseUrl) show = onefileOn;
+           else if (g.baseUrl === seraphBaseUrl) show = seraphOn;
+           else show = true;
+           if (!show) continue;
+           const isPinned = pinnedSet.has(g.name);
+           if (!isPinned) sourceTotal++;
+           if (query && !g._nameLower.includes(query)) continue;
+           if (isPinned) pinnedArr.push(g);
+           else unpinnedArr.push(g);
+       }
+
+       if (gameCountEl) {
+           gameCountEl.textContent = query
+               ? `[ ${unpinnedArr.length} / ${sourceTotal} games ]`
+               : `[ ${sourceTotal} games ]`;
+       }
+
        pinnedGrid.innerHTML = '';
-       if (pinnedFilteredGames.length > 0) {
-           const fragment = document.createDocumentFragment();
-           pinnedFilteredGames.forEach(game => fragment.appendChild(createGameCard(game)));
-           pinnedGrid.appendChild(fragment);
+       if (pinnedArr.length > 0) {
+           const frag = document.createDocumentFragment();
+           for (let i = 0; i < pinnedArr.length; i++) frag.appendChild(createGameCard(pinnedArr[i]));
+           pinnedGrid.appendChild(frag);
            pinnedEmptyMessage.style.display = 'none';
            pinnedGrid.style.display = 'flex';
        } else {
@@ -1398,22 +1518,10 @@ const PINNED_GAMES_STORAGE_KEY = 'untdoc_pinned_games';
            pinnedGrid.style.display = 'none';
        }
 
-       currentFilteredGames = allGames.filter(game => 
-           !pinnedGames.includes(game.name) && game.name.toLowerCase().includes(query) && getSourceFilter(game)
-       );
-
-       // Update game count
-       const countEl = document.getElementById('gameCount');
-       if (countEl) {
-           const total = allGames.filter(g => !pinnedGames.includes(g.name) && getSourceFilter(g)).length;
-           countEl.textContent = query
-               ? `[ ${currentFilteredGames.length} / ${total} games ]`
-               : `[ ${total} games ]`;
-       }
-       
+       currentFilteredGames = unpinnedArr;
+       renderOffset = 0;
+       lastRenderedLetter = null;
        grid.innerHTML = '';
-       currentRenderCount = 0;
-       
        renderNextChunk();
    }
 
@@ -1422,7 +1530,7 @@ const PINNED_GAMES_STORAGE_KEY = 'untdoc_pinned_games';
    let searchTimeout;
    function filterGames() {
        clearTimeout(searchTimeout);
-       searchTimeout = setTimeout(renderAllGames, 150);
+       searchTimeout = setTimeout(renderAllGames, 180);
    }
 
    function handleFileUpload(event) {
@@ -1472,6 +1580,8 @@ const PINNED_GAMES_STORAGE_KEY = 'untdoc_pinned_games';
        }
    }
 
+   const SERAPH_ROOT = 'https://cdn.jsdelivr.net/gh/a456pur/seraph@ae2fcc6d6a9cd051654fcc0519080db1f79cf2a7/';
+
    async function launchGame(fileName, baseUrl, isPNG = false) {
        document.getElementById('loader').classList.add('active');
        const win = window.open('about:blank', '_blank');
@@ -1485,8 +1595,28 @@ const PINNED_GAMES_STORAGE_KEY = 'untdoc_pinned_games';
            document.getElementById('loader').classList.remove('active');
        } else {
            try {
-               const response = await fetch(baseUrl + fileName);
-               const html = await response.text();
+               const fullUrl = baseUrl + fileName;
+               const response = await fetch(fullUrl);
+               let html = await response.text();
+
+               // Compute the base href: directory containing this file
+               const baseHref = fullUrl.substring(0, fullUrl.lastIndexOf('/') + 1);
+
+               // Inject <base> tag if not already present — fixes all relative asset paths
+               if (!/<base[\s>]/i.test(html)) {
+                   if (/<head[\s>]/i.test(html)) {
+                       html = html.replace(/(<head[^>]*>)/i, `$1<base href="${baseHref}">`);
+                   } else {
+                       html = `<base href="${baseHref}">` + html;
+                   }
+               }
+
+               // For seraph games, rewrite root-relative paths (/foo) to the seraph raw root
+               // <base> only fixes relative paths, not root-relative ones like src="/js/main.js"
+               if (baseUrl === seraphBaseUrl) {
+                   html = html.replace(/((?:src|href|action)=")\/(?!\/)/gi, `$1${SERAPH_ROOT}`);
+               }
+
                win.document.open();
                win.document.write(html);
                win.document.close();
@@ -1556,13 +1686,27 @@ const PINNED_GAMES_STORAGE_KEY = 'untdoc_pinned_games';
        return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '255, 43, 158';
    }
 
+   function lightenColor(hex, amount) {
+       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+       if (!result) return '#ffd0e7';
+       const r = parseInt(result[1], 16);
+       const g = parseInt(result[2], 16);
+       const b = parseInt(result[3], 16);
+       return `rgb(${Math.round(r + (255-r)*amount)}, ${Math.round(g + (255-g)*amount)}, ${Math.round(b + (255-b)*amount)})`;
+   }
+
    function applyAccentColor(color) {
+       cachedAccentColor = color;
+       const rgb = hexToRgb(color);
        root.style.setProperty('--accent', color);
        root.style.setProperty('--text', color);
-       root.style.setProperty('--accent-rgb', hexToRgb(color));
-       root.style.setProperty('--accent-dim', `rgba(${hexToRgb(color)}, 0.12)`);
-       root.style.setProperty('--accent-mid', `rgba(${hexToRgb(color)}, 0.4)`);
-       root.style.setProperty('--text-muted', `rgba(${hexToRgb(color)}, 0.65)`);
+       root.style.setProperty('--accent-rgb', rgb);
+       root.style.setProperty('--accent-dim', `rgba(${rgb}, 0.12)`);
+       root.style.setProperty('--accent-mid', `rgba(${rgb}, 0.4)`);
+       root.style.setProperty('--text-muted', `rgba(${rgb}, 0.65)`);
+       root.style.setProperty('--text-strong', lightenColor(color, 0.75));
+       root.style.setProperty('--border', `rgba(${rgb}, 0.12)`);
+       root.style.setProperty('--border-bright', `rgba(${rgb}, 0.28)`);
        const faviconSvg = `<svg version="1.0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 1280"><g transform="translate(0,1280) scale(0.1,-0.1)" fill="${color}" fill-rule="evenodd" stroke="none"><path d="M4820 10794 c-338 -25 -678 -93 -914 -184 -212 -82 -247 -99 -366 -181 -253 -175 -439 -392 -573 -669 -150 -310 -240 -615 -267 -905 -15 -162 -12 -527 5 -695 34 -324 51 -407 122 -585 19 -49 61 -164 93 -255 121 -345 115 -337 393 -544 143 -106 206 -147 409 -268 126 -75 292 -122 723 -204 163 -30 633 -44 865 -24 63 5 180 24 260 40 80 17 179 37 221 46 195 37 366 119 624 298 173 120 192 137 324 299 85 103 106 109 162 51 64 -67 304 -281 374 -334 138 -103 399 -215 655 -280 78 -21 101 -22 295 -17 382 11 691 60 1090 174 249 70 404 157 573 318 367 349 576 831 627 1450 36 423 -17 760 -181 1161 -20 49 -57 141 -83 205 -56 136 -85 189 -150 267 -60 72 -234 223 -333 289 -134 91 -437 251 -560 297 -91 34 -285 72 -497 96 -257 30 -709 33 -856 6 -311 -56 -618 -226 -859 -477 -109 -113 -117 -119 -155 -119 -39 0 -43 3 -167 145 -138 157 -146 163 -332 267 -275 152 -377 189 -707 258 -266 56 -620 88 -815 74z m488 -1438 c111 -36 192 -85 280 -170 84 -81 134 -152 174 -249 118 -279 60 -607 -145 -825 -53 -56 -145 -126 -206 -157 -67 -34 -196 -66 -291 -72 -83 -5 -108 -2 -199 21 -57 15 -122 36 -145 48 -211 107 -362 306 -406 538 -24 121 -25 161 -5 275 55 315 275 543 595 616 19 4 87 6 150 5 91 -3 133 -9 198 -30z m3115 -241 c165 -43 307 -178 363 -345 28 -83 26 -225 -4 -312 -51 -147 -155 -258 -296 -317 -251 -104 -533 5 -658 254 -46 90 -62 238 -37 345 39 173 190 327 369 376 62 17 195 17 263 -1z"/><path d="M1770 8051 c-59 -19 -93 -46 -163 -128 -161 -188 -274 -284 -517 -439 -72 -46 -287 -172 -325 -191 -22 -11 -65 -34 -95 -51 -67 -36 -327 -150 -430 -187 -41 -15 -88 -32 -104 -38 -105 -38 -169 -193 -120 -290 77 -151 181 -173 404 -85 63 26 140 56 170 68 30 12 66 28 80 35 40 22 138 65 147 65 4 0 42 20 83 45 41 24 78 41 81 37 4 -4 17 -59 28 -122 12 -63 25 -133 30 -155 5 -22 14 -65 20 -95 6 -30 25 -122 42 -205 17 -82 35 -168 39 -190 5 -22 18 -76 31 -120 12 -44 25 -96 30 -115 12 -52 64 -240 78 -280 6 -19 22 -73 36 -120 22 -78 45 -144 105 -305 94 -252 239 -529 406 -778 32 -49 66 -98 74 -111 8 -12 42 -57 75 -100 33 -43 69 -91 80 -106 28 -39 59 -78 135 -168 36 -42 83 -99 105 -127 106 -132 377 -386 556 -520 101 -76 199 -148 227 -167 18 -13 52 -37 75 -53 89 -65 380 -232 557 -320 213 -106 579 -252 750 -299 36 -10 81 -24 100 -32 35 -13 257 -74 340 -93 108 -24 139 -31 215 -45 44 -9 103 -20 130 -26 96 -18 150 -29 215 -40 36 -6 85 -15 110 -20 25 -5 77 -14 115 -20 39 -6 93 -16 120 -21 71 -13 446 -56 600 -69 72 -6 159 -15 195 -21 59 -9 216 -19 500 -34 58 -3 146 -7 195 -10 287 -15 548 -17 721 -6 211 14 545 46 614 60 25 5 79 14 120 21 85 13 118 19 280 55 146 32 298 73 403 106 31 11 64 19 72 19 8 0 29 6 47 14 18 8 110 40 205 70 249 81 556 203 825 330 53 25 99 46 102 46 2 0 61 27 131 60 70 33 188 88 263 121 76 33 151 67 167 74 17 8 89 40 160 71 135 59 521 253 588 295 21 13 58 39 83 57 l46 33 231 20 c128 10 251 24 273 30 58 15 112 63 140 123 54 116 10 235 -111 298 -44 23 -34 23 -370 -6 -390 -34 -667 -46 -1050 -46 -518 0 -1364 34 -1640 66 -71 8 -191 21 -265 29 -74 8 -145 17 -158 20 -13 3 -74 12 -135 21 -62 8 -137 19 -167 24 -30 5 -98 14 -150 20 -52 6 -113 15 -135 20 -22 5 -74 13 -115 19 -131 18 -283 41 -342 51 -217 37 -502 88 -553 100 -22 5 -71 14 -110 21 -38 6 -81 15 -95 19 -14 5 -61 16 -105 25 -44 9 -96 20 -115 26 -19 5 -66 16 -105 24 -38 9 -97 23 -130 31 -33 9 -76 20 -95 25 -19 5 -66 16 -105 24 -38 9 -88 21 -110 27 -22 6 -56 14 -75 18 -31 7 -80 21 -265 74 -49 15 -137 39 -205 56 -75 19 -329 96 -430 130 -30 10 -102 33 -160 50 -100 31 -166 53 -310 107 -36 14 -83 31 -105 38 -59 21 -159 58 -255 95 -47 18 -107 41 -135 51 -832 306 -1493 661 -2194 1179 -126 93 -153 114 -226 170 -32 25 -72 56 -90 70 -18 14 -58 45 -90 70 -57 44 -84 65 -161 125 -66 50 -344 295 -426 374 -78 74 -94 105 -60 115 9 3 51 31 92 61 41 30 91 65 110 78 91 62 379 371 411 441 34 75 15 181 -44 244 -48 52 -156 83 -217 63z m-167 -1708 c24 -21 68 -56 97 -78 29 -22 57 -45 64 -50 15 -15 213 -167 239 -185 12 -8 38 -28 58 -45 20 -16 74 -57 120 -90 45 -33 101 -74 123 -90 134 -99 372 -261 502 -340 224 -137 313 -190 354 -213 25 -13 50 -28 55 -32 48 -36 642 -321 835 -400 25 -10 72 -29 105 -43 62 -26 242 -95 330 -128 28 -10 91 -34 140 -53 50 -19 108 -41 130 -49 22 -8 92 -33 155 -56 244 -89 340 -123 425 -149 39 -12 111 -35 160 -51 234 -75 322 -101 339 -101 9 0 26 -5 36 -10 11 -6 72 -24 137 -41 113 -30 141 -37 263 -73 30 -8 93 -25 140 -36 47 -11 110 -27 140 -35 30 -8 105 -26 165 -40 61 -14 133 -32 160 -39 58 -16 258 -62 330 -77 28 -6 77 -17 110 -24 33 -7 87 -18 120 -25 33 -6 78 -15 100 -20 22 -5 74 -14 115 -20 41 -7 89 -16 105 -20 17 -4 66 -13 110 -20 44 -6 98 -15 120 -20 22 -5 74 -14 115 -20 41 -6 100 -15 130 -21 30 -5 89 -13 130 -19 79 -11 368 -53 485 -71 284 -44 665 -89 968 -114 87 -8 87 -7 58 -87 -25 -68 -82 -253 -92 -298 -4 -19 -15 -66 -25 -105 -9 -38 -19 -88 -23 -109 -6 -39 -7 -40 -86 -69 -44 -16 -96 -32 -115 -37 -19 -4 -83 -24 -142 -44 -59 -20 -133 -42 -165 -51 -32 -8 -112 -28 -178 -45 -66 -17 -145 -35 -175 -41 -30 -6 -75 -15 -100 -20 -107 -21 -307 -49 -460 -63 -91 -9 -181 -18 -200 -21 -189 -24 -748 -12 -1325 30 -245 18 -828 82 -957 105 -32 5 -86 15 -120 21 -35 6 -85 15 -113 20 -77 15 -140 26 -260 48 -143 26 -141 26 -270 55 -129 29 -287 70 -330 85 -16 6 -68 22 -115 36 -529 159 -1096 455 -1516 791 -175 140 -436 391 -509 489 -16 22 -54 69 -85 105 -31 36 -64 76 -73 90 -9 14 -35 48 -57 75 -51 64 -188 256 -224 315 -15 25 -43 70 -62 100 -86 137 -220 424 -289 620 -20 58 -43 121 -50 140 -18 46 -56 182 -113 400 -17 63 -38 142 -46 175 -20 71 -46 195 -46 213 0 18 4 16 53 -25z"/></g></svg>`;
        const favicon = document.querySelector("link[rel='icon']");
        if (favicon) favicon.href = 'data:image/svg+xml,' + encodeURIComponent(faviconSvg);
