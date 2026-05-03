@@ -19846,6 +19846,12 @@ function initMediaSession() {
         }
     });
     mediaSession.setActionHandler('pause', () => {
+        // When the screen turns off, Android/iOS fire a system pause via MediaSession.
+        // If the page is hidden (screen off / backgrounded) and the user didn't tap
+        // pause themselves (_userInitiatedPause tracks this), ignore the OS signal so
+        // music keeps playing like a native app.
+        if (document.hidden && !window._userInitiatedPause) return;
+        window._userInitiatedPause = false;
         currentPlayer.pause();
     });
     mediaSession.setActionHandler('previoustrack', () => {
@@ -36757,8 +36763,10 @@ function togglePlay() {
         }
     } else {
         if (isCrossfading) {
+            window._userInitiatedPause = true;
             pauseCrossfade();
         } else {
+            window._userInitiatedPause = true;
             currentPlayer.pause();
         }
     }
@@ -48665,116 +48673,49 @@ async function toggle8D() {
 
 <script>
 // ── Background Audio Keep-Alive ──────────────────────────────────────────────
-// Keeps music playing when the screen is turned off or the browser is
-// backgrounded — the same way Spotify works on mobile.
+// Keeps music playing when the screen is turned off, like a native app.
 //
-// Strategy (layered, each adds resilience):
-//   1. Silent AudioContext buffer loop — prevents the browser from suspending
-//      the AudioContext due to inactivity while the page is hidden.
-//   2. visibilitychange → resume AudioContext if it was suspended anyway.
-//   3. audioCtx.onstatechange → instantly re-resume if the OS suspends it.
-//   4. Screen Wake Lock (optional, Chromium 84+) — acquired while playing,
-//      released on pause. Prevents some browsers from throttling audio when
-//      the display sleeps.
+// Root cause: browsers fire a MediaSession "pause" via the OS when the screen
+// locks, AND may stall the <audio> element's HTTP stream in background tabs.
+// The MediaSession pause handler has already been patched above to ignore
+// OS-initiated pauses (document.hidden && !_userInitiatedPause).
+//
+// This script adds two more layers:
+//   1. Watchdog — polls every 800ms; if audio stalled/paused without user
+//      intent while the page is hidden, it resumes the AudioContext and
+//      calls currentPlayer.play() to restart the stream.
+//   2. Screen Wake Lock — prevents Chromium browsers throttling audio when
+//      display sleeps. Silently skipped where unsupported.
 // ────────────────────────────────────────────────────────────────────────────
 (function () {
     'use strict';
 
-    // ── 1. Silent buffer loop ─────────────────────────────────────────────
-    // Scheduling a silent buffer source on a 1-second recurring loop keeps
-    // the AudioContext "active" from the browser's perspective, preventing
-    // the automatic suspend that would cut audio when the screen turns off.
-    let _silentSource = null;
-    let _silentLoopActive = false;
+    // ── 1. Playback watchdog ──────────────────────────────────────────────
+    // Runs on setInterval (fires even when tab is hidden, unlike rAF).
+    // Only acts when: page is hidden AND user did not intentionally pause.
+    setInterval(function () {
+        if (!document.hidden) return;                      // only care when screen is off
+        if (window._userInitiatedPause) return;           // user pressed pause — respect it
 
-    function _startSilentLoop() {
-        if (_silentLoopActive) return;
-        const ctx = (typeof audioCtx !== 'undefined' && audioCtx) ||
-                    (typeof audioContext !== 'undefined' && audioContext);
-        if (!ctx) return;
-
-        _silentLoopActive = true;
-
-        function _schedule() {
-            if (!_silentLoopActive) return;
-            const c = (typeof audioCtx !== 'undefined' && audioCtx) ||
-                      (typeof audioContext !== 'undefined' && audioContext);
-            if (!c || c.state === 'closed') { _silentLoopActive = false; return; }
-
-            // Resume if suspended before scheduling
-            if (c.state === 'suspended') {
-                c.resume().catch(() => {});
-            }
-
-            const buf = c.createBuffer(1, c.sampleRate, c.sampleRate); // 1s silence
-            const src = c.createBufferSource();
-            src.buffer = buf;
-            src.connect(c.destination);
-            src.onended = _schedule; // chain immediately
-            try { src.start(); } catch (e) {}
-            _silentSource = src;
-        }
-
-        _schedule();
-    }
-
-    function _stopSilentLoop() {
-        _silentLoopActive = false;
-        if (_silentSource) {
-            try { _silentSource.onended = null; _silentSource.stop(); } catch (e) {}
-            _silentSource = null;
-        }
-    }
-
-    // ── 2. visibilitychange — resume AudioContext if OS suspended it ──────
-    document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'hidden') {
-            // Page hidden (screen off / app switch) — ensure loop is running
-            _startSilentLoop();
-        } else {
-            // Page visible again — re-resume in case browser still suspended it
+        const player = (typeof currentPlayer !== 'undefined') ? currentPlayer : null;
+        if (!player) return;
+        if (player.paused && player.src && player.src !== '' && player.readyState >= 2) {
+            // Audio stalled — OS silenced us. Fight back.
             const ctx = (typeof audioCtx !== 'undefined' && audioCtx) ||
                         (typeof audioContext !== 'undefined' && audioContext);
             if (ctx && ctx.state === 'suspended') {
-                ctx.resume().catch(() => {});
+                ctx.resume().then(function () {
+                    player.play().catch(function () {});
+                }).catch(function () {
+                    player.play().catch(function () {});
+                });
+            } else {
+                player.play().catch(function () {});
             }
         }
-    });
+    }, 800);
 
-    // ── 3. audioCtx.onstatechange — instant re-resume ────────────────────
-    // Patch initAudioContext so we can hook into the context right after
-    // it's created (AudioContext may not exist yet at script parse time).
-    const _origInit = typeof initAudioContext !== 'undefined' ? initAudioContext : null;
-
-    function _hookContext(ctx) {
-        if (!ctx || ctx._bgHooked) return;
-        ctx._bgHooked = true;
-        ctx.addEventListener('statechange', function () {
-            if (ctx.state === 'suspended') {
-                const player = typeof currentPlayer !== 'undefined' ? currentPlayer : null;
-                const isPlaying = player && !player.paused;
-                if (isPlaying) {
-                    ctx.resume().catch(() => {});
-                }
-            }
-        });
-    }
-
-    // Poll until audioCtx is available, then hook it
-    let _hookPollCount = 0;
-    const _hookPoll = setInterval(function () {
-        const ctx = (typeof audioCtx !== 'undefined' && audioCtx) ||
-                    (typeof audioContext !== 'undefined' && audioContext);
-        if (ctx) {
-            _hookContext(ctx);
-            clearInterval(_hookPoll);
-        }
-        if (++_hookPollCount > 200) clearInterval(_hookPoll); // give up after ~20s
-    }, 100);
-
-    // ── 4. Screen Wake Lock ───────────────────────────────────────────────
-    // Prevents Chromium-based mobile browsers from throttling or killing
-    // audio when the display sleeps. Released on pause to save battery.
+    // ── 2. Screen Wake Lock ───────────────────────────────────────────────
     let _wakeLock = null;
 
     async function _acquireWakeLock() {
@@ -48784,15 +48725,10 @@ async function toggle8D() {
             _wakeLock = await navigator.wakeLock.request('screen');
             _wakeLock.addEventListener('release', function () {
                 _wakeLock = null;
-                // Re-acquire if a track is still playing after a forced release
-                const player = typeof currentPlayer !== 'undefined' ? currentPlayer : null;
-                if (player && !player.paused) {
-                    setTimeout(_acquireWakeLock, 500);
-                }
+                const p = (typeof currentPlayer !== 'undefined') ? currentPlayer : null;
+                if (p && !p.paused) setTimeout(_acquireWakeLock, 500);
             });
-        } catch (e) {
-            // Permission denied or not supported — silent fail, other layers still work
-        }
+        } catch (e) {}
     }
 
     async function _releaseWakeLock() {
@@ -48802,44 +48738,31 @@ async function toggle8D() {
         }
     }
 
-    // Re-acquire wake lock when tab becomes visible again (OS releases it on hide)
+    // Re-acquire after screen comes back on (OS auto-releases wake lock on hide)
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'visible') {
-            const player = typeof currentPlayer !== 'undefined' ? currentPlayer : null;
-            if (player && !player.paused) _acquireWakeLock();
+            const p = (typeof currentPlayer !== 'undefined') ? currentPlayer : null;
+            if (p && !p.paused) _acquireWakeLock();
         }
     });
 
-    // ── Hook into play/pause events on currentPlayer ──────────────────────
-    // currentPlayer is an <audio> element set up later; poll until it exists.
-    let _playerHookCount = 0;
-    const _playerPoll = setInterval(function () {
-        const player = typeof currentPlayer !== 'undefined' ? currentPlayer : null;
-        if (player && player.addEventListener) {
-            player.addEventListener('play', function () {
-                _startSilentLoop();
-                _acquireWakeLock();
+    // Hook play/pause on currentPlayer once it exists
+    let _pollCount = 0;
+    const _poll = setInterval(function () {
+        const p = (typeof currentPlayer !== 'undefined') ? currentPlayer : null;
+        if (p && p.addEventListener) {
+            p.addEventListener('play', function () { _acquireWakeLock(); });
+            p.addEventListener('pause', function () {
+                // Only release wake lock on genuine user pause
+                if (window._userInitiatedPause) _releaseWakeLock();
             });
-            player.addEventListener('pause', function () {
-                _stopSilentLoop();
-                _releaseWakeLock();
-            });
-            player.addEventListener('ended', function () {
-                _stopSilentLoop();
-                _releaseWakeLock();
-            });
-            clearInterval(_playerPoll);
-
-            // If already playing on attach, start immediately
-            if (!player.paused) {
-                _startSilentLoop();
-                _acquireWakeLock();
-            }
+            clearInterval(_poll);
+            if (!p.paused) _acquireWakeLock();
         }
-        if (++_playerHookCount > 300) clearInterval(_playerPoll);
+        if (++_pollCount > 300) clearInterval(_poll);
     }, 100);
 
-    console.log('[GootBGPlay] Background audio keep-alive initialised.');
+    console.log('[GootBGPlay] Background audio watchdog active.');
 })();
 </script>
 </body>
