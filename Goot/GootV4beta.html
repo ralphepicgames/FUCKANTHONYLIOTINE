@@ -19563,20 +19563,10 @@ async function initAudioContext() {
         if (audioCtx.state === 'suspended') {
             audioCtx.resume();
         }
-        // Android Chrome silently suspends AudioContext on lock screen / background.
-        // onstatechange fires when it suspends — immediately resume so playback continues.
-        audioCtx.onstatechange = function() {
-            if (audioCtx.state === 'suspended' && currentPlayer && !currentPlayer.paused) {
-                audioCtx.resume().then(function() {
-                    // Restamp BOTH players after context resumes — Android resets playbackRate
-                    // on every element in the graph when the pipeline is reconstructed.
-                    if (_isAndroidChrome && !_isPartyGuest()) {
-                        _applyPlaybackRate(player,  (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
-                        _applyPlaybackRate(player2, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
-                    }
-                }).catch(() => {});
-            }
-        };
+        // NOTE: No onstatechange handler — proactively calling resume() on state change
+        // triggers Android audio pipeline reconstruction which silently resets playbackRate.
+        // V3.9 has no onstatechange and never had this bug. The keepalive setInterval
+        // and onplay handlers already resume the context when actually needed.
         sourceNode = audioCtx.createMediaElementSource(player);
         const sourceNode2 = audioCtx.createMediaElementSource(player2);
         bassNode = audioCtx.createBiquadFilter();
@@ -19852,20 +19842,33 @@ function initMediaSession() {
         // Android: restamp BOTH players before play — the OS media session resume path
         // reconstructs the HTMLMediaElement audio pipeline, resetting playbackRate on both
         // elements (the active one and the preloaded next-track player).
+        // Must also restamp AFTER play() because reconstruction completes asynchronously.
+        const _msRate = (effectsState && effectsState.speed ? effectsState.speed : 100) / 100;
         if (_isAndroidChrome && !_isPartyGuest()) {
-            _applyPlaybackRate(player,  (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
-            _applyPlaybackRate(player2, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
+            _applyPlaybackRate(player,  _msRate);
+            _applyPlaybackRate(player2, _msRate);
         }
         if (audioCtx && audioCtx.state === 'suspended') {
             audioCtx.resume().then(() => {
                 if (_isAndroidChrome && !_isPartyGuest()) {
-                    _applyPlaybackRate(player,  (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
-                    _applyPlaybackRate(player2, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
+                    _applyPlaybackRate(player,  _msRate);
+                    _applyPlaybackRate(player2, _msRate);
                 }
-                currentPlayer.play().catch(() => {});
+                currentPlayer.play().then(() => {
+                    // Post-play restamp — pipeline reconstruction finishes after .play() resolves
+                    if (_isAndroidChrome && !_isPartyGuest()) {
+                        setTimeout(() => { _applyPlaybackRate(player, _msRate); _applyPlaybackRate(player2, _msRate); }, 100);
+                        setTimeout(() => { _applyPlaybackRate(player, _msRate); _applyPlaybackRate(player2, _msRate); }, 300);
+                    }
+                }).catch(() => {});
             }).catch(() => { currentPlayer.play().catch(() => {}); });
         } else {
-            currentPlayer.play().catch(() => {});
+            currentPlayer.play().then(() => {
+                if (_isAndroidChrome && !_isPartyGuest()) {
+                    setTimeout(() => { _applyPlaybackRate(player, _msRate); _applyPlaybackRate(player2, _msRate); }, 100);
+                    setTimeout(() => { _applyPlaybackRate(player, _msRate); _applyPlaybackRate(player2, _msRate); }, 300);
+                }
+            }).catch(() => {});
         }
     });
     mediaSession.setActionHandler('pause', () => {
@@ -20379,15 +20382,36 @@ function _isPartyGuest() {
 const _isAndroidChrome = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 function _applyPlaybackRate(el, rate) {
     if (!el) return;
-    // Android Chrome: always false — preservesPitch=true triggers a second OS-level
-    // pitch-correction pass on pipeline reconstruction, causing fast audio bursts.
-    // Desktop/iOS: true at 1x is correct (natural browser behaviour, no penalty).
+    // Android Chrome: ALWAYS false — preservesPitch=true triggers OS pitch-correction
+    // on pipeline reconstruction causing fast-audio bursts. V3.9 always set false unconditionally.
+    // Desktop/iOS: true at 1x is correct natural browser behaviour.
     const pp = _isAndroidChrome ? false : (Math.abs(rate - 1.0) <= 0.01);
+    const clampedRate = Math.max(0.1, Math.min(4.0, rate));
     el.preservesPitch        = pp;
     el.mozPreservesPitch     = pp;
     el.webkitPreservesPitch  = pp;
-    // Clamp rate to safe range — Android HAL can behave unpredictably outside this range
-    el.playbackRate = Math.max(0.1, Math.min(4.0, rate));
+    el.playbackRate = clampedRate;
+    // Android pipeline reconstruction completes ASYNCHRONOUSLY after the triggering event
+    // (seeked, play, onstatechange, media key). A single synchronous stamp is not enough —
+    // Android resets the values again after the event handler returns.
+    // Double-stamp at 0ms and 80ms to catch the post-reconstruction reset.
+    // This is the same pattern as V3.9's unconditional stamping at every callsite.
+    if (_isAndroidChrome) {
+        setTimeout(function() {
+            if (!el) return;
+            el.preservesPitch       = pp;
+            el.mozPreservesPitch    = pp;
+            el.webkitPreservesPitch = pp;
+            el.playbackRate         = clampedRate;
+        }, 0);
+        setTimeout(function() {
+            if (!el) return;
+            el.preservesPitch       = pp;
+            el.mozPreservesPitch    = pp;
+            el.webkitPreservesPitch = pp;
+            el.playbackRate         = clampedRate;
+        }, 80);
+    }
 }
 
 // Re-stamps playbackRate/preservesPitch on currentPlayer right before .play().
@@ -37594,10 +37618,15 @@ player.onplay = () => {
     if (currentPlayer !== player) return;
     // Android: restamp BOTH players on every play event — the browser silently resets
     // playbackRate/preservesPitch on pipeline reconstruction (interruptions, lock/unlock,
-    // media-key resume). Stamping both covers the preloaded next-track player too.
+    // media-key resume). _applyPlaybackRate already stamps at 0ms + 80ms deferred.
+    // Add extra stamps at 150ms and 350ms — Android pipeline can take up to 300ms to
+    // fully reconstruct, causing the fast-audio window after onplay fires.
     if (_isAndroidChrome && !_isPartyGuest()) {
-        _applyPlaybackRate(player,  (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
-        _applyPlaybackRate(player2, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
+        const _opRate = (effectsState && effectsState.speed ? effectsState.speed : 100) / 100;
+        _applyPlaybackRate(player,  _opRate);
+        _applyPlaybackRate(player2, _opRate);
+        setTimeout(() => { _applyPlaybackRate(player, _opRate); _applyPlaybackRate(player2, _opRate); }, 150);
+        setTimeout(() => { _applyPlaybackRate(player, _opRate); _applyPlaybackRate(player2, _opRate); }, 350);
     }
     if (audioContext && audioContext.state === 'suspended') {
         audioContext.resume();
@@ -37667,10 +37696,14 @@ player.onpause = () => {
 };
 player2.onplay = () => {
     if (currentPlayer !== player2) return;
-    // Android: restamp BOTH players on every play event.
+    // Android: restamp BOTH players on every play event — deferred stamps catch
+    // post-reconstruction resets that happen after the event handler returns.
     if (_isAndroidChrome && !_isPartyGuest()) {
-        _applyPlaybackRate(player,  (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
-        _applyPlaybackRate(player2, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
+        const _op2Rate = (effectsState && effectsState.speed ? effectsState.speed : 100) / 100;
+        _applyPlaybackRate(player,  _op2Rate);
+        _applyPlaybackRate(player2, _op2Rate);
+        setTimeout(() => { _applyPlaybackRate(player, _op2Rate); _applyPlaybackRate(player2, _op2Rate); }, 150);
+        setTimeout(() => { _applyPlaybackRate(player, _op2Rate); _applyPlaybackRate(player2, _op2Rate); }, 350);
     }
     if (audioContext && audioContext.state === 'suspended') {
         audioContext.resume();
@@ -48058,14 +48091,10 @@ if (_isAndroidChrome) {
     setInterval(function() {
         if (!audioCtx || !currentPlayer || currentPlayer.paused) return;
         if (audioCtx.state === 'suspended') {
-            audioCtx.resume().then(function() {
-                // Restamp BOTH players after keepalive resume — Android resets playbackRate
-                // on all connected elements during background pipeline reconstruction.
-                if (_isAndroidChrome && !_isPartyGuest()) {
-                    _applyPlaybackRate(player,  (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
-                    _applyPlaybackRate(player2, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
-                }
-            }).catch(() => {});
+            // Do NOT call resume() here — proactive resume() causes Android to reconstruct
+            // the audio pipeline which silently resets playbackRate. The onplay/mediasession
+            // play handlers resume the context when the user actually triggers playback.
+            return;
         } else if (audioCtx.state === 'running') {
             // Schedule a tiny silent buffer on the destination to keep the Android audio thread alive.
             // A disconnected GainNode does nothing — we need an actual graph event.
@@ -48080,30 +48109,41 @@ if (_isAndroidChrome) {
         }
     }, 20000);
 
-    // Android playbackRate watchdog — every 250ms, unconditionally re-stamp playbackRate
+    // Android playbackRate watchdog — every 100ms, unconditionally re-stamp playbackRate
     // and preservesPitch on any playing element. Android silently resets both after
-    // lock/unlock, interruptions, and media key resumes with no event fired. The 250ms
-    // interval means worst-case the glitch lasts a quarter second before correction.
+    // lock/unlock, interruptions, and media key resumes with no event fired. 100ms means
+    // worst-case glitch is barely audible before correction. 250ms was too long.
     // Checks both player elements (not just currentPlayer) to cover the swap window
     // during song changes and crossfades.
-    window._watchdogDebug = true; // always on until bug is diagnosed
+    window._watchdogDebug = false;
     setInterval(function() {
         if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
         const expectedRate = (effectsState && effectsState.speed ? effectsState.speed : 100) / 100;
         [player, player2].forEach(function(el) {
             if (!el || el.paused) return;
             const rateDrifted = Math.abs(el.playbackRate - expectedRate) > 0.01;
-            // On Android, preservesPitch must ALWAYS be false (see _applyPlaybackRate).
-            // The watchdog must expect false unconditionally — never true at any rate.
+            // Android: preservesPitch ALWAYS false unconditionally — matches V3.9
             const pitchDrifted = el.preservesPitch !== false;
             if (rateDrifted || pitchDrifted) {
                 if (window._watchdogDebug && typeof showShareToast === 'function') {
                     showShareToast('🐛 watchdog: ' + el.id + ' rate=' + el.playbackRate.toFixed(2) + ' pitch=' + el.preservesPitch + ' → fixing', 'error');
                 }
-                _applyPlaybackRate(el, expectedRate);
+                // Stamp now AND defer — Android pipeline reconstruction completes async
+                el.preservesPitch       = false;
+                el.mozPreservesPitch    = false;
+                el.webkitPreservesPitch = false;
+                el.playbackRate         = expectedRate;
+                const _el = el, _r = expectedRate;
+                setTimeout(function() {
+                    if (!_el || _el.paused) return;
+                    _el.preservesPitch       = false;
+                    _el.mozPreservesPitch    = false;
+                    _el.webkitPreservesPitch = false;
+                    _el.playbackRate         = _r;
+                }, 0);
             }
         });
-    }, 250);
+    }, 100);
 }
 
 // ── 8D Audio toggle ──────────────────────────────────────────────────────────
