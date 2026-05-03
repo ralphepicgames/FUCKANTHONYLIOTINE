@@ -19846,12 +19846,6 @@ function initMediaSession() {
         }
     });
     mediaSession.setActionHandler('pause', () => {
-        // When the screen turns off, Android/iOS fire a system pause via MediaSession.
-        // If the page is hidden (screen off / backgrounded) and the user didn't tap
-        // pause themselves (_userInitiatedPause tracks this), ignore the OS signal so
-        // music keeps playing like a native app.
-        if (document.hidden && !window._userInitiatedPause) return;
-        window._userInitiatedPause = false;
         currentPlayer.pause();
     });
     mediaSession.setActionHandler('previoustrack', () => {
@@ -36763,10 +36757,8 @@ function togglePlay() {
         }
     } else {
         if (isCrossfading) {
-            window._userInitiatedPause = true;
             pauseCrossfade();
         } else {
-            window._userInitiatedPause = true;
             currentPlayer.pause();
         }
     }
@@ -48672,50 +48664,103 @@ async function toggle8D() {
 </script>
 
 <script>
-// ── Background Audio Keep-Alive ──────────────────────────────────────────────
-// Keeps music playing when the screen is turned off, like a native app.
+// ── Background Audio Keep-Alive v3 ───────────────────────────────────────────
+// Problem: when you lock your phone, the OS sends a MediaSession "pause" signal
+// within ~1-2 seconds. The app's handler calls currentPlayer.pause() and music
+// stops. This script intercepts that specific OS-initiated pause by watching the
+// timing: if the audio pauses within 3 seconds of the page going hidden AND the
+// user didn't interact with any pause control, we immediately resume.
 //
-// Root cause: browsers fire a MediaSession "pause" via the OS when the screen
-// locks, AND may stall the <audio> element's HTTP stream in background tabs.
-// The MediaSession pause handler has already been patched above to ignore
-// OS-initiated pauses (document.hidden && !_userInitiatedPause).
-//
-// This script adds two more layers:
-//   1. Watchdog — polls every 800ms; if audio stalled/paused without user
-//      intent while the page is hidden, it resumes the AudioContext and
-//      calls currentPlayer.play() to restart the stream.
-//   2. Screen Wake Lock — prevents Chromium browsers throttling audio when
-//      display sleeps. Silently skipped where unsupported.
+// User pauses are respected because: if the user taps pause in the app UI, the
+// page is still VISIBLE — document.hidden is false — so the watchdog never acts.
+// If the user taps pause on the lock screen widget, we detect it via a 3-second
+// grace window: after 3s hidden, the OS has already fired its fake-pause; any
+// further pause is from the user pressing the lock-screen control, so we stop
+// fighting it by clearing _wasPlayingWhenHidden.
 // ────────────────────────────────────────────────────────────────────────────
 (function () {
     'use strict';
 
-    // ── 1. Playback watchdog ──────────────────────────────────────────────
-    // Runs on setInterval (fires even when tab is hidden, unlike rAF).
-    // Only acts when: page is hidden AND user did not intentionally pause.
+    let _wasPlayingWhenHidden = false; // was audio playing at the moment screen locked?
+    let _hiddenAt = 0;                 // performance.now() when page became hidden
+    const GRACE_MS = 3000;            // OS fake-pause always arrives within ~1-2s
+
+    // ── Track visibility changes ──────────────────────────────────────────
+    document.addEventListener('visibilitychange', function () {
+        const player = (typeof currentPlayer !== 'undefined') ? currentPlayer : null;
+        if (!player) return;
+
+        if (document.hidden) {
+            // Screen just turned off / app backgrounded
+            _wasPlayingWhenHidden = !player.paused;
+            _hiddenAt = performance.now();
+        } else {
+            // Screen back on — if we were playing but got paused by OS, resume
+            if (_wasPlayingWhenHidden && player.paused) {
+                _resumePlayer(player);
+            }
+            // Reset — next hide cycle starts fresh
+            _wasPlayingWhenHidden = false;
+            _hiddenAt = 0;
+        }
+    });
+
+    // ── Watchdog: catch the OS fake-pause within the grace window ────────
+    // setInterval fires even when the tab is hidden (unlike requestAnimationFrame).
+    // Only acts within GRACE_MS of hiding, so user lock-screen pause after that
+    // is respected normally.
     setInterval(function () {
-        if (!document.hidden) return;                      // only care when screen is off
-        if (window._userInitiatedPause) return;           // user pressed pause — respect it
+        if (!document.hidden) return;
+        if (!_wasPlayingWhenHidden) return;
+        if (_hiddenAt === 0) return;
+        if (performance.now() - _hiddenAt > GRACE_MS) return; // grace window expired
 
         const player = (typeof currentPlayer !== 'undefined') ? currentPlayer : null;
         if (!player) return;
-        if (player.paused && player.src && player.src !== '' && player.readyState >= 2) {
-            // Audio stalled — OS silenced us. Fight back.
-            const ctx = (typeof audioCtx !== 'undefined' && audioCtx) ||
-                        (typeof audioContext !== 'undefined' && audioContext);
-            if (ctx && ctx.state === 'suspended') {
-                ctx.resume().then(function () {
-                    player.play().catch(function () {});
-                }).catch(function () {
-                    player.play().catch(function () {});
-                });
-            } else {
-                player.play().catch(function () {});
-            }
-        }
-    }, 800);
 
-    // ── 2. Screen Wake Lock ───────────────────────────────────────────────
+        if (player.paused && player.src && player.readyState >= 2) {
+            // OS paused us — fight back
+            _resumePlayer(player);
+        }
+    }, 300);
+
+    // ── Also: if user presses pause on lock screen after grace window ─────
+    // Clear _wasPlayingWhenHidden so the on-visible handler doesn't auto-resume.
+    // We detect this via the audio element's own 'pause' event after grace expires.
+    function _onPlayerPause() {
+        if (document.hidden && performance.now() - _hiddenAt > GRACE_MS) {
+            // Grace window has passed — this is a real user pause from lock screen
+            _wasPlayingWhenHidden = false;
+        }
+    }
+
+    function _resumePlayer(player) {
+        const ctx = (typeof audioCtx !== 'undefined' && audioCtx) ||
+                    (typeof audioContext !== 'undefined' && audioContext);
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume().then(function () {
+                player.play().catch(function () {});
+            }).catch(function () {
+                player.play().catch(function () {});
+            });
+        } else {
+            player.play().catch(function () {});
+        }
+    }
+
+    // Hook pause event on currentPlayer once it's available
+    let _pollCount = 0;
+    const _poll = setInterval(function () {
+        const player = (typeof currentPlayer !== 'undefined') ? currentPlayer : null;
+        if (player && player.addEventListener) {
+            player.addEventListener('pause', _onPlayerPause);
+            clearInterval(_poll);
+        }
+        if (++_pollCount > 300) clearInterval(_poll);
+    }, 100);
+
+    // ── Screen Wake Lock ──────────────────────────────────────────────────
+    // Prevents Chromium browsers from throttling audio when display sleeps.
     let _wakeLock = null;
 
     async function _acquireWakeLock() {
@@ -48725,20 +48770,10 @@ async function toggle8D() {
             _wakeLock = await navigator.wakeLock.request('screen');
             _wakeLock.addEventListener('release', function () {
                 _wakeLock = null;
-                const p = (typeof currentPlayer !== 'undefined') ? currentPlayer : null;
-                if (p && !p.paused) setTimeout(_acquireWakeLock, 500);
             });
         } catch (e) {}
     }
 
-    async function _releaseWakeLock() {
-        if (_wakeLock && !_wakeLock.released) {
-            try { await _wakeLock.release(); } catch (e) {}
-            _wakeLock = null;
-        }
-    }
-
-    // Re-acquire after screen comes back on (OS auto-releases wake lock on hide)
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'visible') {
             const p = (typeof currentPlayer !== 'undefined') ? currentPlayer : null;
@@ -48746,23 +48781,18 @@ async function toggle8D() {
         }
     });
 
-    // Hook play/pause on currentPlayer once it exists
-    let _pollCount = 0;
-    const _poll = setInterval(function () {
+    let _wlPollCount = 0;
+    const _wlPoll = setInterval(function () {
         const p = (typeof currentPlayer !== 'undefined') ? currentPlayer : null;
         if (p && p.addEventListener) {
-            p.addEventListener('play', function () { _acquireWakeLock(); });
-            p.addEventListener('pause', function () {
-                // Only release wake lock on genuine user pause
-                if (window._userInitiatedPause) _releaseWakeLock();
-            });
-            clearInterval(_poll);
+            p.addEventListener('play', _acquireWakeLock);
+            clearInterval(_wlPoll);
             if (!p.paused) _acquireWakeLock();
         }
-        if (++_pollCount > 300) clearInterval(_poll);
+        if (++_wlPollCount > 300) clearInterval(_wlPoll);
     }, 100);
 
-    console.log('[GootBGPlay] Background audio watchdog active.');
+    console.log('[GootBGPlay v3] Background audio keep-alive active.');
 })();
 </script>
 </body>
