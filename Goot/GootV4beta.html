@@ -4233,9 +4233,9 @@
 		.animations-disabled .folder-card { opacity: 1 !important; transform: translateY(0) !important; }
 
 		.folder-card:hover {
-			transform: translate3d(0, -4px, 0);
-			box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
-			border-color: var(--md-sys-color-primary);
+			transform: translate3d(0, -2px, 0);
+			box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+			border-color: var(--card-accent, var(--md-sys-color-primary));
 		}
 
 		/* Art container — square ratio at top of card */
@@ -4250,7 +4250,7 @@
 
 		/* Art image — zoom on hover like all-played */
 		.folder-card:hover .folder-card-art img,
-		.folder-card:hover .folder-art img { transform: scale(1.05); }
+		.folder-card:hover .folder-art img { transform: scale(1.02); }
 
 		/* Art fills the art container */
 		.folder-art {
@@ -4332,6 +4332,97 @@
 		.folder-grid.size-large .folder-artist { font-size: 12.5px; }
 		.folder-grid.size-small .folder-artist { font-size: 10.5px; }
 
+		/* ── V3 Folder Card Style ───────────────────────────────────────────────
+		   When .folder-style-v3 is on <html>, cards switch to the v3.9 look:
+		   full-bleed square art with a gradient overlay and bottom-anchored label.
+		   The card itself gets aspect-ratio:1/1; .folder-card-art stretches to fill
+		   it; .folder-info overlays as an absolute gradient. */
+		.folder-style-v3 .folder-card {
+			aspect-ratio: 1/1;
+			background: color-mix(in srgb, var(--md-sys-color-primary) 3%, #000);
+			border-color: color-mix(in srgb, var(--md-sys-color-primary) 15%, var(--md-sys-color-outline));
+			border-radius: 16px;
+		}
+		.folder-style-v3 .folder-card:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 4px 16px color-mix(in srgb, var(--card-accent, var(--md-sys-color-primary)) 20%, rgba(0,0,0,0.4)),
+			            0 0 0 2px color-mix(in srgb, var(--card-accent, var(--md-sys-color-primary)) 40%, transparent);
+		}
+		/* Art container: fill the whole card, no independent aspect-ratio */
+		.folder-style-v3 .folder-card-art {
+			position: absolute;
+			inset: 0;
+			width: auto;
+			height: auto;
+			aspect-ratio: unset;
+			flex-shrink: unset;
+			border-radius: 0;
+		}
+		/* Folder art background in v3 style */
+		.folder-style-v3 .folder-art {
+			background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+		}
+		/* Art image: starts slightly zoomed, settles on load (v3 behaviour) */
+		.folder-style-v3 .folder-art img {
+			transform: scale(1.02);
+			transition: opacity 0.3s ease, transform 0.4s ease;
+		}
+		.folder-style-v3 .folder-art img.loaded {
+			opacity: 1;
+			transform: scale(1);
+		}
+		/* Info panel: absolute overlay at the bottom with gradient, zero height in flow */
+		.folder-style-v3 .folder-info {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			top: 0%;
+			height: auto;
+			z-index: 2;
+			padding: 12px;
+			display: flex;
+			flex-direction: column;
+			justify-content: flex-end;
+			align-items: flex-start;
+			background: linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.65) 20%, rgba(0,0,0,0.35) 45%, rgba(0,0,0,0.08) 70%, transparent 100%);
+			transition: none;
+		}
+		.folder-style-v3 .folder-info.has-accent {
+			background: linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.65) 20%, rgba(0,0,0,0.35) 45%, rgba(0,0,0,0.08) 70%, transparent 100%);
+		}
+		.folder-style-v3 .folder-info span {
+			font-size: 14px;
+			color: #fff;
+			text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			max-width: 100%;
+		}
+		/* Hide the artist subtitle in v3 style (it didn't exist in v3.9) */
+		.folder-style-v3 .folder-artist {
+			display: block;
+			font-size: 11.5px;
+			font-weight: 300;
+			color: rgba(255,255,255,0.75);
+			text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			max-width: 100%;
+			margin-top: 2px;
+			opacity: 1;
+		}
+		/* Light theme adjustments for v3 style */
+		[data-theme="light"] .folder-style-v3 .folder-card {
+			background: color-mix(in srgb, var(--md-sys-color-primary) 5%, #111);
+		}
+		[data-theme="light"] .folder-style-v3 .folder-info {
+			background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.35) 50%, transparent 100%);
+		}
+		[data-theme="light"] .folder-style-v3 .folder-info span { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.7); }
+
 		.playlist-card .play-overlay {
 			position: absolute;
 			inset: 0;
@@ -4359,7 +4450,7 @@
 			width: 48px;
 			height: 48px;
 			border-radius: 50%;
-			background: var(--md-sys-color-primary);
+			background: var(--card-accent, var(--md-sys-color-primary));
 			color: var(--md-sys-color-on-primary);
 			display: flex;
 			align-items: center;
@@ -4370,7 +4461,7 @@
 			transition: all 0.3s var(--motion-standard);
 		}
 
-		.play-overlay .control-btn.shuffle{ background: var(--md-sys-color-primary); opacity: 0.8; }
+		.play-overlay .control-btn.shuffle{ background: var(--card-accent, var(--md-sys-color-primary)); opacity: 0.8; }
 		.play-overlay .control-btn:hover{ transform: scale(1.15); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); }
 		.play-overlay .btn-label {
 			color: white;
@@ -14260,6 +14351,13 @@
 						</label>
 						<label class="m3-setting-row" style="cursor:pointer;">
 							<div class="m3-setting-info">
+								<span class="m3-setting-label">Classic Folder Cards</span>
+								<span class="m3-setting-desc">Use the v3.9 square card style with full-bleed art and a gradient label overlay</span>
+							</div>
+							<div class="m3-toggle"><input type="checkbox" id="folderStyleV3Toggle" onchange="toggleFolderCardStyle()"><span class="m3-toggle-track"><span class="m3-toggle-thumb"></span></span></div>
+						</label>
+						<label class="m3-setting-row" style="cursor:pointer;">
+							<div class="m3-setting-info">
 								<span class="m3-setting-label">Disable Animations</span>
 								<span class="m3-setting-desc">Reduce motion for better performance</span>
 							</div>
@@ -18845,7 +18943,9 @@ let _idbFlushScheduled = false;
 function _scheduleIDBFlush() {
     if (_idbFlushScheduled) return;
     _idbFlushScheduled = true;
-    Promise.resolve().then(async () => {
+    // Use setTimeout (macrotask) instead of Promise.resolve (microtask) so IDB writes
+    // don't block the rendering pipeline — especially important on low-end hardware.
+    setTimeout(async () => {
         _idbFlushScheduled = false;
         if (_idbWriteQueue.size === 0) return;
         const batch = new Map(_idbWriteQueue);
@@ -18855,7 +18955,7 @@ function _scheduleIDBFlush() {
         const store = transaction.objectStore('trackMetadata');
         for (const record of batch.values()) store.put(record);
         await new Promise(resolve => { transaction.oncomplete = resolve; transaction.onerror = resolve; });
-    });
+    }, 0);
 }
 async function saveCompleteTrackMetadata(trackId, metadata) {
     if (!metaDB) await initMetaDB();
@@ -20643,7 +20743,8 @@ async function getFolderWithMeta(folderId, refresh = false) {
                 .filter(id => !(trackMetadata[id]?.title && trackMetadata[id]?.duration));
 
             if (missingIds.length > 0) {
-                fetch(`${METADATA_API_URL}/metadata/batch`, {
+                // Defer so this doesn't compete with card render on navigation
+                const _doMissingFetch = () => fetch(`${METADATA_API_URL}/metadata/batch`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ids: missingIds }),
@@ -20669,6 +20770,7 @@ async function getFolderWithMeta(folderId, refresh = false) {
                         notifyCentralMetadataUpdate(batchIds);
                     }
                 }).catch(() => {});
+                (window.requestIdleCallback || (fn => setTimeout(fn, 300)))(_doMissingFetch);
             }
 
             folderContentsCache.set(folderId, { data: files, timestamp: Date.now() });
@@ -21086,6 +21188,12 @@ async function init() {
         document.documentElement.classList.add('compact-rows');
         const table = document.querySelector('#library-screen table');
         if (table) table.classList.add('compact-table');
+    }
+    // Restore folder card style setting
+    const folderStyleV3Saved = localStorage.getItem('goot_folder_style_v3') === 'true';
+    document.getElementById('folderStyleV3Toggle').checked = folderStyleV3Saved;
+    if (folderStyleV3Saved) {
+        document.documentElement.classList.add('folder-style-v3');
     }
     renderPlaylists();
     await loadMetadata();
@@ -21514,22 +21622,23 @@ async function loadFolders(id, refresh = false) {
                 }
             });
             if (coldTrackIds.length > 0) {
-                // Slight delay so artist label fetches don't compete with card animation
-                setTimeout(() => getBatchTrackMetadata(coldTrackIds).catch(() => {}), 600);
+                // Push cold metadata fetch past card animation + art load
+                setTimeout(() => getBatchTrackMetadata(coldTrackIds).catch(() => {}), 1200);
             }
-            // For folders not yet in cache, fetch contents then grab track-01's metadata
+            // For folders not yet in cache, fetch contents in parallel then grab track-01's metadata
             if (_uncachedFolders.length > 0) {
                 setTimeout(async () => {
-                    for (const f of _uncachedFolders) {
+                    // Parallel content fetches — no serial await
+                    await Promise.all(_uncachedFolders.map(async f => {
                         const el = document.getElementById(`f-artist-${f.id}`);
-                        if (!el || el.dataset.filled === '1') continue;
+                        if (!el || el.dataset.filled === '1') return;
                         try {
                             await getFolderWithMeta(f.id, false);
                             const first = _firstTrackByFilename(f.id);
-                            if (first) await getBatchTrackMetadata([first.id]).catch(() => {});
+                            if (first) getBatchTrackMetadata([first.id]).catch(() => {});
                         } catch(e) {}
-                    }
-                }, 800);
+                    }));
+                }, 1500);
             }
         }
         // ── End folder artist labels ────────────────────────────────────────────
@@ -22137,8 +22246,10 @@ async function loadFolders(id, refresh = false) {
                 // Hide album background when not in album view
                 const albumBg = document.getElementById('albumViewBg');
                 if (albumBg) albumBg.classList.remove('visible');
-                // Restore accent color to currently playing track
-                restorePlayingTrackColor();
+                // Only restore accent when leaving album-view — grid-to-grid nav
+                // never changes the global accent so no restore needed (saves full style recalc)
+                if (_wasAlbumView) restorePlayingTrackColor();
+                else window._inAlbumColorView = false;
                 currentAlbumView = null;
             }
             } // Close the if (coverBanner) block
@@ -22249,6 +22360,9 @@ function _setFolderInfoColor(infoEl, color) {
     infoEl.style.setProperty('--card-accent', color);
     infoEl.classList.add('has-accent');
     infoEl.dataset.colorSet = '1';
+    // Also set on card root so overlay buttons and border can use it
+    const card = infoEl.closest('.folder-card');
+    if (card) card.style.setProperty('--card-accent', color);
 }
 
 function _applyFolderInfoColor(fid) {
@@ -22315,8 +22429,8 @@ function _applyFolderInfoColor(fid) {
             // Read layout to force browser to commit opacity:0 before transition
             void img.offsetWidth;
             img.classList.add('loaded');
-            // Try to apply accent color now that art is loaded and cache is likely warm
-            _applyFolderInfoColor(fid);
+            // Defer color extraction to idle time so art paint isn't blocked
+            (window.requestIdleCallback || (fn => setTimeout(fn, 80)))(() => _applyFolderInfoColor(fid));
         };
         // If already cached (blob URL), onload may fire sync — that's fine
     }
@@ -22426,7 +22540,8 @@ async function fetchFolderArt(fid) {
                 img.classList.add('loaded');
                 // Cache under folder ID so album view Tier 0 hits instantly next time
                 R2FolderCovers._memoryCache.set(fid, src);
-                _applyFolderInfoColor(fid);
+                // Defer color extraction to idle time so art paint isn't blocked
+                (window.requestIdleCallback || (fn => setTimeout(fn, 80)))(() => _applyFolderInfoColor(fid));
             };
             img.src = src;
         }
@@ -31052,9 +31167,13 @@ function applyAccentColorTemp(hex) {
 
         const picker = document.getElementById('accentPicker');
         if (picker) picker.value = h;
-        refreshAllSliderColors(h);
+        // Debounce slider refresh — querySelectorAll('input[type=range]') is expensive.
+        // Browsing folders can trigger rapid accent changes; batch them into one update.
+        clearTimeout(_accentSliderDebounce);
+        _accentSliderDebounce = setTimeout(() => refreshAllSliderColors(h), 400);
     });
 }
+var _accentSliderDebounce = null;
 
 // ── Material You Tinting Controls ────────────────────────────────────────────
 var _myTintCache = null;
@@ -32941,6 +33060,16 @@ function toggleCompactRows() {
     } else {
         document.documentElement.classList.remove('compact-rows');
         document.querySelectorAll('.compact-table').forEach(el => el.classList.remove('compact-table'));
+    }
+}
+
+function toggleFolderCardStyle() {
+    const v3 = document.getElementById('folderStyleV3Toggle').checked;
+    localStorage.setItem('goot_folder_style_v3', v3.toString());
+    if (v3) {
+        document.documentElement.classList.add('folder-style-v3');
+    } else {
+        document.documentElement.classList.remove('folder-style-v3');
     }
 }
 function extractColorFromAlbumArt(id, isPlayingTrack = false) {
@@ -47913,6 +48042,7 @@ document.addEventListener('visibilitychange', function() {
         if (audioCtx && audioCtx.state === 'suspended') {
             audioCtx.resume().catch(() => {});
         }
+    }
     if (document.visibilityState === 'visible') {
         updateMediaSessionMetadata();
         updateMediaSessionPlaybackState();
