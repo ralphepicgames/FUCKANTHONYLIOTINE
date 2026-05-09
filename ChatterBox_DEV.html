@@ -7249,6 +7249,128 @@ function stopMicTest() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── HIDDEN ADMIN PANEL ───────────────────────────────────────────────────────
+(function(){
+  let _kbuf = '';
+  const _TRIGGER = 'douglasdev///';
+
+  document.addEventListener('keydown', function(e) {
+    const authScreen = document.getElementById('auth-screen');
+    if (!authScreen || authScreen.classList.contains('hidden')) { _kbuf = ''; return; }
+    if (e.key.length === 1) {
+      _kbuf += e.key;
+      if (_kbuf.length > _TRIGGER.length) _kbuf = _kbuf.slice(-_TRIGGER.length);
+      if (_kbuf === _TRIGGER) {
+        _kbuf = '';
+        _showAdminPanel();
+      }
+    } else if (e.key === 'Escape') {
+      _kbuf = '';
+    }
+  });
+
+  function _showAdminPanel() {
+    const el = document.getElementById('_adm-overlay');
+    if (el) { el.style.display = 'flex'; document.getElementById('_adm-user').focus(); }
+  }
+
+  window._hideAdminPanel = function() {
+    const el = document.getElementById('_adm-overlay');
+    if (el) el.style.display = 'none';
+    document.getElementById('_adm-user').value = '';
+    document.getElementById('_adm-newpw').value = '';
+    document.getElementById('_adm-newpw2').value = '';
+    document.getElementById('_adm-status').textContent = '';
+    document.getElementById('_adm-status').style.color = '';
+  };
+
+  window._doAdminReset = async function() {
+    const username    = document.getElementById('_adm-user').value.trim();
+    const newPassword = document.getElementById('_adm-newpw').value;
+    const newPassword2 = document.getElementById('_adm-newpw2').value;
+    const statusEl    = document.getElementById('_adm-status');
+
+    if (!username || !newPassword) {
+      statusEl.textContent = 'Username and new password are required.';
+      statusEl.style.color = '#ff4444'; return;
+    }
+    if (newPassword !== newPassword2) {
+      statusEl.textContent = 'Passwords do not match.';
+      statusEl.style.color = '#ff4444'; return;
+    }
+
+    const btn = document.getElementById('_adm-submit');
+    btn.disabled = true;
+    btn.textContent = 'Resetting…';
+    statusEl.textContent = '';
+
+    try {
+      const r = await fetch('https://chatterbox-api.untdocapis.workers.dev/admin/resetpw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: 'some-secret-only-you-know', username, newPassword })
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok) {
+        statusEl.textContent = '✓ Password reset successfully.';
+        statusEl.style.color = '#20c060';
+      } else {
+        statusEl.textContent = data.error || data.message || 'Reset failed.';
+        statusEl.style.color = '#ff4444';
+      }
+    } catch(err) {
+      statusEl.textContent = 'Network error — could not reach server.';
+      statusEl.style.color = '#ff4444';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Reset Password';
+    }
+  };
+})();
+
 </script>
+
+<!-- ── HIDDEN ADMIN PASSWORD-RESET PANEL ── -->
+<div id="_adm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:99999;align-items:center;justify-content:center;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);" onclick="if(event.target===this)_hideAdminPanel()">
+  <div style="background:rgba(14,14,14,0.98);border:1px solid rgba(255,32,32,0.22);border-radius:24px;padding:28px 24px 22px;width:330px;max-width:92vw;box-shadow:0 28px 80px rgba(0,0,0,0.85),0 0 0 1px rgba(255,32,32,0.08);position:relative;font-family:'Outfit',sans-serif;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;">
+      <div>
+        <div style="font-size:9px;font-weight:700;color:#FF2020;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:3px;">Admin Access</div>
+        <div style="font-size:18px;font-weight:700;color:#f0f0f0;letter-spacing:0.01em;">Password Reset</div>
+      </div>
+      <button onclick="_hideAdminPanel()" title="Close" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.09);border-radius:9px;color:rgba(240,240,240,0.45);cursor:pointer;width:32px;height:32px;flex-shrink:0;font-size:17px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;line-height:1;" onmouseover="this.style.background='rgba(255,255,255,0.13)';this.style.color='#f0f0f0'" onmouseout="this.style.background='rgba(255,255,255,0.07)';this.style.color='rgba(240,240,240,0.45)'">✕</button>
+    </div>
+
+    <div style="margin-bottom:13px;">
+      <label style="font-size:10px;font-weight:700;color:rgba(240,240,240,0.45);letter-spacing:0.6px;text-transform:uppercase;display:block;margin-bottom:6px;">Username</label>
+      <input id="_adm-user" type="text" placeholder="Enter username" autocomplete="off" spellcheck="false"
+        style="width:100%;padding:10px 13px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:11px;color:#f0f0f0;font-family:'Outfit',sans-serif;font-size:14px;outline:none;box-sizing:border-box;transition:border-color 0.15s;"
+        onfocus="this.style.borderColor='rgba(255,32,32,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+    </div>
+
+    <div style="margin-bottom:13px;">
+      <label style="font-size:10px;font-weight:700;color:rgba(240,240,240,0.45);letter-spacing:0.6px;text-transform:uppercase;display:block;margin-bottom:6px;">New Password</label>
+      <input id="_adm-newpw" type="password" placeholder="Enter new password" autocomplete="new-password"
+        style="width:100%;padding:10px 13px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:11px;color:#f0f0f0;font-family:'Outfit',sans-serif;font-size:14px;outline:none;box-sizing:border-box;transition:border-color 0.15s;"
+        onfocus="this.style.borderColor='rgba(255,32,32,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label style="font-size:10px;font-weight:700;color:rgba(240,240,240,0.45);letter-spacing:0.6px;text-transform:uppercase;display:block;margin-bottom:6px;">Confirm Password</label>
+      <input id="_adm-newpw2" type="password" placeholder="Repeat new password" autocomplete="new-password"
+        style="width:100%;padding:10px 13px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:11px;color:#f0f0f0;font-family:'Outfit',sans-serif;font-size:14px;outline:none;box-sizing:border-box;transition:border-color 0.15s;"
+        onfocus="this.style.borderColor='rgba(255,32,32,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'"
+        onkeydown="if(event.key==='Enter')_doAdminReset()">
+    </div>
+
+    <button id="_adm-submit" onclick="_doAdminReset()"
+      style="width:100%;padding:12px 14px;background:linear-gradient(135deg,#FF2020,rgba(220,20,20,0.88));border:none;border-radius:12px;color:#fff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.03em;transition:all 0.15s;margin-bottom:11px;"
+      onmouseover="this.style.opacity='0.87';this.style.transform='translateY(-1px)'"
+      onmouseout="this.style.opacity='1';this.style.transform='translateY(0)'">Reset Password</button>
+
+    <div id="_adm-status" style="font-size:12px;text-align:center;min-height:16px;font-family:'Outfit',sans-serif;color:rgba(240,240,240,0.5);"></div>
+  </div>
+</div>
+
 </body>
 </html>
