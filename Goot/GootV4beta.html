@@ -4927,6 +4927,373 @@
 		[data-theme="light"] #albumViewBg { filter: blur(60px) saturate(1.9) brightness(1.05); }
 		[data-theme="light"] #albumViewBg.visible { opacity: 0.45; }
 
+		/* ══════════════════════════════════════════════════════════════════════
+		   ALBUM VIEW LAYOUT VARIANTS
+		   Each layout keeps #aotySection visible and repositions it
+		   ══════════════════════════════════════════════════════════════════════ */
+
+		/* ── Shared: redesigned AOTY card for all layouts ─────────────────── */
+		/* The base #aotySection styles (width:220px etc) are overridden per-layout */
+
+		/* ── Split layout — full blurred album art background ── */
+		body.album-layout-split #library-screen.album-view #folderCoverBanner {
+			align-items: stretch !important;
+			gap: 0 !important;
+			padding: 0 !important;
+			border-radius: 18px !important;
+			overflow: hidden !important;
+			margin: 0 20px !important;
+			height: 280px !important;
+			min-height: 0 !important;
+			position: relative !important;
+		}
+		body.album-layout-split #library-screen.album-view #folderCoverBanner::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background: var(--split-banner-bg, transparent);
+			background-size: cover;
+			background-position: center;
+			filter: blur(40px) saturate(1.2) brightness(0.35);
+			z-index: 0;
+		}
+		/* Art container — fixed square, solid right edge (no fade) */
+		body.album-layout-split #folderCoverArt {
+			width: 280px !important;
+			min-width: 280px !important;
+			height: 280px !important;
+			border-radius: 0 !important;
+			box-shadow: none !important;
+			flex-shrink: 0 !important;
+			align-self: stretch !important;
+			cursor: zoom-in !important;
+			position: relative !important;
+			background: transparent !important;
+			z-index: 1 !important;
+		}
+		body.album-layout-split #folderCoverArt img,
+		body.album-layout-split #folderCoverArt .loaded {
+			object-fit: cover !important;
+			object-position: center center !important;
+			width: 100% !important;
+			height: 100% !important;
+			border-radius: 0 !important;
+			display: block !important;
+		}
+		/* Info — transparent background, sits above blurred banner */
+		body.album-layout-split #folderCoverBanner > div:not(#folderCoverArt):not(#aotySection) {
+			flex: 1 !important;
+			padding: 28px 20px 24px 52px !important;
+			justify-content: center !important;
+			background: transparent !important;
+			position: relative !important;
+			z-index: 1 !important;
+		}
+		body.album-layout-split #folderCoverTitle {
+			font-size: 28px !important;
+			font-weight: 800 !important;
+			letter-spacing: -0.8px !important;
+			line-height: 1.05 !important;
+		}
+		body.album-layout-split #folderCoverLabel { font-size: 9px !important; letter-spacing: 2px !important; }
+		body.album-layout-split #folderCoverMeta { font-size: 13px !important; }
+		
+		/* Responsive text sizing for split layout */
+		@media (min-width: 900px) {
+			body.album-layout-split #folderCoverTitle { font-size: 34px !important; }
+			body.album-layout-split #folderCoverMeta { font-size: 14px !important; }
+		}
+		@media (min-width: 1100px) {
+			body.album-layout-split #folderCoverTitle { font-size: 42px !important; }
+			body.album-layout-split #folderCoverMeta { font-size: 15px !important; }
+		}
+		@media (min-width: 1400px) {
+			body.album-layout-split #folderCoverTitle { font-size: 48px !important; }
+			body.album-layout-split #folderCoverMeta { font-size: 16px !important; }
+		}
+		body.album-layout-split #folderCoverActions { margin-top: 14px !important; }
+		/* Ratings column — sits directly on blurred art */
+		body.album-layout-split #aotySection {
+			width: 220px !important;
+			flex-shrink: 0 !important;
+			border-radius: 0 !important;
+			border: none !important;
+			background: transparent !important;
+			backdrop-filter: none !important;
+			-webkit-backdrop-filter: none !important;
+			align-self: stretch !important;
+			padding: 22px 18px !important;
+			justify-content: center !important;
+			position: relative !important;
+			z-index: 1 !important;
+		}
+
+		/* ── Redesigned base AOTY card (applies to all) ──────────────────── */
+		/* Horizontal scores layout — critic left, user right with pill divider */
+		#aotySection .aoty-scores-row {
+			flex-direction: row !important;
+			justify-content: space-around !important;
+			width: 100% !important;
+			gap: 8px !important;
+		}
+		#aotySection .aoty-score-badge {
+			flex-direction: column !important;
+			align-items: center !important;
+			gap: 2px !important;
+			flex: 1 !important;
+			padding: 8px 6px !important;
+			border-radius: 12px !important;
+			background: transparent !important;
+			transition: background 0.15s !important;
+		}
+		#aotySection .aoty-score-badge:hover {
+			background: color-mix(in srgb, var(--md-sys-color-primary) 10%, var(--md-sys-color-surface)) !important;
+		}
+		#aotySection .aoty-score-num {
+			font-size: 32px !important;
+			letter-spacing: -2px !important;
+			line-height: 1 !important;
+		}
+		#aotySection .aoty-score-label {
+			font-size: 9px !important;
+			letter-spacing: 1px !important;
+		}
+		#aotySection .aoty-score-count {
+			font-size: 9px !important;
+			opacity: 0.3 !important;
+		}
+		#aotySection .aoty-divider {
+			display: none !important;
+		}
+		#aotySection .aoty-card-header {
+			margin-bottom: 10px !important;
+		}
+		#aotySection .aoty-card-icon {
+			width: 26px !important;
+			height: 26px !important;
+			font-size: 11px !important;
+			border-radius: 8px !important;
+		}
+		#aotySection .aoty-card-title {
+			font-size: 12px !important;
+		}
+		#aotySection .aoty-link-pill {
+			font-size: 11px !important;
+			margin-top: 8px !important;
+			margin-left: -6px !important;
+			opacity: 0.6 !important;
+		}
+		
+		/* Responsive ratings section for split layout */
+		@media (min-width: 900px) {
+			#aotySection .aoty-score-num { font-size: 38px !important; }
+			#aotySection .aoty-card-title { font-size: 13px !important; }
+		}
+		@media (min-width: 1100px) {
+			#aotySection .aoty-score-num { font-size: 44px !important; }
+			#aotySection .aoty-card-title { font-size: 14px !important; }
+		}
+		@media (min-width: 1400px) {
+			#aotySection .aoty-score-num { font-size: 48px !important; }
+			#aotySection .aoty-card-title { font-size: 15px !important; }
+		}
+	
+		/* ── Album layout button picker ─────────────────────────────────── */
+		/* Hide album layout setting on mobile - split is always default */
+		@media (max-width: 768px) {
+			.album-layout-setting { display: none !important; }
+		}
+		.album-layout-btn {
+			background: color-mix(in srgb, var(--md-sys-color-surface-variant) 80%, transparent);
+			border: 1.5px solid color-mix(in srgb, var(--md-sys-color-outline) 35%, transparent);
+			border-radius: 10px;
+			padding: 10px 12px 8px;
+			cursor: pointer;
+			color: var(--md-sys-color-on-surface);
+			font-size: 11px;
+			font-weight: 600;
+			font-family: var(--font-fallback);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 7px;
+			transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+			min-width: 70px;
+			opacity: 0.7;
+		}
+		.album-layout-btn:hover {
+			background: color-mix(in srgb, var(--md-sys-color-primary) 10%, var(--md-sys-color-surface-variant));
+			border-color: color-mix(in srgb, var(--md-sys-color-primary) 50%, transparent);
+			opacity: 1;
+		}
+		.album-layout-btn.active {
+			background: color-mix(in srgb, var(--md-sys-color-primary) 16%, var(--md-sys-color-surface-variant));
+			border-color: var(--md-sys-color-primary);
+			color: var(--md-sys-color-primary);
+			opacity: 1;
+		}
+		.album-layout-btn svg {
+			width: 44px;
+			height: 32px;
+			display: block;
+		}
+
+		/* ── Album of the Year — M3 Card ─────────────────────────────────────── */
+		#aotySection {
+			display: none;
+			flex-direction: column;
+			flex-shrink: 0;
+			width: 220px;
+			background: var(--md-sys-color-surface-variant);
+			border-radius: 24px;
+			border: 1px solid color-mix(in srgb, var(--md-sys-color-outline) 60%, transparent);
+			padding: 20px;
+			box-sizing: border-box;
+			align-self: stretch;
+			transition: box-shadow 0.25s var(--motion-standard);
+		}
+		#aotySection.visible { display: flex; }
+		#aotySection:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+		#aotyScoresRow {
+			flex: 1;
+			display: flex;
+			align-items: center;
+		}
+		[data-theme="light"] #aotySection {
+			background: color-mix(in srgb, var(--md-sys-color-primary) 5%, white);
+			box-shadow: 0 2px 10px rgba(0,0,0,0.07), 0 0 0 1px color-mix(in srgb, var(--md-sys-color-primary) 10%, rgba(0,0,0,0.04));
+		}
+		.aoty-card-header {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 16px;
+		}
+		.aoty-card-icon {
+			width: 32px;
+			height: 32px;
+			border-radius: 10px;
+			background: var(--md-sys-color-primary-container);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: var(--md-sys-color-primary);
+			font-size: 13px;
+			flex-shrink: 0;
+		}
+		.aoty-card-title {
+			font-size: 14px;
+			font-weight: 600;
+			letter-spacing: -0.1px;
+		}
+		.aoty-scores-row {
+			display: flex;
+			align-items: center;
+			gap: 0;
+			margin-bottom: 4px;
+		}
+		.aoty-score-badge {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 4px;
+			flex: 1;
+		}
+		.aoty-score-badge-labels {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 1px;
+		}
+		.aoty-score-num {
+			font-size: 44px;
+			font-weight: 700;
+			letter-spacing: -2px;
+			line-height: 1;
+			transition: transform 0.15s var(--motion-standard);
+		}
+		.aoty-score-badge:hover .aoty-score-num { transform: scale(1.06); }
+		.aoty-score-num.score-great { color: #57a85a; }
+		.aoty-score-num.score-good  { color: #8ab457; }
+		.aoty-score-num.score-mixed { color: #c9a227; }
+		.aoty-score-num.score-poor  { color: #c97027; }
+		.aoty-score-num.score-bad   { color: #c94040; }
+		.aoty-score-label {
+			font-size: 10px;
+			font-weight: 600;
+			letter-spacing: 0.6px;
+			text-transform: uppercase;
+			opacity: 0.45;
+		}
+		.aoty-score-count { font-size: 10px; opacity: 0.35; }
+		.aoty-divider {
+			width: 1px;
+			align-self: stretch;
+			margin: 0 14px;
+			background: color-mix(in srgb, var(--md-sys-color-outline) 40%, transparent);
+			flex-shrink: 0;
+		}
+		/* m3-btn-text style for both action buttons */
+		.aoty-reviews-toggle,
+		.aoty-link-pill {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			background: transparent;
+			border: none;
+			color: var(--md-sys-color-primary);
+			font-size: 13px;
+			font-weight: 500;
+			font-family: var(--font-fallback);
+			letter-spacing: 0.1px;
+			text-decoration: none;
+			cursor: pointer;
+			padding: 6px 10px;
+			border-radius: 100px;
+			transition: background 0.2s var(--motion-standard);
+			align-self: flex-start;
+			margin-left: -10px;
+		}
+		.aoty-reviews-toggle { margin-top: 14px; }
+		.aoty-link-pill { margin-top: 2px; opacity: 0.7; }
+		.aoty-reviews-toggle:hover,
+		.aoty-link-pill:hover { background: var(--md-sys-color-primary-container); opacity: 1; }
+		.aoty-reviews-list {
+			display: none;
+			flex-direction: column;
+			gap: 6px;
+			margin-top: 8px;
+			max-height: 420px;
+			overflow-y: auto;
+		}
+		.aoty-reviews-list::-webkit-scrollbar { width: 4px; }
+		.aoty-reviews-list::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--md-sys-color-outline) 40%, transparent); border-radius: 2px; }
+		.aoty-reviews-list.open { display: flex; }
+		.aoty-review-card {
+			display: flex;
+			align-items: flex-start;
+			gap: 8px;
+			padding: 8px 10px;
+			border-radius: 12px;
+			background: color-mix(in srgb, var(--md-sys-color-surface) 60%, transparent);
+			border: 1px solid color-mix(in srgb, var(--md-sys-color-outline) 30%, transparent);
+		}
+		.aoty-review-pub-img { width: 24px; height: 24px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: var(--md-sys-color-surface-variant); }
+		.aoty-review-body { flex: 1; min-width: 0; }
+		.aoty-review-top { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+		.aoty-review-pub { font-size: 11px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
+		.aoty-review-score { font-size: 12px; font-weight: 700; flex-shrink: 0; }
+		.aoty-review-author { font-size: 10px; opacity: 0.38; margin-bottom: 2px; }
+		.aoty-review-text { font-size: 11px; opacity: 0.55; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+		.aoty-loading {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex: 1;
+			font-size: 48px;
+			color: var(--md-sys-color-primary);
+		}
+
 		/* Ensure library-screen content sits above the bg */
 		#library-screen>*:not(#albumViewBg){ position: relative; z-index: 1; }
 		/* ── Compact Song Row Mode (Spotify-style) ── */
@@ -12647,6 +13014,7 @@
 				min-width: 110px !important;
 			}
 
+			#aotySection { display: none !important; }
 			#folderCoverTitle{ font-size: 22px !important; line-height: 1.2 !important; }
 			#folderCoverActions{ flex-wrap: wrap !important; }
 			/* ══════════════════════════════════════════════════════════════
@@ -13726,9 +14094,9 @@
 						onmouseleave="this.style.transform='';this.style.boxShadow='0 12px 40px rgba(0,0,0,0.55)'">
 						<i class="fa-solid fa-music" style="font-size:52px;opacity:0.2;"></i>
 					</div>
-					<div style="display:flex;flex-direction:column;gap:10px;min-width:0;flex:1;">
+					<div style="display:flex;flex-direction:column;gap:10px;min-width:0;flex:1;justify-content:center;">
 						<div id="folderCoverLabel"
-							style="font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;opacity:0.45;">
+							style="font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;opacity:0.4;">
 							Album</div>
 						<div id="folderCoverTitle"
 							style="font-size:42px;font-weight:700;letter-spacing:-0.5px;line-height:1.1;word-break:break-word;">
@@ -13736,6 +14104,11 @@
 						<div id="folderCoverMeta" style="font-size:15px;opacity:0.5;margin-top:2px;"></div>
 						<div id="folderCoverActions"
 							style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;align-items:center;"></div>
+					</div>
+					<!-- Album of the Year panel — shown only when scores are available -->
+					<div id="aotySection">
+						<div class="aoty-scores-row" id="aotyScoresRow"></div>
+						<div id="aotyReviewsWrap"></div>
 					</div>
 				</div>
 				<!-- Folder grid skeleton loading -->
@@ -14426,6 +14799,31 @@
 							</div>
 							<div class="m3-toggle"><input type="checkbox" id="albumViewBgToggle" onchange="toggleAlbumViewBgSetting()"><span class="m3-toggle-track"><span class="m3-toggle-thumb"></span></span></div>
 						</label>
+
+						<!-- Album View Layout Picker -->
+						<div class="m3-setting-row album-layout-setting" style="flex-direction:column;align-items:flex-start;gap:12px;cursor:default;">
+							<div class="m3-setting-info">
+								<span class="m3-setting-label">Album View Layout</span>
+								<span class="m3-setting-desc">Choose how the album header looks when browsing a folder</span>
+							</div>
+							<div style="display:flex;gap:10px;flex-wrap:wrap;" id="albumLayoutButtons">
+								<button class="album-layout-btn active" data-layout="split" onclick="setAlbumViewLayout('split')" title="Art left half, blurred album art background">
+									<svg viewBox="0 0 44 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+										<rect x="1" y="2" width="20" height="22" rx="4" fill="currentColor" opacity="0.45"/>
+										<rect x="22" y="2" width="22" height="22" rx="4" fill="currentColor" opacity="0.18"/>
+										<rect x="25" y="6" width="13" height="3.5" rx="1.5" fill="currentColor" opacity="0.6"/>
+										<rect x="25" y="12" width="9" height="2" rx="1" fill="currentColor" opacity="0.4"/>
+										<rect x="25" y="16" width="6" height="2" rx="1" fill="currentColor" opacity="0.25"/>
+										<!-- ratings right edge -->
+										<rect x="36" y="2" width="8" height="22" rx="3" fill="currentColor" opacity="0.22"/>
+										<rect x="37.5" y="8" width="5" height="3" rx="1" fill="currentColor" opacity="0.4"/>
+										<rect x="1" y="28" width="42" height="2" rx="1" fill="currentColor" opacity="0.1"/>
+									</svg>
+									Split
+								</button>
+							</div>
+						</div>
+
 						<label class="m3-setting-row" style="cursor:pointer;">
 							<div class="m3-setting-info">
 								<span class="m3-setting-label">Performance Mode</span>
@@ -21205,6 +21603,8 @@ async function init() {
     // Restore album view background setting (off by default)
     const albumViewBgEl = document.getElementById('albumViewBgToggle');
     if (albumViewBgEl) albumViewBgEl.checked = localStorage.getItem('goot_album_view_bg') === 'true';
+    // Restore album view layout
+    restoreAlbumViewLayout();
     // Restore custom font
     const savedFont = localStorage.getItem('goot_font');
     if (savedFont) fontPickerApply(savedFont);
@@ -21504,6 +21904,21 @@ async function loadFolders(id, refresh = false) {
                 }
                 if (card._metaPrefetched) return;
                 card._metaPrefetched = true;
+
+                // Try AOTY prefetch immediately from already-cached trackMetadata
+                const _tryAOTYFromExisting = () => {
+                    if (typeof _prefetchAOTYCache !== 'function') return;
+                    const entry = folderContentsCache.get(f.id);
+                    if (!entry) return;
+                    const audioFiles = entry.data.filter(x => x.mimeType?.includes('audio') || x.mimeType?.startsWith('video/'));
+                    const existingMeta = audioFiles.map(x => trackMetadata[x.id]).filter(m => m?.artist && m?.album && m.artist !== 'Unknown' && m.album !== 'Unknown');
+                    if (!existingMeta.length) return;
+                    const bestArtist = mostCommon(existingMeta.map(m => m.artist));
+                    const bestAlbum  = mostCommon(existingMeta.map(m => m.album));
+                    if (bestArtist && bestAlbum) _prefetchAOTYCache(bestAlbum, bestArtist);
+                };
+                _tryAOTYFromExisting();
+
                 // Collect all audio IDs under this folder (and its subfolders) from cache
                 const ids = [];
                 const scanFolder = (fid) => {
@@ -21537,6 +21952,14 @@ async function loadFolders(id, refresh = false) {
                         trackMetadata[item.id] = { ...existing, title: item.title || existing.title || 'Unknown Track', artist: item.artist || existing.artist || 'Unknown Artist', album, year: item.year || existing.year || null, genre: item.genre || existing.genre || null, albumArt: albumToArt.get(albumKey) || item.thumbnailLink || existing.albumArt || '', albumKey, duration: item.duration || existing.duration || null };
                         saveCompleteTrackMetadata(item.id, trackMetadata[item.id]).catch(() => {});
                     });
+                    // AOTY prefetch from freshly fetched metadata
+                    if (typeof _prefetchAOTYCache === 'function') {
+                        const metaArtists = metadata.map(m => m.artist).filter(v => v && v !== 'Unknown');
+                        const metaAlbums  = metadata.map(m => m.album).filter(v => v && v !== 'Unknown');
+                        const bestArtist  = metaArtists.length ? mostCommon(metaArtists) : null;
+                        const bestAlbum   = metaAlbums.length  ? mostCommon(metaAlbums)  : null;
+                        if (bestArtist && bestAlbum) _prefetchAOTYCache(bestAlbum, bestArtist);
+                    }
                 }).catch(() => {});
             }, { passive: true });
             _gridFragment.appendChild(card);
@@ -22140,6 +22563,10 @@ async function loadFolders(id, refresh = false) {
                         img.src = artUrl;
                         coverArtEl.dataset.artUrl = artUrl;
                     }
+                    // Set split layout banner background
+                    if (document.body.classList.contains('album-layout-split')) {
+                        coverBanner.style.setProperty('--split-banner-bg', `url("${artUrl}")`);
+                    }
                 };
 
                 // Populate text from already-cached metadata immediately
@@ -22184,6 +22611,19 @@ async function loadFolders(id, refresh = false) {
                 if (coverActionsEl) {
                     coverActionsEl.innerHTML = getFolderActionsHTML('playCurrentFolderTracksOnly', 'shuffleCurrentFolderTracksOnly', true);
                 }
+                // ── AOTY: fetch scores once we have title+artist ──────────────────
+                _resetAOTYSection();
+                // Poll immediately for metadata instead of fixed delay
+                (function _aotyPoll(attempts) {
+                    const _t = document.getElementById('folderCoverTitle')?.textContent?.trim() || '';
+                    const _a = document.getElementById('folderCoverMeta')?.textContent?.trim() || '';
+                    if (_t && _a) {
+                        fetchAndRenderAOTY(_t, _a);
+                    } else if (attempts > 0) {
+                        setTimeout(() => _aotyPoll(attempts - 1), 100);
+                    }
+                })(20);
+
                 // Set currentAlbumView so album ellipsis menu functions work
                 currentAlbumView = {
                     album: { album: coverTitleEl?.textContent || _thisFolderName, artist: '' },
@@ -22267,6 +22707,12 @@ async function loadFolders(id, refresh = false) {
                 coverBanner.style.display = 'none';
                 coverBanner.style.paddingBottom = '16px';
                 document.getElementById('library-screen')?.classList.remove('album-view');
+                _resetAOTYSection();
+                // Clear split layout banner background to prevent stale data
+                const splitBanner = document.getElementById('folderCoverBanner');
+                if (splitBanner) {
+                    splitBanner.style.removeProperty('--split-banner-bg');
+                }
                 // Restore opacity — was frozen if we were previously in album-view
                 const _lsEl = document.getElementById('library-screen');
                 if (_lsEl) _lsEl.style.opacity = '';
@@ -31202,6 +31648,10 @@ function applyAccentColorTemp(hex) {
 
         const picker = document.getElementById('accentPicker');
         if (picker) picker.value = h;
+        // Write a dedicated split-layout accent var directly on the banner so the split
+        // panel can use a rich tint independent of the global surface-variant tint level.
+        const _splitBanner = document.getElementById('folderCoverBanner');
+        if (_splitBanner) _splitBanner.style.setProperty('--split-album-accent', h);
         // Debounce slider refresh — querySelectorAll('input[type=range]') is expensive.
         // Browsing folders can trigger rapid accent changes; batch them into one update.
         clearTimeout(_accentSliderDebounce);
@@ -32846,6 +33296,41 @@ function toggleAlbumViewBgSetting() {
         const albumBg = document.getElementById('albumViewBg');
         if (albumBg) albumBg.classList.remove('visible');
     }
+}
+
+// ── Album View Layout ──────────────────────────────────────────────────────────
+const ALBUM_LAYOUT_CLASSES = ['album-layout-split'];
+
+function setAlbumViewLayout(layout) {
+    // Remove all layout classes from body
+    ALBUM_LAYOUT_CLASSES.forEach(cls => document.body.classList.remove(cls));
+    // Apply the selected one (default = no class)
+    if (layout !== 'default') {
+        document.body.classList.add('album-layout-' + layout);
+        // For split layout, apply the blurred album art as banner background
+        const banner = document.getElementById('folderCoverBanner');
+        const artUrl = document.getElementById('folderCoverArt')?.dataset?.artUrl;
+        if (banner && artUrl) {
+            banner.style.setProperty('--split-banner-bg', `url("${artUrl}")`);
+        }
+    } else {
+        // Clear the banner background for default layout
+        const banner = document.getElementById('folderCoverBanner');
+        if (banner) {
+            banner.style.removeProperty('--split-banner-bg');
+        }
+    }
+    // Persist
+    localStorage.setItem('goot_album_view_layout', layout);
+    // Update button states
+    document.querySelectorAll('#albumLayoutButtons .album-layout-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.layout === layout);
+    });
+}
+
+function restoreAlbumViewLayout() {
+    const saved = localStorage.getItem('goot_album_view_layout') || 'split';
+    setAlbumViewLayout(saved);
 }
 
 // ── Font Picker ────────────────────────────────────────────────────────────────
@@ -38771,6 +39256,10 @@ function renderAlbumAsFolderView(album, tracks) {
             img.src = cachedArt;
             coverArtEl.dataset.artUrl = cachedArt;
             setAlbumViewBg(cachedArt);
+            // Set split layout banner background to blurred album art
+            if (document.body.classList.contains('album-layout-split')) {
+                coverBanner.style.setProperty('--split-banner-bg', `url("${cachedArt}")`);
+            }
             extractAndApplyColorForAlbumView(cachedArt, album.album || '');
         } else {
             // If no art yet, watch albumArtCache for this album
@@ -38789,6 +39278,10 @@ function renderAlbumAsFolderView(album, tracks) {
                     img.src = art;
                     coverArtEl.dataset.artUrl = art;
                     setAlbumViewBg(art);
+                    // Set split layout banner background to blurred album art
+                    if (document.body.classList.contains('album-layout-split')) {
+                        coverBanner.style.setProperty('--split-banner-bg', `url("${art}")`);
+                    }
                     // Apply accent color from album art
                     extractAndApplyColorForAlbumView(art, album.album || '');
                 }
@@ -48825,6 +49318,174 @@ async function toggle8D() {
     } else {
         _tryPendingTrack(20);
     }
+})();
+</script>
+
+<script>
+// ── Album of the Year Integration ────────────────────────────────────────────
+// Fetches critic + user scores from the AOTY API and renders them in the
+// album view banner below the play/shuffle action buttons.
+// ─────────────────────────────────────────────────────────────────────────────
+
+(function() {
+    'use strict';
+
+    // In-memory cache so navigating back doesn't re-fetch
+    const _aotyCache = new Map();
+    let _aotySession = 0; // incremented on each reset to cancel stale retry loops
+
+    function _scoreClass(n) {
+        if (n >= 80) return 'score-great';
+        if (n >= 65) return 'score-good';
+        if (n >= 50) return 'score-mixed';
+        if (n >= 35) return 'score-poor';
+        return 'score-bad';
+    }
+
+    function _cleanAOTYAlbum(album) {
+        return album.replace(/\s*\((?:deluxe|deluxe version|deluxe edition|standard|standard edition|regular|explicit|clean|remastered|remaster|expanded|anniversary edition|bonus tracks?)\)/gi, '').trim();
+    }
+
+    window._prefetchAOTYCache = async function(album, artist) {
+        album = _cleanAOTYAlbum(album);
+        if (!album || !artist) return;
+        const tryFetch = async (a) => {
+            const key = (a + '||' + album).toLowerCase();
+            if (_aotyCache.has(key)) return;
+            try {
+                const url = `https://aoty-api.hnh65483.workers.dev/?artist=${encodeURIComponent(a)}&album=${encodeURIComponent(album)}`;
+                const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+                if (!res.ok) return null;
+                const data = await res.json();
+                if (data && (data.critic || data.user)) { _aotyCache.set(key, data); return data; }
+            } catch(_) {}
+            return null;
+        };
+        const result = await tryFetch(artist);
+        if (!result && artist.includes(',')) {
+            await tryFetch(artist.split(',')[0].trim());
+        }
+    };
+
+    window._resetAOTYSection = function() {
+        _aotySession++; // invalidate any in-flight retry loops
+        const sec = document.getElementById('aotySection');
+        if (sec) {
+            sec.classList.remove('visible');
+            const row = document.getElementById('aotyScoresRow');
+            const wrap = document.getElementById('aotyReviewsWrap');
+            if (row) row.innerHTML = '';
+            if (wrap) wrap.innerHTML = '';
+        }
+    };
+
+    window.fetchAndRenderAOTY = async function(album, artist, _retries = 15, _session = _aotySession) {
+        if (!album || !artist) return;
+        if (_session !== _aotySession) return;
+        album = _cleanAOTYAlbum(album);
+
+        const sec = document.getElementById('aotySection');
+        const row = document.getElementById('aotyScoresRow');
+        const wrap = document.getElementById('aotyReviewsWrap');
+        if (!sec || !row || !wrap) return;
+
+        const firstArtist = artist.includes(',') ? artist.split(',')[0].trim() : artist;
+        const cacheKey = (artist + '||' + album).toLowerCase();
+        const firstArtistKey = (firstArtist + '||' + album).toLowerCase();
+
+        // Show loading state
+        sec.classList.add('visible');
+        row.innerHTML = '<span class="aoty-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></span>';
+        wrap.innerHTML = '';
+
+        // Helper: try one artist string, returns data or null
+        const _tryArtist = async (a) => {
+            const key = (a + '||' + album).toLowerCase();
+            if (_aotyCache.has(key)) return _aotyCache.get(key);
+            try {
+                const url = `https://aoty-api.hnh65483.workers.dev/?artist=${encodeURIComponent(a)}&album=${encodeURIComponent(album)}`;
+                const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+                if (!res.ok) return null;
+                const d = await res.json();
+                if (d && (d.critic || d.user)) { _aotyCache.set(key, d); return d; }
+            } catch(_) {}
+            return null;
+        };
+
+        let data = await _tryArtist(artist);
+        if (!data && firstArtist !== artist) data = await _tryArtist(firstArtist);
+
+        if (_session !== _aotySession) return;
+
+        if (!data) {
+            if (_retries > 0) {
+                // keep spinner visible during retry wait
+                await new Promise(r => setTimeout(r, 1000));
+                if (_session !== _aotySession) return;
+                return fetchAndRenderAOTY(album, artist, _retries - 1, _session);
+            }
+            row.innerHTML = '<span class="aoty-loading" style="font-size:13px;opacity:0.4;">No ratings found</span>';
+            return;
+        }
+
+        // Build scores row
+        const criticScore = data.critic?.score ? parseInt(data.critic.score) : null;
+        const userScore   = data.user?.score   ? parseInt(data.user.score)   : null;
+        const criticCount = data.critic?.count || null;
+        const userCount   = data.user?.count   || null;
+        const pageUrl     = data.url || 'https://www.albumoftheyear.org';
+
+        let html = '';
+
+        if (criticScore !== null && !isNaN(criticScore)) {
+            html += `
+            <div class="aoty-score-badge">
+                <span class="aoty-score-num ${_scoreClass(criticScore)}">${criticScore}</span>
+                <div class="aoty-score-badge-labels">
+                    <span class="aoty-score-label">Critic</span>
+                    ${criticCount ? `<span class="aoty-score-count">${criticCount} reviews</span>` : ''}
+                </div>
+            </div>`;
+            if (userScore !== null && !isNaN(userScore)) {
+                html += `<div class="aoty-divider"></div>`;
+            }
+        }
+
+        if (userScore !== null && !isNaN(userScore)) {
+            html += `
+            <div class="aoty-score-badge">
+                <span class="aoty-score-num ${_scoreClass(userScore)}">${userScore}</span>
+                <div class="aoty-score-badge-labels">
+                    <span class="aoty-score-label">User</span>
+                    ${userCount ? `<span class="aoty-score-count">${userCount} ratings</span>` : ''}
+                </div>
+            </div>`;
+        }
+
+        if (!html) {
+            sec.classList.remove('visible');
+            return;
+        }
+
+        // Header goes into section directly (before the scores row)
+        let headerEl = sec.querySelector('.aoty-card-header');
+        if (!headerEl) {
+            headerEl = document.createElement('div');
+            headerEl.className = 'aoty-card-header';
+            headerEl.innerHTML = `<div class="aoty-card-icon"><i class="fa-solid fa-star"></i></div><span class="aoty-card-title">Ratings</span>`;
+            sec.insertBefore(headerEl, row);
+        }
+        row.innerHTML = html;
+
+        // Reviews section + link pill at bottom of panel
+        const reviews = data.critic?.reviews?.filter(r => r.score) || [];
+        let wrapHTML = '';
+
+        wrapHTML += `<a class="aoty-link-pill" href="${pageUrl}" target="_blank" rel="noopener">
+            <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:9px;"></i>View on AOTY
+        </a>`;
+        wrap.innerHTML = wrapHTML;
+    };
 })();
 </script>
 
