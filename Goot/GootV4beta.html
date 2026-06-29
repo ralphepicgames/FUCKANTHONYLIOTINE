@@ -14583,7 +14583,12 @@ oninput="blockPanelSearch(this.value)">
 <div id="redirect-selected-id" style="font-size:11px;opacity:0.4;margin-top:4px;font-family:monospace;"></div>
 </div>
 <div id="redirect-form" style="display:none;flex-direction:column;gap:10px;">
-<input id="redirect-new-id-input" type="text" placeholder="New Drive ID or Drive link" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;">
+<div id="redirect-upload-zone" style="border:2px dashed color-mix(in srgb,var(--md-sys-color-primary) 40%,transparent);border-radius:10px;padding:18px 14px;text-align:center;cursor:pointer;transition:all 0.15s;font-size:13px;opacity:0.75;" onclick="document.getElementById('redirect-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--md-sys-color-primary)';this.style.opacity='1'" ondragleave="this.style.borderColor='';this.style.opacity='0.75'" ondrop="_redirectHandleDrop(event)">
+<i class="fa-solid fa-upload" style="margin-right:6px;"></i>Click or drop file to upload as redirect
+<div id="redirect-upload-status" style="margin-top:6px;font-size:12px;display:none;"></div>
+</div>
+<input type="file" id="redirect-file-input" style="display:none;" accept="audio/*,video/*" onchange="_redirectHandleFile(this.files[0])">
+<input id="redirect-new-id-input" type="text" placeholder="…or paste a local file ID directly" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;">
 <div style="display:flex;gap:8px;">
 <button class="m3-btn m3-btn-filled" style="flex:1;justify-content:center;" onclick="submitTrackRedirect()"><i class="fa-solid fa-check"></i> Set Redirect</button>
 <button class="m3-btn m3-btn-tonal" onclick="clearRedirectSelection()"><i class="fa-solid fa-xmark"></i></button>
@@ -14612,12 +14617,12 @@ oninput="blockPanelSearch(this.value)">
 <div id="album-redirect-track-list" style="display:flex;flex-direction:column;gap:4px;margin-top:10px;max-height:240px;overflow-y:auto;"></div>
 </div>
 <div id="album-redirect-form" style="display:none;flex-direction:column;gap:10px;">
-<div style="display:flex;gap:8px;">
-<input id="album-redirect-folder-input" type="text" placeholder="Paste a Drive folder link to auto-fill IDs (optional)" autocomplete="off" style="flex:1;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();albumRedirectFillFromFolder();}">
-<button class="m3-btn m3-btn-tonal" id="album-redirect-folder-fill-btn" onclick="albumRedirectFillFromFolder()"><i class="fa-solid fa-folder-open"></i> Fill</button>
+<div id="album-redirect-upload-zone" style="border:2px dashed color-mix(in srgb,var(--md-sys-color-primary) 40%,transparent);border-radius:10px;padding:18px 14px;text-align:center;cursor:pointer;transition:all 0.15s;font-size:13px;opacity:0.75;" onclick="document.getElementById('album-redirect-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--md-sys-color-primary)';this.style.opacity='1'" ondragleave="this.style.borderColor='';this.style.opacity='0.75'" ondrop="_albumRedirectHandleDrop(event)">
+<i class="fa-solid fa-upload" style="margin-right:6px;"></i>Drop files or click to upload — auto-fills IDs in filename order
+<div id="album-redirect-upload-status" style="margin-top:6px;font-size:12px;display:none;"></div>
 </div>
-<div id="album-redirect-folder-status" style="display:none;font-size:12px;padding:6px 10px;border-radius:8px;"></div>
-<textarea id="album-redirect-ids-input" placeholder="New Drive IDs or Drive links, one per line, in track order" autocomplete="off" rows="6" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;resize:vertical;" oninput="albumRedirectValidateCount()"></textarea>
+<input type="file" id="album-redirect-file-input" style="display:none;" accept="audio/*,video/*" multiple onchange="_albumRedirectHandleFiles(this.files)">
+<textarea id="album-redirect-ids-input" placeholder="Local file IDs — one per line, in track order (auto-filled by upload)" autocomplete="off" rows="6" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;resize:vertical;" oninput="albumRedirectValidateCount()"></textarea>
 <div id="album-redirect-count-hint" style="font-size:12px;opacity:0.55;"></div>
 <div style="display:flex;gap:8px;">
 <button class="m3-btn m3-btn-filled" id="album-redirect-submit-btn" style="flex:1;justify-content:center;" onclick="submitAlbumBatchRedirect()"><i class="fa-solid fa-check"></i> Redirect Entire Album</button>
@@ -14640,12 +14645,12 @@ oninput="blockPanelSearch(this.value)">
 <div id="lossless-track-list" style="display:flex;flex-direction:column;gap:4px;margin-top:10px;max-height:240px;overflow-y:auto;"></div>
 </div>
 <div id="lossless-form" style="display:none;flex-direction:column;gap:10px;">
-<div style="display:flex;gap:8px;">
-<input id="lossless-folder-input" type="text" placeholder="Paste a Drive folder link to auto-fill IDs (optional)" autocomplete="off" style="flex:1;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();losslessFillFromFolder();}">
-<button class="m3-btn m3-btn-tonal" id="lossless-folder-fill-btn" onclick="losslessFillFromFolder()"><i class="fa-solid fa-folder-open"></i> Fill</button>
+<div id="lossless-upload-zone" style="border:2px dashed color-mix(in srgb,var(--md-sys-color-primary) 40%,transparent);border-radius:10px;padding:18px 14px;text-align:center;cursor:pointer;transition:all 0.15s;font-size:13px;opacity:0.75;" onclick="document.getElementById('lossless-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--md-sys-color-primary)';this.style.opacity='1'" ondragleave="this.style.borderColor='';this.style.opacity='0.75'" ondrop="_losslessHandleDrop(event)">
+<i class="fa-solid fa-gem" style="margin-right:6px;"></i>Drop lossless files (FLAC/WAV/ALAC) or click to upload
+<div id="lossless-upload-status" style="margin-top:6px;font-size:12px;display:none;"></div>
 </div>
-<div id="lossless-folder-status" style="display:none;font-size:12px;padding:6px 10px;border-radius:8px;"></div>
-<textarea id="lossless-ids-input" placeholder="Lossless Drive IDs or Drive links, one per line, in track order" autocomplete="off" rows="6" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;resize:vertical;" oninput="losslessValidateCount()"></textarea>
+<input type="file" id="lossless-file-input" style="display:none;" accept="audio/*,.flac,.wav,.m4a,.aiff,.aif,.ape,.wv" multiple onchange="_losslessHandleFiles(this.files)">
+<textarea id="lossless-ids-input" placeholder="Lossless file IDs — one per line, in track order (auto-filled by upload)" autocomplete="off" rows="6" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;resize:vertical;" oninput="losslessValidateCount()"></textarea>
 <div id="lossless-count-hint" style="font-size:12px;opacity:0.55;"></div>
 <div style="display:flex;gap:8px;">
 <button class="m3-btn m3-btn-filled" id="lossless-submit-btn" style="flex:1;justify-content:center;" onclick="submitAlbumLossless()"><i class="fa-solid fa-gem"></i> Add Lossless to Entire Album</button>
@@ -30688,6 +30693,136 @@ m = input.match(/\/([a-zA-Z0-9_-]{25,})(?:[=?\/]|$)/);
 if (m) return m[1];
 return input; // fallback: return as-is
 }
+// ── Local file upload helpers for redirect / lossless panels ──────────────
+const _LOCAL_UPLOAD_BASE = 'https://fuckinthedog.tail1ec02c.ts.net';
+const _LOCAL_UPLOAD_KEY  = 'penis';
+// Hidden staging folder for redirect/lossless uploads — keeps the root tidy.
+// Created on first use; the server's /folder/create is idempotent (409 = already exists = fine).
+const _STAGING_FOLDER = '.goot_staging';
+async function _ensureStagingFolder() {
+    try {
+        await fetch(`${_LOCAL_UPLOAD_BASE}/folder/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': _LOCAL_UPLOAD_KEY },
+            body: JSON.stringify({ parentFolder: '', name: _STAGING_FOLDER })
+        });
+    } catch(_) {}
+}
+async function _uploadLocalFile(file, statusEl) {
+    await _ensureStagingFolder();
+    const fd = new FormData();
+    fd.append('file', file);
+    if (statusEl) { statusEl.textContent = `Uploading ${file.name}…`; statusEl.style.color = ''; statusEl.style.display = ''; }
+    const res = await fetch(`${_LOCAL_UPLOAD_BASE}/upload?folder=${encodeURIComponent(_STAGING_FOLDER)}`, {
+        method: 'POST', headers: { 'X-Admin-Key': _LOCAL_UPLOAD_KEY }, body: fd
+    });
+    const data = await res.json();
+    if (!res.ok || !data.id) throw new Error(data.error || 'Upload failed');
+    return data.id;
+}
+async function _uploadLocalFiles(files, statusEl) {
+    await _ensureStagingFolder();
+    // Sort by filename so order matches track order regardless of drop order
+    const sorted = Array.from(files).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    const ids = [];
+    for (let i = 0; i < sorted.length; i++) {
+        const f = sorted[i];
+        if (statusEl) { statusEl.textContent = `Uploading ${i + 1}/${sorted.length}: ${f.name}`; statusEl.style.display = ''; }
+        const fd = new FormData();
+        fd.append('file', f);
+        const res = await fetch(`${_LOCAL_UPLOAD_BASE}/upload?folder=${encodeURIComponent(_STAGING_FOLDER)}`, {
+            method: 'POST', headers: { 'X-Admin-Key': _LOCAL_UPLOAD_KEY }, body: fd
+        });
+        const data = await res.json();
+        if (!res.ok || !data.id) throw new Error(data.error || `Failed on ${f.name}`);
+        ids.push(data.id);
+    }
+    return ids;
+}
+// Track redirect upload
+async function _redirectHandleFile(file) {
+    if (!file) return;
+    const zone = document.getElementById('redirect-upload-zone');
+    const statusEl = document.getElementById('redirect-upload-status');
+    const input = document.getElementById('redirect-new-id-input');
+    zone.style.opacity = '0.5';
+    zone.style.pointerEvents = 'none';
+    try {
+        const id = await _uploadLocalFile(file, statusEl);
+        input.value = id;
+        statusEl.textContent = `✓ Uploaded: ${file.name} → ${id}`;
+        statusEl.style.color = '#22c55e';
+    } catch(e) {
+        statusEl.textContent = '✗ ' + e.message;
+        statusEl.style.color = '#ef4444';
+        statusEl.style.display = '';
+    } finally {
+        zone.style.opacity = '';
+        zone.style.pointerEvents = '';
+    }
+}
+function _redirectHandleDrop(e) {
+    e.preventDefault();
+    const zone = document.getElementById('redirect-upload-zone');
+    zone.style.borderColor = ''; zone.style.opacity = '0.75';
+    const file = e.dataTransfer?.files?.[0];
+    if (file) _redirectHandleFile(file);
+}
+// Album batch redirect upload
+async function _albumRedirectHandleFiles(files) {
+    if (!files || files.length === 0) return;
+    const zone = document.getElementById('album-redirect-upload-zone');
+    const statusEl = document.getElementById('album-redirect-upload-status');
+    const textarea = document.getElementById('album-redirect-ids-input');
+    zone.style.opacity = '0.5'; zone.style.pointerEvents = 'none';
+    try {
+        const ids = await _uploadLocalFiles(files, statusEl);
+        textarea.value = ids.join('\n');
+        albumRedirectValidateCount();
+        statusEl.textContent = `✓ Uploaded ${ids.length} file${ids.length === 1 ? '' : 's'} — IDs filled below`;
+        statusEl.style.color = '#22c55e';
+    } catch(e) {
+        statusEl.textContent = '✗ ' + e.message;
+        statusEl.style.color = '#ef4444';
+        statusEl.style.display = '';
+    } finally {
+        zone.style.opacity = ''; zone.style.pointerEvents = '';
+    }
+}
+function _albumRedirectHandleDrop(e) {
+    e.preventDefault();
+    const zone = document.getElementById('album-redirect-upload-zone');
+    zone.style.borderColor = ''; zone.style.opacity = '0.75';
+    if (e.dataTransfer?.files?.length) _albumRedirectHandleFiles(e.dataTransfer.files);
+}
+// Lossless upload
+async function _losslessHandleFiles(files) {
+    if (!files || files.length === 0) return;
+    const zone = document.getElementById('lossless-upload-zone');
+    const statusEl = document.getElementById('lossless-upload-status');
+    const textarea = document.getElementById('lossless-ids-input');
+    zone.style.opacity = '0.5'; zone.style.pointerEvents = 'none';
+    try {
+        const ids = await _uploadLocalFiles(files, statusEl);
+        textarea.value = ids.join('\n');
+        losslessValidateCount();
+        statusEl.textContent = `✓ Uploaded ${ids.length} file${ids.length === 1 ? '' : 's'} — IDs filled below`;
+        statusEl.style.color = '#22c55e';
+    } catch(e) {
+        statusEl.textContent = '✗ ' + e.message;
+        statusEl.style.color = '#ef4444';
+        statusEl.style.display = '';
+    } finally {
+        zone.style.opacity = ''; zone.style.pointerEvents = '';
+    }
+}
+function _losslessHandleDrop(e) {
+    e.preventDefault();
+    const zone = document.getElementById('lossless-upload-zone');
+    zone.style.borderColor = ''; zone.style.opacity = '0.75';
+    if (e.dataTransfer?.files?.length) _losslessHandleFiles(e.dataTransfer.files);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 async function submitTrackRedirect() {
 const raw = document.getElementById('redirect-new-id-input').value.trim();
 const newId = extractDriveId(raw);
@@ -30987,8 +31122,7 @@ _albumRedirectTracks = [];
 document.getElementById('album-redirect-selected').style.display = 'none';
 document.getElementById('album-redirect-form').style.display = 'none';
 document.getElementById('album-redirect-ids-input').value = '';
-document.getElementById('album-redirect-folder-input').value = '';
-document.getElementById('album-redirect-folder-status').style.display = 'none';
+const us = document.getElementById('album-redirect-upload-status'); if (us) { us.style.display = 'none'; us.textContent = ''; }
 document.getElementById('album-redirect-status').style.display = 'none';
 document.getElementById('album-redirect-progress').style.display = 'none';
 document.getElementById('album-redirect-progress').innerHTML = '';
@@ -31203,8 +31337,7 @@ _losslessTracks = [];
 document.getElementById('lossless-selected').style.display = 'none';
 document.getElementById('lossless-form').style.display = 'none';
 document.getElementById('lossless-ids-input').value = '';
-document.getElementById('lossless-folder-input').value = '';
-document.getElementById('lossless-folder-status').style.display = 'none';
+const us = document.getElementById('lossless-upload-status'); if (us) { us.style.display = 'none'; us.textContent = ''; }
 document.getElementById('lossless-status').style.display = 'none';
 document.getElementById('lossless-progress').style.display = 'none';
 document.getElementById('lossless-progress').innerHTML = '';
