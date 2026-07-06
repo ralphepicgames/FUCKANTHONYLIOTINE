@@ -16935,7 +16935,7 @@ while (offset < toFetch.length) {
 if (_queuePrefetchGen !== generation) return;
 const batch = toFetch.slice(offset, offset + 10);
 offset += 10;
-await fetch(`${PLAYER_WORKER_URL}/prefetch/batch?ids=${batch.map(encodeURIComponent).join(',')}`, {
+await fetch(`${PLAYER_WORKER_URL}/prefetch/batch?ids=${batch.map(encodeURIComponent).join(',')}${isLosslessPreferred() ? '&lossless=1' : ''}`, {
 method: 'GET',
 priority: 'low',
 }).catch(() => {});
@@ -16971,7 +16971,7 @@ if (!ids || ids.length === 0) return;
 const uncached = await filterUncachedIds(ids.slice(0, 17));
 if (uncached.length === 0) return;
 uncached.forEach(id => _laHoverPrefetched.add(id));
-fetch(`${PLAYER_WORKER_URL}/prefetch/batch?ids=${uncached.map(encodeURIComponent).join(',')}`, {
+fetch(`${PLAYER_WORKER_URL}/prefetch/batch?ids=${uncached.map(encodeURIComponent).join(',')}${isLosslessPreferred() ? '&lossless=1' : ''}`, {
 method: 'GET',
 priority: 'low',
 }).catch(() => {});
@@ -23694,7 +23694,7 @@ if (_laHoverPrefetched.has(t.id)) return;
 _laHoverPrefetched.add(t.id);
 filterUncachedIds([t.id]).then(uncached => {
 if (uncached.length > 0) {
-fetch(`${PLAYER_WORKER_URL}/prefetch/batch?ids=${encodeURIComponent(t.id)}`, {
+fetch(`${PLAYER_WORKER_URL}/prefetch/batch?ids=${encodeURIComponent(t.id)}${isLosslessPreferred() ? '&lossless=1' : ''}`, {
 method: 'GET', priority: 'low'
 }).catch(() => {});
 }
@@ -45557,7 +45557,7 @@ if (trackId && !_laHoverPrefetched.has(trackId)) {
 _laHoverPrefetched.add(trackId);
 filterUncachedIds([trackId]).then(uncached => {
 if (uncached.length > 0) {
-fetch(`${PLAYER_WORKER_URL}/prefetch/batch?ids=${encodeURIComponent(trackId)}`, {
+fetch(`${PLAYER_WORKER_URL}/prefetch/batch?ids=${encodeURIComponent(trackId)}${isLosslessPreferred() ? '&lossless=1' : ''}`, {
 method: 'GET', priority: 'low'
 }).catch(() => {});
 }
