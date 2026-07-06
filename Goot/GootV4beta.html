@@ -30803,9 +30803,12 @@ return input; // fallback: return as-is
 // ── Local file upload helpers for redirect / lossless panels ──────────────
 const _LOCAL_UPLOAD_BASE = 'https://fuckinthedog.tail1ec02c.ts.net';
 const _LOCAL_UPLOAD_KEY  = 'penis';
-// Hidden staging folder for redirect/lossless uploads — keeps the root tidy.
+// Hidden folder for redirect/lossless uploads — keeps the root tidy.
+// This is the same folder all other track redirects and lossless files already
+// live in on disk (/root/goot/.goot.hidden_lossless_cache), so uploads from
+// this panel land alongside them instead of a separate, unused staging folder.
 // Created on first use; the server's /folder/create is idempotent (409 = already exists = fine).
-const _STAGING_FOLDER = '.goot_staging';
+const _STAGING_FOLDER = '.goot.hidden_lossless_cache';
 async function _ensureStagingFolder() {
     try {
         await fetch(`${_LOCAL_UPLOAD_BASE}/folder/create`, {
