@@ -16716,6 +16716,13 @@ const COLOR_WORKER_URL = "https://gootcolor.goot-api.workers.dev";
 const METADATA_API_URL = SCANNER_WORKER_URL;
 const SEARCH_API_URL = PLAYER_WORKER_URL;
 const STREAMING_URL = PLAYER_WORKER_URL;
+// Folder cover images are fetched straight from the home tunnel instead of
+// through the Worker proxy. NOTE: this means folder covers no longer go
+// through Cloudflare's edge cache — every browser/session re-fetches the raw
+// image live from home instead of getting a cached hit from Cloudflare. It
+// also relies on the home server itself sending CORS headers, since the
+// Worker (which used to add them) is no longer in the path.
+const GOOT_LOCAL_DIRECT_BASE = "https://fuckinthedog.tail1ec02c.ts.net";
 /**
 * Lossless streaming preference (global toggle in Settings).
 * When enabled, all playback/buffer URLs ask the worker for the lossless
@@ -16771,6 +16778,24 @@ return result;
 * Streaming enabled (since that's what determines whether it's really being
 * streamed lossless right now).
 */
+/**
+* A track can be "lossless" two different ways: (1) an admin explicitly linked
+* a separate lossless master via the Lossless admin panel (tracked in the
+* worker's lossless-redirect KV table), or (2) the file that's ALREADY the
+* track's only copy is itself a lossless format (FLAC/WAV/ALAC/APE/etc)
+* because it was ingested that way with no separate lossy copy ever existing.
+* checkLosslessAvailability() only ever sees case (1) via a network round-trip
+* to the KV table — so albums ingested natively as FLAC with no manual
+* redirect entries showed as partially or entirely non-lossless in the UI
+* even though every track streamed was already lossless. This catches case
+* (2) instantly from the file's own mimeType/extension, no network needed.
+*/
+function isNativelyLosslessTrack(mimeType, nameOrFilename) {
+const mt = (mimeType || '').toLowerCase();
+if (/flac|alac|ape|wavpack|aiff|dsd|\bwav\b|x-wav|x-pn-wav/.test(mt)) return true;
+const n = (nameOrFilename || '').toLowerCase();
+return /\.(flac|wav|alac|ape|wv|aiff?|dsf|dff|tta)$/.test(n);
+}
 async function updateNowPlayingLosslessBadge() {
 const npBadge = document.getElementById('npLosslessBadge');
 const deBadge = document.getElementById('deLosslessBadge');
@@ -16785,6 +16810,14 @@ const isPreferred = isLosslessPreferred();
 if (!isPreferred) {
 if (npBadge) npBadge.style.display = 'none';
 if (deBadge) deBadge.style.display = 'none';
+return;
+}
+// Natively-lossless file (ingested directly as FLAC/WAV/etc, no manual
+// redirect ever needed) — show immediately, no network round-trip required.
+const _npMeta = trackMetadata[trackId];
+if (isNativelyLosslessTrack(_npMeta?.mimeType, _npMeta?.name || _npMeta?.filename)) {
+if (npBadge) npBadge.style.display = 'inline-flex';
+if (deBadge) deBadge.style.display = 'inline-flex';
 return;
 }
 try {
@@ -16807,37 +16840,59 @@ async function updateAlbumViewLosslessBadge(tracks) {
 const wrap = document.getElementById('folderCoverLossless');
 const textEl = document.getElementById('folderCoverLosslessText');
 if (!wrap || !textEl) return;
-const ids = (tracks || []).map(t => t.id).filter(Boolean);
+const list = tracks || [];
+const ids = list.map(t => t.id).filter(Boolean);
 if (!ids.length) { wrap.style.opacity = '0'; return; }
-// Synchronous fast-path: if every track ID is already in the session cache,
-// read the result right now before any await and paint the badge in the same
-// frame as the rest of the album-view UI — no pop-in.
-const allCached = ids.every(id => _losslessAvailCache.has(id));
-if (allCached) {
-const cachedCount = ids.filter(id => _losslessAvailCache.get(id)).length;
-if (cachedCount > 0) {
-textEl.textContent = cachedCount >= ids.length ? 'Lossless' : `Lossless (${cachedCount}/${ids.length})`;
-wrap.style.transition = 'none';
+// Tracks that are ALREADY natively lossless (ingested as FLAC/WAV/etc with
+// no separate lossy copy) count immediately — no KV lookup needed, and no
+// dependency on an admin having manually linked a redirect for them. This is
+// what was making fully-lossless albums show as partial (or not at all):
+// the old code only ever asked the KV table, which only knows about
+// manually-linked redirects.
+const nativeIds = new Set(
+list.filter(t => isNativelyLosslessTrack(t.mimeType, t.name || t.filename)).map(t => t.id)
+);
+const idsNeedingCheck = ids.filter(id => !nativeIds.has(id));
+const paintCount = (availableCount) => {
+if (availableCount <= 0) { wrap.style.opacity = '0'; return; }
+textEl.textContent = availableCount >= ids.length ? 'Lossless' : `Lossless (${availableCount}/${ids.length})`;
 wrap.style.opacity = '1';
-requestAnimationFrame(() => { wrap.style.transition = ''; });
-} else {
+};
+if (!idsNeedingCheck.length) {
+// Every track is natively lossless — paint immediately, no network call.
 wrap.style.transition = 'none';
-wrap.style.opacity = '0';
+paintCount(nativeIds.size);
 requestAnimationFrame(() => { wrap.style.transition = ''; });
+return;
 }
+// Synchronous fast-path: if every remaining track ID is already in the
+// session cache, read the result right now before any await and paint the
+// badge in the same frame as the rest of the album-view UI — no pop-in.
+const allCached = idsNeedingCheck.every(id => _losslessAvailCache.has(id));
+if (allCached) {
+const cachedCount = nativeIds.size + idsNeedingCheck.filter(id => _losslessAvailCache.get(id)).length;
+wrap.style.transition = 'none';
+paintCount(cachedCount);
+requestAnimationFrame(() => { wrap.style.transition = ''; });
 return;
 }
 // Async path: data not yet cached, must hit the network.
 // Badge fades in once the response arrives.
 try {
-const result = await checkLosslessAvailability(ids);
-const availableCount = ids.filter(id => result[id]).length;
+const result = await checkLosslessAvailability(idsNeedingCheck);
+const availableCount = nativeIds.size + idsNeedingCheck.filter(id => result[id]).length;
 if (availableCount === 0) { wrap.style.opacity = '0'; return; }
-textEl.textContent = availableCount >= ids.length ? 'Lossless' : `Lossless (${availableCount}/${ids.length})`;
 wrap.style.transition = 'opacity 0.4s ease';
-wrap.style.opacity = '1';
+paintCount(availableCount);
 } catch (e) {
+if (nativeIds.size > 0) {
+// KV network check failed, but the natively-lossless tracks are known
+// locally regardless — still show those rather than hiding the badge.
+wrap.style.transition = 'opacity 0.4s ease';
+paintCount(nativeIds.size);
+} else {
 wrap.style.opacity = '0';
+}
 }
 }
 const CLIENT_AUDIO_CACHE = 'goot-audio-v1';
@@ -17382,10 +17437,9 @@ partyState.ws.send(JSON.stringify({ type: 'party-leave' }));
 }
 });
 function getImageUrl(id, mimeType = null) {
-if (mimeType) {
-return `${STREAMING_URL}?id=${id}&mime=${encodeURIComponent(mimeType)}`;
-}
-return `${STREAMING_URL}?id=${id}`;
+let url = `${GOOT_LOCAL_DIRECT_BASE}/audio?id=${id}`;
+if (mimeType) url += `&mime=${encodeURIComponent(mimeType)}`;
+return url;
 }
 function isHeicFile(fileName) {
 const name = fileName.toLowerCase();
@@ -22011,6 +22065,11 @@ trackMetadata[f.id]._isVideo = true;
 if (!trackMetadata[f.id].albumArt) trackMetadata[f.id].albumArt = getDriveVideoThumbnail(f.id);
 } else {
 _audio_all.push(f);
+if (f.mimeType) {
+if (!trackMetadata[f.id]) trackMetadata[f.id] = {};
+if (!trackMetadata[f.id].mimeType) trackMetadata[f.id].mimeType = f.mimeType;
+if (!trackMetadata[f.id].name) trackMetadata[f.id].name = f.name;
+}
 }
 }
 }
@@ -22031,6 +22090,55 @@ fBase.includes(_currentBase.slice(0, Math.max(4, _currentBase.length - 2)));
 }) : [];
 const hasOnlyVariantFolders = hasFolders && variantFolders.length > 0 && variantFolders.length === folders.length;
 const _gridFragment = document.createDocumentFragment();
+// ── Hover-prefetch batching ──────────────────────────────────────────────
+// Each folder card used to fire its OWN /metadata/folder POST the instant the
+// mouse entered it. Scrolling or dragging the cursor down a grid of 20-50
+// subfolders meant 20-50 separate tiny POSTs firing back-to-back. Instead,
+// every card just adds its ids to a shared pending set and (re)schedules one
+// flush a little in the future — so a burst of hovers collapses into a
+// single combined request instead of one per card.
+let _hoverMetaPending = new Set();
+let _hoverMetaTimer = null;
+function _flushHoverMetaPrefetch() {
+_hoverMetaTimer = null;
+const batchIds = Array.from(_hoverMetaPending);
+_hoverMetaPending.clear();
+if (!batchIds.length) return;
+fetch(`${METADATA_API_URL}/metadata/folder`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ ids: batchIds })
+}).then(r => r.ok ? r.json() : []).then(metadata => {
+if (!Array.isArray(metadata)) return;
+const albumToArt = new Map();
+metadata.forEach(item => {
+const albumKey = generateAlbumKey(item.artist, item.album || 'Unknown');
+if (item.thumbnailLink && !albumToArt.has(albumKey)) albumToArt.set(albumKey, item.thumbnailLink);
+});
+metadata.forEach(item => {
+const album = item.album || 'Unknown';
+const albumKey = generateAlbumKey(item.artist, album);
+const existing = trackMetadata[item.id] || {};
+trackMetadata[item.id] = { ...existing, title: item.title || existing.title || 'Unknown Track', artist: item.artist || existing.artist || 'Unknown Artist', album, year: item.year || existing.year || null, genre: item.genre || existing.genre || null, albumArt: albumToArt.get(albumKey) || item.thumbnailLink || existing.albumArt || '', albumKey, duration: item.duration || existing.duration || null, release_date: item.release_date || existing.release_date || null };
+saveCompleteTrackMetadata(item.id, trackMetadata[item.id]).catch(() => {});
+});
+if (typeof _prefetchAOTYCache === 'function') {
+const metaArtists = metadata.map(m => m.artist).filter(v => v && v !== 'Unknown');
+const metaAlbums  = metadata.map(m => m.album).filter(v => v && v !== 'Unknown');
+const bestArtist  = metaArtists.length ? mostCommon(metaArtists) : null;
+const bestAlbum   = metaAlbums.length  ? mostCommon(metaAlbums)  : null;
+if (bestArtist && bestAlbum) _prefetchAOTYCache(bestAlbum, bestArtist);
+}
+const allAudioIds = metadata.map(m => m.id).filter(Boolean);
+if (allAudioIds.length) checkLosslessAvailability(allAudioIds).catch(() => {});
+}).catch(() => {});
+}
+function _queueHoverMetaPrefetch(ids) {
+if (!ids || !ids.length) return;
+ids.forEach(id => _hoverMetaPending.add(id));
+if (_hoverMetaTimer) clearTimeout(_hoverMetaTimer);
+_hoverMetaTimer = setTimeout(_flushHoverMetaPrefetch, 150);
+}
 folders.forEach(f => {
 if (hasOnlyVariantFolders && variantFolders.some(v => v.id === f.id)) return;
 const card = document.createElement("div");
@@ -22147,38 +22255,7 @@ scanForLossless(f.id);
 // Lossless prefetch happens after metadata returns (below), so we don't
 // need a separate early fire here — that would cause duplicate requests
 // for the same IDs when the metadata callback also calls checkLosslessAvailability.
-if (!ids.length) return;
-fetch(`${METADATA_API_URL}/metadata/folder`, {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ ids })
-}).then(r => r.ok ? r.json() : []).then(metadata => {
-if (!Array.isArray(metadata)) return;
-const albumToArt = new Map();
-metadata.forEach(item => {
-const albumKey = generateAlbumKey(item.artist, item.album || 'Unknown');
-if (item.thumbnailLink && !albumToArt.has(albumKey)) albumToArt.set(albumKey, item.thumbnailLink);
-});
-metadata.forEach(item => {
-const album = item.album || 'Unknown';
-const albumKey = generateAlbumKey(item.artist, album);
-const existing = trackMetadata[item.id] || {};
-trackMetadata[item.id] = { ...existing, title: item.title || existing.title || 'Unknown Track', artist: item.artist || existing.artist || 'Unknown Artist', album, year: item.year || existing.year || null, genre: item.genre || existing.genre || null, albumArt: albumToArt.get(albumKey) || item.thumbnailLink || existing.albumArt || '', albumKey, duration: item.duration || existing.duration || null, release_date: item.release_date || existing.release_date || null };
-saveCompleteTrackMetadata(item.id, trackMetadata[item.id]).catch(() => {});
-});
-if (typeof _prefetchAOTYCache === 'function') {
-const metaArtists = metadata.map(m => m.artist).filter(v => v && v !== 'Unknown');
-const metaAlbums  = metadata.map(m => m.album).filter(v => v && v !== 'Unknown');
-const bestArtist  = metaArtists.length ? mostCommon(metaArtists) : null;
-const bestAlbum   = metaAlbums.length  ? mostCommon(metaAlbums)  : null;
-if (bestArtist && bestAlbum) _prefetchAOTYCache(bestAlbum, bestArtist);
-}
-// Prefetch lossless availability so the badge is already cached when the
-// album view opens. Fire-and-forget; errors are silently swallowed inside
-// checkLosslessAvailability.
-const allAudioIds = metadata.map(m => m.id).filter(Boolean);
-if (allAudioIds.length) checkLosslessAvailability(allAudioIds).catch(() => {});
-}).catch(() => {});
+_queueHoverMetaPrefetch(ids);
 }, { passive: true });
 _gridFragment.appendChild(card);
 });
@@ -23044,11 +23121,25 @@ const memKey = `folder-cover-${coverFileId}`;
 try {
 const memHit = ImageCacheAPI.memoryCache.get(memKey);
 if (memHit && memHit.startsWith('blob:')) return { url: memHit, blob: null };
+// Tier 2: Cache API disk store
+const cache = await ImageCacheAPI._open();
+const cacheUrl = ImageCacheAPI._toUrl(memKey);
+const cachedResp = await cache.match(cacheUrl);
+if (cachedResp) {
+const blob = await cachedResp.blob();
+if (blob && blob.size > 0) {
+const blobUrl = URL.createObjectURL(blob);
+ImageCacheAPI.memoryCache.set(memKey, blobUrl);
+return { url: blobUrl, blob };
+}
+}
+// Tier 3: network
 const imageUrl = getImageUrl(coverFileId, mimeType);
 const response = await fetch(imageUrl);
 if (!response.ok) return null;
 const blob = await response.blob();
 if (!blob || blob.size === 0) return null;
+await cache.put(cacheUrl, new Response(blob.slice(0), { headers: { 'Content-Type': blob.type || 'application/octet-stream' } }));
 const blobUrl = URL.createObjectURL(blob);
 ImageCacheAPI.memoryCache.set(memKey, blobUrl);
 return { url: blobUrl, blob }; // Return blob so caller can upload to R2 without re-fetching
@@ -23061,7 +23152,7 @@ async function fetchFolderArt(fid) {
 const container = document.getElementById(`f-art-${fid}`);
 if (!container) return; // Card not in DOM — bail immediately
 try {
-const res = await fetch(`${STREAMING_URL}?list=${fid}`);
+const res = await fetch(`${GOOT_LOCAL_DIRECT_BASE}/list?folder=${encodeURIComponent(fid)}`);
 if (!res.ok) return;
 const json = await res.json();
 const files = json.files || json || [];
@@ -28001,6 +28092,21 @@ const _trackIdForCache = t.id;
 const _doSave = () => saveTrackToClientCache(_trackIdForCache);
 if (pendingWorkerFetches.has(_trackIdForCache)) {
 pendingWorkerFetches.get(_trackIdForCache).then(_doSave).catch(_doSave);
+} else if (isLosslessPreferred()) {
+// saveTrackToClientCache does a full, un-ranged fetch of the whole track
+// purely to warm the client cache for next time. Firing that immediately
+// races the SAME track's live streaming fetch on the <audio> element for
+// the listener's own downlink — for lossless files that's effectively
+// doubling the bandwidth needed right when playback is trying to buffer,
+// which is what was causing lossless to buffer so badly. Wait until the
+// player itself says it has enough buffered to play through cleanly
+// before starting the background cache-warm fetch (same pattern already
+// used by analyzeAndApplyNormalization below). Fall back to a timeout in
+// case canplaythrough never fires.
+let _cacheFired = false;
+const _fireSave = () => { if (_cacheFired) return; _cacheFired = true; _doSave(); };
+player.addEventListener('canplaythrough', _fireSave, { once: true });
+setTimeout(_fireSave, 20000);
 } else {
 setTimeout(_doSave, 3000);
 }
