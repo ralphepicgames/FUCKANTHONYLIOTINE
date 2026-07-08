@@ -49736,3 +49736,115 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
 }
 </script>
+<script>
+// ── Album banner title auto-fit ──────────────────────────────────────────
+// Shrinks #folderCoverTitle's font-size when the album/folder name would
+// wrap, so a long title never grows the banner tall enough to push
+// the meta/date/duration/action row out of view. It keeps wrapping enabled
+// (never truncates or ellipsizes) — it just picks a smaller size so the
+// wrap looks intentional instead of overflowing.
+(function () {
+  let _fitRAF = null;
+
+  function _fitFolderCoverTitle() {
+    const el = document.getElementById('folderCoverTitle');
+    if (!el) return;
+    const text = el.textContent.trim();
+    if (!text) { el.style.removeProperty('font-size'); return; }
+
+    // Clear any previous JS override so we can read the "natural" size
+    // that the current CSS (breakpoint / layout variant) wants to use.
+    el.style.removeProperty('font-size');
+    const cs = getComputedStyle(el);
+    const naturalSize = parseFloat(cs.fontSize);
+    const availableWidth = el.clientWidth;
+    if (!naturalSize || !availableWidth) return;
+
+    // Measure how wide the title would be on a single line at natural size.
+    const prevWhiteSpace = el.style.whiteSpace;
+    el.style.whiteSpace = 'nowrap';
+    const singleLineWidth = el.scrollWidth;
+    el.style.whiteSpace = prevWhiteSpace || '';
+
+    const minSize = Math.max(15, naturalSize * 0.35);
+    let size = naturalSize;
+
+    if (singleLineWidth > availableWidth + 1) {
+      // It would wrap. Scale the font almost all the way down to what's
+      // needed to fit on one line (0.92, not 1.0 — it's still allowed to
+      // wrap into a couple of neat, appropriately-sized lines, just not
+      // at full natural size).
+      size = naturalSize * (availableWidth / singleLineWidth);
+      size = naturalSize - (naturalSize - size) * 0.92;
+      size = Math.max(minSize, Math.min(naturalSize, size));
+    }
+    el.style.setProperty('font-size', Math.round(size) + 'px', 'important');
+
+    // The "split" banner layout has a fixed height with overflow:hidden,
+    // so a wrapped title can push the meta/date/action row past the
+    // bottom edge and get clipped even after the width-based shrink
+    // above. Keep shrinking in small steps until the banner's content
+    // actually fits inside it, or we hit the floor.
+    const banner = document.getElementById('folderCoverBanner');
+    if (banner) {
+      let guard = 0;
+      while (banner.scrollHeight > banner.clientHeight + 1 && size > minSize && guard < 40) {
+        size = Math.max(minSize, size - 1);
+        el.style.setProperty('font-size', Math.round(size) + 'px', 'important');
+        guard++;
+      }
+    }
+  }
+
+  // Runs the fit synchronously (no rAF) so it's already correct on the
+  // very first frame the banner is visible — no pop-in/shrink flash.
+  function _fitNow() {
+    _fitFolderCoverTitle();
+  }
+
+  // Used for resize-driven re-fits, where debouncing to the next frame
+  // is fine (and safer, since it avoids ResizeObserver reflow loops).
+  function _scheduleFit() {
+    if (_fitRAF) cancelAnimationFrame(_fitRAF);
+    _fitRAF = requestAnimationFrame(_fitFolderCoverTitle);
+  }
+
+  function _initFit() {
+    const el = document.getElementById('folderCoverTitle');
+    if (!el) return;
+
+    // Re-fit the instant the title text changes, no matter which code path
+    // set it (there are several throughout the app). MutationObserver
+    // callbacks run as a microtask before the browser paints, so this
+    // lands before the oversized text ever gets drawn.
+    const mo = new MutationObserver(_fitNow);
+    mo.observe(el, { childList: true, characterData: true, subtree: true });
+
+    // Re-fit when the banner's width changes — window resizes, sidebar
+    // toggles, layout switches. Observing the parent (not the title
+    // element itself) avoids a feedback loop, since shrinking the font
+    // changes the title's own box height/width.
+    const ro = new ResizeObserver(_scheduleFit);
+    if (el.parentElement) ro.observe(el.parentElement);
+
+    window.addEventListener('resize', _scheduleFit);
+
+    // The banner font (Montserrat) loads asynchronously. If it finishes
+    // loading after our first measurement (which would've used a fallback
+    // font's slightly different metrics), the title's real width can
+    // change and cause a visible shift/overflow moments after opening the
+    // album. Re-fit once webfonts are actually ready to catch that case.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(_fitNow).catch(function () {});
+    }
+
+    _fitNow();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initFit);
+  } else {
+    _initFit();
+  }
+})();
+</script>
