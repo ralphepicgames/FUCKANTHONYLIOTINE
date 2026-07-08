@@ -2259,6 +2259,14 @@
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
               <span id="mvSourceBadge" class="mv-ep-label" style="font-size:10px;opacity:0.5;"></span>
+              <div id="mvLangSwitcher" style="position:relative;display:none;">
+                <button class="bar-icon-btn settings-btn" id="mvLangBtn" onclick="toggleMvLangMenu(event)" title="Audio language">
+                  <svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
+                </button>
+                <div class="settings-popover" id="mvLangMenu" style="right:auto;left:0;">
+                  <div class="settings-popover-header">Audio Language</div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -4011,11 +4019,17 @@
     let _mvSources  = [];
     let _mvActiveIdx = 0;
 
-    // Force English audio track on HLS instance — providers often default to non-English
+    // Tracks whether the viewer has manually picked an audio language for the
+    // current stream — once true, we stop auto-forcing English on track updates.
+    let _mvUserPickedLang = false;
+
+    // Force English audio track on HLS instance — providers often default to non-English.
+    // Skipped once the user has manually picked a language for this stream.
     function _forceEnglishAudio(hlsInstance) {
+      if (_mvUserPickedLang) { _renderLangMenu(hlsInstance); return; }
       try {
         const tracks = hlsInstance.audioTracks;
-        if (!tracks || tracks.length <= 1) return;
+        if (!tracks || tracks.length <= 1) { _renderLangMenu(hlsInstance); return; }
         const en = tracks.findIndex(t =>
           t.lang?.toLowerCase().startsWith('en') ||
           t.name?.toLowerCase().includes('english') ||
@@ -4025,7 +4039,66 @@
           hlsInstance.audioTrack = en;
         }
       } catch(_) {}
+      _renderLangMenu(hlsInstance);
     }
+
+    // Human-friendly label for an audio track — prefer name, fall back to lang code
+    function _langLabel(t) {
+      if (t.name && !/^(und|unknown)?$/i.test(t.name)) return t.name;
+      if (t.lang) {
+        try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(t.lang) || t.lang.toUpperCase(); }
+        catch(_) { return t.lang.toUpperCase(); }
+      }
+      return 'Track ' + ((t.id ?? 0) + 1);
+    }
+
+    // Render the audio-language popover for the given HLS instance; hides the
+    // button entirely when the stream only has one (or zero) audio tracks.
+    function _renderLangMenu(hlsInstance) {
+      const wrap = document.getElementById('mvLangSwitcher');
+      const menu = document.getElementById('mvLangMenu');
+      if (!wrap || !menu) return;
+      const tracks = hlsInstance?.audioTracks || [];
+      if (tracks.length <= 1) { wrap.style.display = 'none'; return; }
+      wrap.style.display = 'block';
+
+      menu.querySelectorAll('.quality-menu-item').forEach(el => el.remove());
+      const frag = document.createDocumentFragment();
+      tracks.forEach((t, i) => {
+        const active = i === hlsInstance.audioTrack;
+        const div = document.createElement('div');
+        div.className = 'quality-menu-item' + (active ? ' active' : '');
+        div.innerHTML = `<span class="q-dot"></span><span>${_langLabel(t)}</span>`;
+        div.onclick = () => { switchMovieLang(i); closeMvLangMenu(); };
+        frag.appendChild(div);
+      });
+      menu.appendChild(frag);
+    }
+
+    // User picked a language from the menu — apply it and stop auto-forcing English
+    function switchMovieLang(idx) {
+      const video = document.getElementById('moviesVideo');
+      const hls = video?._mvHls;
+      if (!hls || !hls.audioTracks || idx < 0 || idx >= hls.audioTracks.length) return;
+      _mvUserPickedLang = true;
+      hls.audioTrack = idx;
+      _renderLangMenu(hls);
+    }
+
+    function toggleMvLangMenu(e) {
+      e.stopPropagation();
+      const menu = document.getElementById('mvLangMenu');
+      const btn  = document.getElementById('mvLangBtn');
+      const isOpen = menu.classList.toggle('open');
+      if (btn) btn.classList.toggle('active', isOpen);
+    }
+    function closeMvLangMenu() {
+      const menu = document.getElementById('mvLangMenu');
+      const btn  = document.getElementById('mvLangBtn');
+      if (menu) menu.classList.remove('open');
+      if (btn) btn.classList.remove('active');
+    }
+    document.addEventListener('click', closeMvLangMenu);
 
     async function loadMoviesEmbed(id, type, season, episode) {
       document.getElementById('mvPlayerPlaceholder').style.display = 'none';
@@ -4045,6 +4118,10 @@
       const worker = getWorkerUrl();
       _mvSources   = _buildSourceList(worker, id, type, season, episode);
       _mvActiveIdx = 0;
+      _mvUserPickedLang = false;
+      closeMvLangMenu();
+      const langWrap = document.getElementById('mvLangSwitcher');
+      if (langWrap) langWrap.style.display = 'none';
       _renderSourceBar(0);
       await _loadDirectStream(0);
     }
@@ -4293,6 +4370,10 @@
       if (video._mvHls) { video._mvHls.destroy(); video._mvHls = null; }
       video.pause();
       video.removeAttribute('src');
+      _mvUserPickedLang = false;
+      closeMvLangMenu();
+      const langWrap = document.getElementById('mvLangSwitcher');
+      if (langWrap) langWrap.style.display = 'none';
       _loadDirectStream(idx);
     }
 
