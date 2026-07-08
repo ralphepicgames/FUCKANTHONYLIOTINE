@@ -943,6 +943,16 @@
       backdrop-filter: blur(12px);
     }
     .settings-popover.open { display: block; animation: qs-pop 0.15s cubic-bezier(0.34,1.4,0.64,1) both; }
+    /* Language dropdown: opens DOWNWARD (button lives in a top bar, not a bottom bar
+       like the quality menu) and is right-anchored + width-clamped so it can never
+       spill past the edge of the viewport. */
+    .mv-lang-popover {
+      top: calc(100% + 8px);
+      bottom: auto;
+      right: 0;
+      left: auto;
+      max-width: calc(100vw - 32px);
+    }
     @keyframes qs-pop {
       from { opacity: 0; transform: scale(0.92) translateY(6px); }
       to   { opacity: 1; transform: scale(1)    translateY(0);   }
@@ -2263,7 +2273,7 @@
                 <button class="bar-icon-btn settings-btn" id="mvLangBtn" onclick="toggleMvLangMenu(event)" title="Audio language">
                   <svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
                 </button>
-                <div class="settings-popover" id="mvLangMenu" style="right:auto;left:0;">
+                <div class="settings-popover mv-lang-popover" id="mvLangMenu">
                   <div class="settings-popover-header">Audio Language</div>
                 </div>
               </div>
@@ -4019,27 +4029,53 @@
     let _mvSources  = [];
     let _mvActiveIdx = 0;
 
-    // Tracks whether the viewer has manually picked an audio language for the
-    // current stream — once true, we stop auto-forcing English on track updates.
-    let _mvUserPickedLang = false;
+    // The audio language the viewer wants for the *current* stream.
+    // null = auto (prefer English, else whatever hls.js defaulted to).
+    // Otherwise a lowercased lang/name key identifying a track the user picked.
+    // We key by lang/name rather than index because hls.js can rebuild the
+    // audioTracks array (different order/length) on level switches.
+    let _mvDesiredLang = null;
 
-    // Force English audio track on HLS instance — providers often default to non-English.
-    // Skipped once the user has manually picked a language for this stream.
-    function _forceEnglishAudio(hlsInstance) {
-      if (_mvUserPickedLang) { _renderLangMenu(hlsInstance); return; }
+    function _trackKey(t) { return (t.lang || t.name || '').toLowerCase(); }
+    function _isEnglishTrack(t) {
+      return t.lang?.toLowerCase().startsWith('en') ||
+             t.name?.toLowerCase().includes('english') ||
+             t.name?.toLowerCase() === 'en';
+    }
+
+    // Applies the desired audio track to the given HLS instance.
+    // IMPORTANT: this is not a one-shot "set and forget". hls.js frequently
+    // resets its internal audio-track selection back to whatever the manifest
+    // flags DEFAULT=YES whenever it re-evaluates tracks — on ABR level
+    // switches, and sometimes even after the fragment's real audio group is
+    // negotiated a few hundred ms after the track list first appears. That's
+    // why this gets re-invoked from several hls.js events below AND from a
+    // few delayed safety re-checks — a single call at MANIFEST_PARSED isn't
+    // reliable and is why playback was silently sticking to the manifest's
+    // default track (Italian) even though the selector showed English.
+    function _applyDesiredAudio(hlsInstance) {
       try {
         const tracks = hlsInstance.audioTracks;
-        if (!tracks || tracks.length <= 1) { _renderLangMenu(hlsInstance); return; }
-        const en = tracks.findIndex(t =>
-          t.lang?.toLowerCase().startsWith('en') ||
-          t.name?.toLowerCase().includes('english') ||
-          t.name?.toLowerCase() === 'en'
-        );
-        if (en >= 0 && en !== hlsInstance.audioTrack) {
-          hlsInstance.audioTrack = en;
+        if (tracks && tracks.length) {
+          let targetIdx = _mvDesiredLang ? tracks.findIndex(t => _trackKey(t) === _mvDesiredLang) : -1;
+          if (targetIdx === -1 && !_mvDesiredLang) targetIdx = tracks.findIndex(_isEnglishTrack);
+          if (targetIdx >= 0 && hlsInstance.audioTrack !== targetIdx) {
+            hlsInstance.audioTrack = targetIdx;
+          }
         }
       } catch(_) {}
       _renderLangMenu(hlsInstance);
+    }
+
+    // Re-check a bit after the stream starts — catches hls.js reverting the
+    // selection after these events already fired. Idempotent if it already stuck.
+    function _scheduleAudioRecheck(hlsInstance) {
+      [300, 1000, 3000].forEach(ms => {
+        setTimeout(() => {
+          const video = document.getElementById('moviesVideo');
+          if (video && video._mvHls === hlsInstance) _applyDesiredAudio(hlsInstance);
+        }, ms);
+      });
     }
 
     // Human-friendly label for an audio track — prefer name, fall back to lang code
@@ -4075,14 +4111,15 @@
       menu.appendChild(frag);
     }
 
-    // User picked a language from the menu — apply it and stop auto-forcing English
+    // User picked a language from the menu — apply it and keep re-asserting it
     function switchMovieLang(idx) {
       const video = document.getElementById('moviesVideo');
       const hls = video?._mvHls;
       if (!hls || !hls.audioTracks || idx < 0 || idx >= hls.audioTracks.length) return;
-      _mvUserPickedLang = true;
+      _mvDesiredLang = _trackKey(hls.audioTracks[idx]);
       hls.audioTrack = idx;
       _renderLangMenu(hls);
+      _scheduleAudioRecheck(hls);
     }
 
     function toggleMvLangMenu(e) {
@@ -4118,7 +4155,7 @@
       const worker = getWorkerUrl();
       _mvSources   = _buildSourceList(worker, id, type, season, episode);
       _mvActiveIdx = 0;
-      _mvUserPickedLang = false;
+      _mvDesiredLang = null;
       closeMvLangMenu();
       const langWrap = document.getElementById('mvLangSwitcher');
       if (langWrap) langWrap.style.display = 'none';
@@ -4195,11 +4232,13 @@
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          _forceEnglishAudio(hls);
+          _applyDesiredAudio(hls);
+          _scheduleAudioRecheck(hls);
           document.getElementById('mvIframeLoading').style.display = 'none';
           video.play().catch(() => {});
         });
-        hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => { _forceEnglishAudio(hls); });
+        hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => { _applyDesiredAudio(hls); });
+        hls.on(Hls.Events.LEVEL_SWITCHED, () => { _applyDesiredAudio(hls); });
 
         hls.on(Hls.Events.ERROR, (_, d) => {
           if (!d.fatal) return;
@@ -4242,11 +4281,13 @@
             hlsR.loadSource(hlsUrl);
             hlsR.attachMedia(video);
             hlsR.on(Hls.Events.MANIFEST_PARSED, () => {
-              _forceEnglishAudio(hlsR);
+              _applyDesiredAudio(hlsR);
+              _scheduleAudioRecheck(hlsR);
               document.getElementById('mvIframeLoading').style.display = 'none';
               video.play().catch(() => {});
             });
-            hlsR.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => { _forceEnglishAudio(hlsR); });
+            hlsR.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => { _applyDesiredAudio(hlsR); });
+            hlsR.on(Hls.Events.LEVEL_SWITCHED, () => { _applyDesiredAudio(hlsR); });
             hlsR.on(Hls.Events.ERROR, (_, d2) => {
               if (!d2.fatal) return;
               hlsR.destroy();
@@ -4287,11 +4328,13 @@
             hls2.loadSource(hlsUrl);
             hls2.attachMedia(video);
             hls2.on(Hls.Events.MANIFEST_PARSED, () => {
-              _forceEnglishAudio(hls2);
+              _applyDesiredAudio(hls2);
+              _scheduleAudioRecheck(hls2);
               document.getElementById('mvIframeLoading').style.display = 'none';
               video.play().catch(() => {});
             });
-            hls2.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => { _forceEnglishAudio(hls2); });
+            hls2.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => { _applyDesiredAudio(hls2); });
+            hls2.on(Hls.Events.LEVEL_SWITCHED, () => { _applyDesiredAudio(hls2); });
             hls2.on(Hls.Events.ERROR, (_, d2) => {
               if (!d2.fatal) return;
               hls2.destroy();
@@ -4370,7 +4413,7 @@
       if (video._mvHls) { video._mvHls.destroy(); video._mvHls = null; }
       video.pause();
       video.removeAttribute('src');
-      _mvUserPickedLang = false;
+      _mvDesiredLang = null;
       closeMvLangMenu();
       const langWrap = document.getElementById('mvLangSwitcher');
       if (langWrap) langWrap.style.display = 'none';
