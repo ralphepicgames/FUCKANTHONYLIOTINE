@@ -16896,27 +16896,36 @@ wrap.style.opacity = '0';
 }
 }
 const CLIENT_AUDIO_CACHE = 'goot-audio-v1';
-const _clientAudioBlobUrls = {}; // trackId → blob URL (session memory, revoked on clear)
+const _clientAudioBlobUrls = {}; // cacheKey → blob URL (session memory, revoked on clear)
 const completedTrackBuffers = new Map(); // trackId → ArrayBuffer
 let _blobUrlsBlocked = false; // Track if blob URLs are blocked by security policy
+// Lossless and lossy versions of the same track are different bytes (and
+// different mime types), so they need separate cache entries -- otherwise
+// whichever quality gets cached first "wins" and gets served regardless of
+// the current Prefer Lossless setting.
+function _audioCacheKey(trackId) {
+return 'https://goot-audio-cache/' + trackId + (isLosslessPreferred() ? ':lossless' : ':lossy');
+}
 async function getClientCachedSrc(trackId) {
 try {
 if (_blobUrlsBlocked) return null;
+const key = _audioCacheKey(trackId);
+if (_clientAudioBlobUrls[key]) return _clientAudioBlobUrls[key];
 const cache = await caches.open(CLIENT_AUDIO_CACHE);
-const match = await cache.match('https://goot-audio-cache/' + trackId);
+const match = await cache.match(key);
 if (!match) return null;
-if (_clientAudioBlobUrls[trackId]) return _clientAudioBlobUrls[trackId];
 const blob = await match.blob();
 const url = URL.createObjectURL(blob);
-_clientAudioBlobUrls[trackId] = url;
+_clientAudioBlobUrls[key] = url;
 return url;
 } catch (_) { return null; }
 }
 async function saveTrackToClientCache(trackId) {
 try {
+const key = _audioCacheKey(trackId);
 const cache = await caches.open(CLIENT_AUDIO_CACHE);
-if (await cache.match('https://goot-audio-cache/' + trackId)) return;
-let buf;
+if (await cache.match(key)) return;
+let buf, contentType = 'audio/mpeg';
 if (completedTrackBuffers.has(trackId)) {
 buf = completedTrackBuffers.get(trackId);
 } else if (pendingWorkerFetches.has(trackId)) {
@@ -16924,18 +16933,30 @@ buf = await pendingWorkerFetches.get(trackId);
 } else {
 const res = await fetch(streamUrl(trackId), { priority: 'low' });
 if (!res.ok) return;
+contentType = res.headers.get('Content-Type') || contentType;
 const expectedLen = parseInt(res.headers.get('Content-Length') || '0', 10);
 buf = await res.arrayBuffer();
 if (expectedLen > 0 && buf.byteLength < expectedLen) return; // truncated — skip
 }
 if (!buf || buf.byteLength === 0) return;
-await cache.put('https://goot-audio-cache/' + trackId, new Response(buf, {
-headers: { 'Content-Type': 'audio/mpeg', 'X-Content-Length': String(buf.byteLength) }
+await cache.put(key, new Response(buf, {
+headers: { 'Content-Type': contentType, 'X-Content-Length': String(buf.byteLength) }
 }));
 if (!completedTrackBuffers.has(trackId)) {
 completedTrackBuffers.set(trackId, buf);
 if (completedTrackBuffers.size > 30)
 completedTrackBuffers.delete(completedTrackBuffers.keys().next().value);
+}
+// Make this play's cache write actually pay off for the NEXT play of the
+// same track this session: stash a blob URL synchronously so `play()`
+// can pick it up via `_clientAudioBlobUrls[trackId]` without having to
+// await a Cache API round-trip. (Previously this map was only ever
+// written inside getClientCachedSrc(), which nothing called -- so the
+// cache was write-only and every replay re-streamed from home.)
+if (!_clientAudioBlobUrls[key]) {
+try {
+_clientAudioBlobUrls[key] = URL.createObjectURL(new Blob([buf], { type: contentType }));
+} catch (_) {}
 }
 } catch (_) {}
 }
@@ -16958,13 +16979,13 @@ if (!ids || ids.length === 0) return [];
 const needsCacheCheck = ids.filter(id =>
 !_laHoverPrefetched.has(id) &&
 !completedTrackBuffers.has(id) &&
-!_clientAudioBlobUrls[id]
+!_clientAudioBlobUrls[_audioCacheKey(id)]
 );
 if (needsCacheCheck.length === 0) return [];
 try {
 const c = await caches.open(CLIENT_AUDIO_CACHE);
 const hits = await Promise.all(
-needsCacheCheck.map(id => c.match('https://goot-audio-cache/' + id).catch(() => null))
+needsCacheCheck.map(id => c.match(_audioCacheKey(id)).catch(() => null))
 );
 return needsCacheCheck.filter((_, i) => !hits[i]);
 } catch (_) {
@@ -18301,15 +18322,15 @@ artExtractionAttempted.add(trackId);
 try {
 const cache = await caches.open(CLIENT_AUDIO_CACHE).catch(() => null);
 if (cache) {
-const cached = await cache.match('https://goot-audio-cache/' + trackId).catch(() => null);
+const cached = await cache.match(_audioCacheKey(trackId)).catch(() => null);
 if (cached) {
 const buf = await cached.arrayBuffer();
 if (buf && buf.byteLength > 0) { _doExtract(buf); return; }
 }
 }
-if (_clientAudioBlobUrls[trackId]) {
+if (_clientAudioBlobUrls[_audioCacheKey(trackId)]) {
 try {
-const res = await fetch(_clientAudioBlobUrls[trackId]);
+const res = await fetch(_clientAudioBlobUrls[_audioCacheKey(trackId)]);
 if (res.ok) {
 const buf = await res.arrayBuffer();
 if (buf && buf.byteLength > 0) { _doExtract(buf); return; }
@@ -18663,7 +18684,7 @@ return pendingWorkerFetches.get(trackId);
 const p = (async () => {
 try {
 const cache = await caches.open(CLIENT_AUDIO_CACHE);
-const cached = await cache.match('https://goot-audio-cache/' + trackId);
+const cached = await cache.match(_audioCacheKey(trackId));
 if (cached) {
 const buf = await cached.arrayBuffer();
 if (buf && buf.byteLength > 0) {
@@ -18674,9 +18695,9 @@ return buf;
 }
 }
 } catch (_) {}
-if (_clientAudioBlobUrls[trackId]) {
+if (_clientAudioBlobUrls[_audioCacheKey(trackId)]) {
 try {
-const res = await fetch(_clientAudioBlobUrls[trackId]);
+const res = await fetch(_clientAudioBlobUrls[_audioCacheKey(trackId)]);
 if (res.ok) {
 const buf = await res.arrayBuffer();
 if (buf && buf.byteLength > 0) {
@@ -22868,22 +22889,13 @@ return;
 }
 if (_bgSet) return;
 try {
-const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif', '.bmp'];
-const preferredNames = ['cover', 'folder', 'album', 'artwork', 'art'];
-const freshRes = await fetch(`${STREAMING_URL}?list=${id}`);
-const freshJson = freshRes.ok ? await freshRes.json() : { files: [] };
-const freshFiles = freshJson.files || freshJson || [];
-let cover = freshFiles.find(f => {
-const nm = f.name.toLowerCase();
-return (f.mimeType?.startsWith('image/') || imageExtensions.some(ext => nm.endsWith(ext))) &&
-preferredNames.some(pref => nm.includes(pref));
-});
-if (!cover) {
-cover = freshFiles.find(f => {
-const nm = f.name.toLowerCase();
-return f.mimeType?.startsWith('image/') || imageExtensions.some(ext => nm.endsWith(ext));
-});
-}
+// This is only fetching a listing to find ONE cover image, so go
+// straight to the resolve endpoint on the home server instead of
+// asking the Worker to proxy a full /list -- fewer hops, and it
+// matches how the folder grid resolves covers.
+const freshRes = await fetch(`${GOOT_LOCAL_DIRECT_BASE}/folder/cover-resolve?ids=${encodeURIComponent(id)}`);
+const resolved = freshRes.ok ? await freshRes.json() : {};
+const cover = resolved[id] || null;
 if (cover) {
 const mimeType = getImageMimeType(cover.name, cover.mimeType);
 getFolderCoverBlobUrl(cover.id, mimeType).then(result => {
@@ -23098,11 +23110,43 @@ notInMemory.push(id);
 }
 });
 if (notInMemory.length === 0) return;
-const batchSize = 10;
-for (let i = 0; i < notInMemory.length; i += batchSize) {
-const batch = notInMemory.slice(i, i + batchSize);
-Promise.all(batch.map(id => fetchFolderArt(id).catch(() => {}))).catch(() => {});
+// Resolve each folder's cover with its own request (rather than one combined
+// /folder/cover-resolve?ids=a,b,c request for the whole grid), fired in
+// parallel. This avoids a single slow/failing folder holding up the resolve
+// for the entire grid, and lets covers appear as each one resolves instead
+// of all-at-once after the whole batch returns.
+notInMemory.forEach(async (fid) => {
+try {
+const resolveRes = await fetch(`${GOOT_LOCAL_DIRECT_BASE}/folder/cover-resolve?ids=${encodeURIComponent(fid)}`);
+if (!resolveRes.ok) return;
+const resolved = await resolveRes.json();
+const cover = resolved[fid];
+if (!cover) return;
+if (!document.getElementById(`f-art-${fid}`)) return;
+_loadResolvedFolderCover(fid, cover);
+} catch (e) {}
+});
 }
+function _loadResolvedFolderCover(fid, cover) {
+const memKey = `folder-cover-${cover.id}`;
+const cached = ImageCacheAPI.memoryCache.get(memKey);
+const src = (cached && cached.startsWith('blob:'))
+? cached
+: getImageUrl(cover.id, getImageMimeType(cover.name, cover.mimeType));
+const img = document.createElement('img');
+img.crossOrigin = 'anonymous';
+img.onload = () => {
+const liveContainer = document.getElementById(`f-art-${fid}`);
+if (!liveContainer) return;
+const icon = liveContainer.querySelector('i');
+if (icon) icon.style.opacity = '0';
+liveContainer.appendChild(img);
+void img.offsetWidth;
+img.classList.add('loaded');
+R2FolderCovers._memoryCache.set(fid, src);
+(window.requestIdleCallback || (fn => setTimeout(fn, 80)))(() => _applyFolderInfoColor(fid));
+};
+img.src = src;
 }
 /**
 * Get a blob URL for a folder cover image, using Cache API as persistent store.
@@ -23148,50 +23192,21 @@ console.warn('[FolderCover] fetch error for', coverFileId, e);
 return { url: getImageUrl(coverFileId, mimeType), blob: null };
 }
 }
+// Single-folder cover fetch — used as a fallback when a folder needs its
+// cover refreshed outside of a batch grid render. Still uses the batched
+// resolve endpoint (with just one id) rather than /list, to stay consistent
+// with the fix above and avoid reintroducing the old double round-trip.
 async function fetchFolderArt(fid) {
 const container = document.getElementById(`f-art-${fid}`);
 if (!container) return; // Card not in DOM — bail immediately
 try {
-const res = await fetch(`${GOOT_LOCAL_DIRECT_BASE}/list?folder=${encodeURIComponent(fid)}`);
-if (!res.ok) return;
-const json = await res.json();
-const files = json.files || json || [];
+const resolveRes = await fetch(`${GOOT_LOCAL_DIRECT_BASE}/folder/cover-resolve?ids=${encodeURIComponent(fid)}`);
+if (!resolveRes.ok) return;
+const resolved = await resolveRes.json();
+const cover = resolved[fid];
+if (!cover) return;
 if (!document.getElementById(`f-art-${fid}`)) return;
-const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif', '.bmp', '.svg'];
-const preferredNames = ['cover', 'folder', 'album', 'artwork', 'art'];
-let cover = files.find(f => {
-const name = f.name.toLowerCase();
-return (f.mimeType?.startsWith('image/') || imageExtensions.some(ext => name.endsWith(ext))) &&
-preferredNames.some(pref => name.includes(pref));
-});
-if (!cover) {
-cover = files.find(f => {
-const name = f.name.toLowerCase();
-return f.mimeType?.startsWith('image/') ||
-imageExtensions.some(ext => name.endsWith(ext));
-});
-}
-if (cover) {
-const memKey = `folder-cover-${cover.id}`;
-const cached = ImageCacheAPI.memoryCache.get(memKey);
-const src = (cached && cached.startsWith('blob:'))
-? cached
-: getImageUrl(cover.id, getImageMimeType(cover.name, cover.mimeType));
-const img = document.createElement('img');
-img.crossOrigin = 'anonymous';
-img.onload = () => {
-const liveContainer = document.getElementById(`f-art-${fid}`);
-if (!liveContainer) return;
-const icon = liveContainer.querySelector('i');
-if (icon) icon.style.opacity = '0';
-liveContainer.appendChild(img);
-void img.offsetWidth;
-img.classList.add('loaded');
-R2FolderCovers._memoryCache.set(fid, src);
-(window.requestIdleCallback || (fn => setTimeout(fn, 80)))(() => _applyFolderInfoColor(fid));
-};
-img.src = src;
-}
+_loadResolvedFolderCover(fid, cover);
 } catch(e) {}
 }
 let currentTrackActionsId = null;
@@ -28056,8 +28071,29 @@ player2.pause();
 player2.src = '';
 player2.currentTime = 0;
 const _streamUrl = streamUrl(t.id);
-const _instantBlob = _clientAudioBlobUrls[t.id];
+const _instantBlob = _clientAudioBlobUrls[_audioCacheKey(t.id)];
 player.src = _instantBlob || _streamUrl;
+// If this exact track isn't in the in-memory blob map (i.e. hasn't been
+// played yet THIS session) it still might already be sitting in the
+// persistent Cache API from an earlier session/reload -- that's the
+// "I've played this 70 times" case. Check it and swap the source over
+// before the network fetch gets anywhere, instead of always re-streaming
+// from home. cache.match() on a local disk-backed cache is fast (single
+// digit ms), so this doesn't meaningfully delay playback start, and we
+// only swap if we're still actually on this track.
+if (!_instantBlob) {
+const _tIdForSwap = t.id, _qIdxForSwap = qIndex;
+getClientCachedSrc(_tIdForSwap).then(cachedUrl => {
+if (!cachedUrl) return;
+if (qIndex !== _qIdxForSwap || (queue[qIndex] && queue[qIndex].id !== _tIdForSwap)) return;
+if (player.src === cachedUrl) return;
+const _resumeAt = player.currentTime || 0;
+const _wasPlaying = !player.paused;
+player.src = cachedUrl;
+if (_resumeAt > 0.05) player.currentTime = _resumeAt;
+if (_wasPlaying) player.play().catch(() => {});
+}).catch(() => {});
+}
 if (!_isPartyGuest()) {
 _applyPlaybackRate(player, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
 }
@@ -38121,7 +38157,7 @@ cancelCrossfade();
 let nextIndex = qIndex + 1;
 const nextTrack = queue[nextIndex];
 const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
-const _preloadCached = nextTrack ? (_clientAudioBlobUrls[nextTrack.id] || null) : null;
+const _preloadCached = nextTrack ? (_clientAudioBlobUrls[_audioCacheKey(nextTrack.id)] || null) : null;
 const _preloadSrc = _preloadCached || expectedUrl;
 const hasCorrectNextTrack = nextPlayer.src === _preloadSrc || nextPlayer.src === expectedUrl;
 if (timeLeft <= PRELOAD_THRESHOLD && !hasCorrectNextTrack && nextTrack) {
@@ -38200,7 +38236,7 @@ cancelCrossfade();
 let nextIndex = qIndex + 1;
 const nextTrack = queue[nextIndex];
 const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
-const _preloadCached = nextTrack ? (_clientAudioBlobUrls[nextTrack.id] || null) : null;
+const _preloadCached = nextTrack ? (_clientAudioBlobUrls[_audioCacheKey(nextTrack.id)] || null) : null;
 const _preloadSrc = _preloadCached || expectedUrl;
 const hasCorrectNextTrack = nextPlayer.src === _preloadSrc || nextPlayer.src === expectedUrl;
 if (timeLeft <= PRELOAD_THRESHOLD && !hasCorrectNextTrack && nextTrack) {
@@ -44090,12 +44126,14 @@ if (badge) badge.style.display = 'none';
 return;
 }
 const BASE = 'https://goot-audio-cache/';
-const trackIds = keys.map(req => {
+const trackIds = [...new Set(keys.map(req => {
 const url = req.url || '';
 const idx = url.indexOf(BASE);
-if (idx !== -1) return url.slice(idx + BASE.length).split('?')[0].split('#')[0] || null;
-return null;
-}).filter(Boolean);
+if (idx === -1) return null;
+// Strip the ":lossless"/":lossy" quality suffix added by _audioCacheKey()
+// so the same track cached in both qualities shows up as one row.
+return url.slice(idx + BASE.length).split('?')[0].split('#')[0].replace(/:(lossless|lossy)$/, '') || null;
+}).filter(Boolean))];
 if (trackIds.length === 0) {
 empty.style.display = '';
 if (badge) badge.style.display = 'none';
@@ -44142,7 +44180,8 @@ empty.style.display   = '';
 async function removeCachedTrack(trackId, btn) {
 try {
 const cache = await caches.open(CLIENT_AUDIO_CACHE);
-await cache.delete('https://goot-audio-cache/' + trackId);
+await cache.delete('https://goot-audio-cache/' + trackId + ':lossless');
+await cache.delete('https://goot-audio-cache/' + trackId + ':lossy');
 const row = btn.closest('.offline-track-row');
 if (row) { row.style.transition = 'opacity 0.2s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 200); }
 const badge = document.getElementById('offlineCachedCount');
