@@ -6808,12 +6808,16 @@ justify-content: flex-start;
 gap: 24px;
 overflow-x: auto;
 overflow-y: hidden;
-padding: 8px 0 8px 0;
+padding: 8px 0 16px 0;
 scroll-behavior: smooth;
 -webkit-overflow-scrolling: touch;
-scrollbar-width: none;
+scrollbar-width: thin;
+scrollbar-color: var(--md-sys-color-outline) transparent;
 }
-.listen-again-scroll-container::-webkit-scrollbar{ display: none; }
+.listen-again-scroll-container::-webkit-scrollbar{ height: 6px; }
+.listen-again-scroll-container::-webkit-scrollbar-track{ background: transparent; }
+.listen-again-scroll-container::-webkit-scrollbar-thumb{ background: var(--md-sys-color-outline); border-radius: 3px; }
+.listen-again-scroll-container::-webkit-scrollbar-thumb:hover{ background: var(--md-sys-color-on-surface); }
 .listen-again-header {
 display: flex;
 flex-direction: row;
@@ -12945,13 +12949,12 @@ height: 36px !important;
 font-size: 13px !important;
 gap: 5px !important;
 }
-/* Scroll container — tighter gap, hide scrollbar */
+/* Scroll container — tighter gap, keep visible scrollbar */
 .listen-again-scroll-container {
 gap: 14px !important;
-padding: 4px 0 12px !important;
-scrollbar-width: none !important;
+padding: 4px 0 16px !important;
 }
-.listen-again-scroll-container::-webkit-scrollbar{ display: none !important; }
+.listen-again-scroll-container::-webkit-scrollbar{ height: 5px !important; }
 /* Track cards — square art on mobile, caption panel sizes itself */
 .listen-again-track-card {
 width: 140px !important;
