@@ -3715,8 +3715,8 @@ causes unnecessary paint work on every image (thumbnails, icons, etc.) */
 #fsArt img.loaded { opacity: 1; }
 .folder-grid {
 display: grid;
-grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-gap: 24px;
+grid-template-columns: repeat(auto-fill, minmax(clamp(140px, 15vw, 230px), 1fr));
+gap: clamp(14px, 1.8vw, 26px);
 position: relative;
 z-index: 1;
 width: 100%;
@@ -3835,6 +3835,7 @@ max-width: calc(100vw - 120px);
 /* Listen Again container expansion */
 .listen-again-container {
 margin-bottom: 16px;
+margin-top: 32px;
 width: 100%;
 margin-left: auto;
 margin-right: auto;
@@ -3885,12 +3886,16 @@ overflow: hidden;
 transition: opacity 0.15s var(--motion-standard), transform 0.15s var(--motion-standard), box-shadow 0.2s ease, border-color 0.2s ease;
 opacity: 0;
 transform: translateY(12px);
+transform-origin: center center;
 border: 1px solid color-mix(in srgb, var(--card-accent, var(--md-sys-color-outline)) 35%, var(--md-sys-color-outline));
 z-index: 1;
 display: flex;
 flex-direction: column;
+isolation: isolate;
+contain: layout style;
 }
 .folder-card.loaded{ opacity: 1; transform: translateY(0); }
+.folder-card:active{ transform: scale(0.98); }
 /* Single track cards at artist level */
 .single-badge {
 position: absolute;
@@ -4132,11 +4137,8 @@ flex-shrink: 0;
 #albumsSectionHeader { padding-top: 32px; }
 #albumsSectionHeader + #folderGrid { padding-top: 0; contain: none; }
 #singlesGrid.folder-grid { padding-top: 0; contain: none; }
-/* Singles use a one-step-smaller column width than the current grid size */
-#singlesGrid.folder-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px 12px; }
-#singlesGrid.folder-grid.size-small { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px 10px; }
-#singlesGrid.folder-grid.size-medium { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px 12px; }
-#singlesGrid.folder-grid.size-large { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px 16px; }
+/* Singles use a slightly smaller fluid column width than the main folder grid */
+#singlesGrid.folder-grid { grid-template-columns: repeat(auto-fill, minmax(clamp(110px, 11vw, 180px), 1fr)); gap: clamp(12px, 1.4vw, 18px) clamp(10px, 1.1vw, 14px); }
 /* Instant/disabled animations: force cards visible immediately since transitions are killed */
 .anim-speed-0 .folder-card,
 .animations-disabled .folder-card { opacity: 1 !important; transform: translateY(0) !important; }
@@ -4144,6 +4146,7 @@ flex-shrink: 0;
 transform: translate3d(0, -2px, 0);
 box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 border-color: var(--card-accent, var(--md-sys-color-primary));
+z-index: 10;
 }
 /* Art container — square ratio at top of card */
 .folder-card-art {
@@ -4156,9 +4159,8 @@ flex-shrink: 0;
 transform: translateZ(0);
 -webkit-transform: translateZ(0);
 }
-/* Art image — zoom on hover like all-played */
-.folder-card:hover .folder-card-art img,
-.folder-card:hover .folder-art img { transform: scale(1.02); }
+/* Hover zoom removed — matches listen-again-track-card, which has no
+hover-triggered image scale (only a load-in scale-down, no :hover rule). */
 /* Art fills the art container */
 .folder-art {
 position: absolute;
@@ -4206,7 +4208,7 @@ background: color-mix(in srgb, var(--card-accent) 55%, #111111);
 .folder-info.has-accent .folder-artist.visible { opacity: 0.9; }
 .folder-info span {
 font-weight: 600;
-font-size: 13px;
+font-size: clamp(14.5px, 0.9vw + 10.5px, 17px);
 color: var(--md-sys-color-on-surface);
 white-space: nowrap;
 overflow: hidden;
@@ -4214,12 +4216,9 @@ text-overflow: ellipsis;
 line-height: 1.4;
 transition: font-size 0.2s var(--motion-standard);
 }
-/* Larger title when grid is at max size */
-.folder-grid.size-large .folder-info span { font-size: 15px; }
-.folder-grid.size-large .folder-info { padding: 11px 13px 13px; }
 /* Artist subtitle in folder card */
 .folder-artist {
-font-size: 11.5px;
+font-size: clamp(12px, 0.45vw + 10.5px, 14.5px);
 font-weight: 400;
 color: var(--md-sys-color-on-surface-variant);
 opacity: 0;
@@ -4230,8 +4229,6 @@ margin-top: 1px;
 transition: opacity 0.3s ease, font-size 0.2s var(--motion-standard);
 }
 .folder-artist.visible { opacity: 0.75; }
-.folder-grid.size-large .folder-artist { font-size: 12.5px; }
-.folder-grid.size-small .folder-artist { font-size: 10.5px; }
 
 /* ── V3 Folder Card Style ───────────────────────────────────────────────
 When .folder-style-v3 is on <html>, cards switch to the v3.9 look:
@@ -5335,14 +5332,11 @@ color: var(--md-sys-color-on-surface);
 }
 .other-versions-grid {
 display: grid;
-grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-gap: 24px;
+grid-template-columns: repeat(auto-fill, minmax(clamp(150px, 16vw, 250px), 1fr));
+gap: clamp(14px, 1.8vw, 26px);
 width: 100%;
 padding: 0 24px 16px 24px;
 }
-.other-versions-grid.size-small{ grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 14px; }
-.other-versions-grid.size-medium{ grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 24px; }
-.other-versions-grid.size-large{ grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 28px; }
 .other-version-card {
 display: flex;
 align-items: center;
@@ -6798,7 +6792,7 @@ margin-top: -2px;
 /* Uses same styling as folder-card to match home screen aesthetic */
 .listen-again-container {
 margin-bottom: 16px;
-margin-top: 20px;
+margin-top: 40px;
 width: 100%;
 margin-left: auto;
 margin-right: auto;
@@ -6814,33 +6808,52 @@ justify-content: flex-start;
 gap: 24px;
 overflow-x: auto;
 overflow-y: hidden;
-padding: 8px 0 24px 0;
+padding: 8px 0 8px 0;
 scroll-behavior: smooth;
 -webkit-overflow-scrolling: touch;
-scrollbar-width: thin;
-scrollbar-color: var(--md-sys-color-primary) transparent;
+scrollbar-width: none;
 }
-.listen-again-scroll-container::-webkit-scrollbar{ height: 6px; }
-.listen-again-scroll-container::-webkit-scrollbar-thumb {
-background: var(--md-sys-color-primary);
-border-radius: 3px;
-}
-.listen-again-scroll-container::-webkit-scrollbar-track{ background: transparent; }
+.listen-again-scroll-container::-webkit-scrollbar{ display: none; }
 .listen-again-header {
 display: flex;
 flex-direction: row;
 align-items: center;
 justify-content: space-between;
-margin-bottom: 24px;
+padding: 8px 0 16px;
 gap: 16px;
-padding: 0 76px;
+}
+.listen-again-title-group {
+display: flex;
+align-items: center;
+gap: 18px;
+min-width: 0;
+}
+.listen-again-icon {
+width: 56px;
+height: 56px;
+border-radius: 18px;
+background: var(--md-sys-color-primary-container);
+display: flex;
+align-items: center;
+justify-content: center;
+color: var(--md-sys-color-primary);
+font-size: 22px;
+flex-shrink: 0;
 }
 .listen-again-title {
-font-size: 32px;
-font-weight: 700;
+font-size: 40px;
+font-weight: 800;
 margin: 0;
-color: var(--md-sys-color-on-background);
-letter-spacing: -0.5px;
+color: var(--md-sys-color-on-surface);
+letter-spacing: -0.9px;
+line-height: 1;
+}
+.listen-again-subtitle {
+font-size: 14px;
+font-weight: 400;
+margin: 6px 0 0;
+color: var(--md-sys-color-on-surface-variant);
+opacity: 0.65;
 }
 /* Remove the underline decoration */
 .listen-again-title::after{ display: none; }
@@ -6850,55 +6863,162 @@ gap: 10px;
 align-items: center;
 flex-wrap: wrap;
 }
+/* Period selector: custom dropdown styled to match the EQ preset dropdown
+   (dark surface panel, primary-colored border/glow, icon + label + check rows). */
 .la-period-dropdown{ display: none; }
-.la-period-picker {
-display: flex;
-gap: 5px;
+.la-period-dropdown-wrap {
+position: relative;
+display: inline-flex;
 align-items: center;
+z-index: 10;
 }
-.la-period-chip {
-padding: 5px 14px;
-border-radius: 100px;
-border: 1.5px solid color-mix(in srgb, var(--md-sys-color-outline) 60%, transparent);
-background: transparent;
-color: color-mix(in srgb, var(--md-sys-color-on-surface) 60%, transparent);
-font-size: 12px;
-font-weight: 500;
-cursor: pointer;
-transition: background 0.15s, border-color 0.15s, color 0.15s;
-white-space: nowrap;
-font-family: inherit;
-}
-.la-period-chip:hover {
-border-color: var(--md-sys-color-primary);
-color: var(--md-sys-color-primary);
-background: color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent);
-}
-.la-period-chip.active {
-background: var(--md-sys-color-primary);
-border-color: var(--md-sys-color-primary);
-color: var(--md-sys-color-on-primary);
-}
-.listen-again-expand-btn {
+.la-period-trigger {
 display: inline-flex;
 align-items: center;
 gap: 8px;
-padding: 10px 20px;
+padding: 8px 14px;
+border-radius: 12px;
+border: 1.5px solid color-mix(in srgb, var(--md-sys-color-outline) 60%, transparent);
+background: color-mix(in srgb, var(--md-sys-color-surface-variant) 70%, transparent);
+color: var(--md-sys-color-on-surface);
+font-family: var(--font-fallback);
+font-size: 13px;
+font-weight: 600;
+cursor: pointer;
+white-space: nowrap;
+transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+-webkit-tap-highlight-color: transparent;
+}
+.la-period-trigger:hover, .la-period-trigger:focus-visible {
+border-color: var(--md-sys-color-primary);
+background: color-mix(in srgb, var(--md-sys-color-primary) 6%, var(--md-sys-color-surface-variant));
+outline: none;
+}
+.la-period-trigger.open {
+border-color: var(--md-sys-color-primary);
+box-shadow: 0 0 0 2px color-mix(in srgb, var(--md-sys-color-primary) 25%, transparent);
+border-bottom-left-radius: 0;
+border-bottom-right-radius: 0;
+}
+.la-period-trigger-icon {
+color: var(--md-sys-color-primary);
+font-size: 12px;
+opacity: 0.85;
+flex-shrink: 0;
+}
+.la-period-trigger.has-selection .la-period-trigger-label { color: var(--md-sys-color-primary); }
+.la-period-trigger-arrow {
+font-size: 10px;
+opacity: 0.6;
+transition: transform 0.2s ease, opacity 0.2s;
+flex-shrink: 0;
+}
+.la-period-trigger.open .la-period-trigger-arrow {
+transform: rotate(180deg);
+opacity: 0.9;
+}
+.la-period-menu {
+position: absolute;
+top: calc(100% - 1px);
+left: 0;
+min-width: 170px;
+background: var(--md-sys-color-surface-variant, #2a2a2a);
+border: 1.5px solid var(--md-sys-color-primary);
+border-top: none;
+border-bottom-left-radius: 12px;
+border-bottom-right-radius: 12px;
+overflow: hidden;
+max-height: 0;
+opacity: 0;
+pointer-events: none;
+transition: max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+opacity 0.18s ease;
+box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+z-index: 20;
+}
+.la-period-menu.open {
+max-height: 200px;
+opacity: 1;
+pointer-events: auto;
+overflow-y: auto;
+overscroll-behavior: contain;
+-webkit-overflow-scrolling: touch;
+}
+.la-period-option {
+display: flex;
+align-items: center;
+gap: 10px;
+width: 100%;
+padding: 11px 14px;
+border: none;
+background: none;
+color: var(--md-sys-color-on-surface);
+font-family: var(--font-fallback);
+font-size: 13px;
+font-weight: 400;
+cursor: pointer;
+text-align: left;
+white-space: nowrap;
+transition: background 0.12s ease;
+border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline) 15%, transparent);
+-webkit-tap-highlight-color: transparent;
+min-height: 40px;
+}
+.la-period-option:last-child { border-bottom: none; }
+.la-period-option:hover, .la-period-option:focus-visible {
+background: color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent);
+outline: none;
+}
+.la-period-option:active {
+background: color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
+}
+.la-period-opt-icon {
+color: var(--md-sys-color-primary);
+opacity: 0.7;
+font-size: 12px;
+width: 16px;
+text-align: center;
+flex-shrink: 0;
+}
+.la-period-opt-label { flex: 1; }
+.la-period-opt-check {
+color: var(--md-sys-color-primary);
+font-size: 11px;
+opacity: 0;
+transition: opacity 0.15s ease;
+flex-shrink: 0;
+}
+.la-period-option.selected .la-period-opt-check { opacity: 1; }
+.la-period-option.selected {
+color: var(--md-sys-color-primary);
+font-weight: 500;
+}
+.la-period-option.selected .la-period-opt-icon { opacity: 1; }
+.la-period-chip{ display: none; }
+.la-period-picker{ display: none; }
+/* Icon-only show-all button, matches the round carousel-arrow treatment */
+.listen-again-expand-btn {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 40px;
+height: 40px;
+padding: 0;
 background: var(--md-sys-color-primary);
 border: none;
-border-radius: 100px;
+border-radius: 50%;
 color: var(--md-sys-color-on-primary);
 cursor: pointer;
-font-size: 14px;
-font-weight: 500;
+font-size: 15px;
 font-family: var(--font-fallback);
-transition: all 0.3s var(--motion-standard);
-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+transition: filter 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
+.listen-again-expand-btn span{ display: none; }
 .listen-again-expand-btn:hover {
-background: var(--md-sys-color-primary);
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-transform: translateY(-2px);
+filter: brightness(1.12);
+box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+transform: scale(1.05);
 }
 /* --- SKELETON LOADING STATES --- */
 /* Shimmer animation for skeleton loading */
@@ -7066,41 +7186,42 @@ overflow: visible;
 /* Track card styling matching folder-card */
 .listen-again-track-card {
 flex-shrink: 0;
-width: 180px;
-height: 180px;
-background: #000;
-aspect-ratio: 1/1;
-border-radius: 20px;
+width: 200px;
+display: flex;
+flex-direction: column;
+background: var(--md-sys-color-surface-container);
+border-radius: 16px;
 cursor: pointer;
-overflow: visible;
+overflow: hidden;
 position: relative;
 border: 1px solid var(--md-sys-color-outline);
 opacity: 0;
-transform: translateY(16px) scale(0.96);
-transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+transform: translateY(12px);
+transition: opacity 0.15s var(--motion-standard), transform 0.15s var(--motion-standard), box-shadow 0.2s ease, border-color 0.2s ease;
 transform-origin: center center;
 isolation: isolate;
 contain: layout style;
 }
-.listen-again-track-card.loaded{ opacity: 1; transform: translateY(0) scale(1); }
+.listen-again-track-card.loaded{ opacity: 1; transform: translateY(0); }
 .anim-speed-0 .listen-again-track-card,
-.animations-disabled .listen-again-track-card { opacity: 1 !important; transform: translateY(0) scale(1) !important; }
+.animations-disabled .listen-again-track-card { opacity: 1 !important; transform: translateY(0) !important; }
 .listen-again-track-card:hover {
-box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--md-sys-color-primary);
-border-color: var(--md-sys-color-primary);
+box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+border-color: var(--card-accent, var(--md-sys-color-primary));
 z-index: 10;
-position: relative;
+transform: translate3d(0, -2px, 0);
 }
 .listen-again-track-card:active{ transform: scale(0.98); }
 .listen-again-track-art {
-position: absolute;
-inset: 0;
+position: relative;
+width: 100%;
+aspect-ratio: 1/1;
+flex-shrink: 0;
 display: flex;
 align-items: center;
 justify-content: center;
 z-index: 1;
 background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
-border-radius: 20px;
 overflow: hidden;
 }
 .listen-again-track-art img {
@@ -7109,7 +7230,6 @@ height: 100%;
 object-fit: cover;
 position: absolute;
 inset: 0;
-border-radius: 20px;
 opacity: 0;
 transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 transform: scale(1.05);
@@ -7164,10 +7284,14 @@ transform: scale(1.05);
 .playlist-cover img.loaded,
 #playlistCover img.fade-in,
 #playlistCover img.loaded{ opacity: 1; transform: scale(1); }
-/* Play overlay for Listen Again cards - SAME as playlist-card */
+/* Play overlay for Listen Again cards - bounded to the art area only,
+now that the caption lives in its own solid panel below (see .listen-again-track-info) */
 .listen-again-track-card .play-overlay {
 position: absolute;
-inset: 0;
+top: 0;
+left: 0;
+right: 0;
+bottom: 54px;
 display: flex;
 flex-direction: column;
 justify-content: flex-end;
@@ -7176,9 +7300,8 @@ padding: 12px;
 opacity: 0;
 transition: opacity 0.4s var(--motion-standard);
 pointer-events: none;
-background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 60%);
+background: linear-gradient(to top, rgba(0, 0, 0, 0.55) 0%, transparent 55%);
 z-index: 3;
-border-radius: 20px;
 overflow: visible;
 }
 .listen-again-track-card:hover .play-overlay{ opacity: 1; pointer-events: auto; }
@@ -7218,36 +7341,42 @@ font-variant-numeric: tabular-nums;
 backdrop-filter: blur(8px);
 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
-/* Track info overlay */
+/* Track caption panel — solid background below the art, same pattern as
+.folder-info on the artist/album cards beneath this row, instead of
+text floated on a gradient over the image. */
 .listen-again-track-info {
-position: absolute;
-inset: 0;
+position: relative;
 z-index: 2;
-padding: 12px;
+height: 54px;
+box-sizing: border-box;
+padding: 10px 12px 12px;
 display: flex;
 flex-direction: column;
-justify-content: flex-end;
-background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
-border-radius: 20px;
-overflow: visible;
+justify-content: center;
+gap: 2px;
+background: transparent;
+transition: background 0.5s ease;
 }
+/* Solid accent-derived background, same treatment as .folder-info.has-accent */
+.listen-again-track-info.has-accent {
+background: color-mix(in srgb, var(--card-accent) 55%, #111111);
+}
+.listen-again-track-info.has-accent .listen-again-track-artist{ opacity: 0.9; }
 .listen-again-track-title {
 font-weight: 600;
-font-size: 14px;
-color: white;
+font-size: 13.5px;
+color: var(--md-sys-color-on-surface);
 white-space: nowrap;
 overflow: hidden;
 text-overflow: ellipsis;
-margin-bottom: 4px;
-text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 .listen-again-track-artist {
-font-size: 12px;
-color: rgba(255, 255, 255, 0.75);
+font-size: 11.5px;
+color: var(--md-sys-color-on-surface-variant);
+opacity: 0.75;
 white-space: nowrap;
 overflow: hidden;
 text-overflow: ellipsis;
-text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 /* Empty state */
 .listen-again-empty {
@@ -7358,48 +7487,64 @@ border-color: var(--md-sys-color-primary) !important;
 }
 .show-all-card:hover .show-all-content{ color: var(--md-sys-color-on-primary); }
 .show-all-card:hover .show-all-content i{ opacity: 1; }
+/* Match total card height (art + caption panel) now that the card auto-sizes */
+.listen-again-track-card.show-all-card{ height: 254px; }
 /* Hide old pagination - using horizontal scroll now */
 .listen-again-pagination{ display: none; }
-/* Carousel navigation for Listen Again - now horizontal scroll */
+/* Carousel navigation for Listen Again — floats over the strip, themed with
+the same tokens every icon button in the app uses. Only ever shown when
+that direction actually has more to scroll to; otherwise fully hidden
+rather than left sitting there grayed out. */
 .listen-again-carousel {
-display: flex;
-align-items: center;
+display: block;
 position: relative;
 width: 100%;
 overflow: visible;
-padding: 0 16px;
+padding: 0;
 }
 .listen-again-carousel-btn {
-width: 44px;
-height: 44px;
+position: absolute;
+top: 50%;
+transform: translateY(-50%);
+width: 40px;
+height: 40px;
 border-radius: 50%;
-border: 1px solid var(--md-sys-color-outline);
-background: var(--md-sys-color-surface-container);
-color: var(--md-sys-color-on-surface);
+border: none;
+background: var(--md-sys-color-primary);
+color: var(--md-sys-color-on-primary);
 cursor: pointer;
 display: flex;
 align-items: center;
 justify-content: center;
-font-size: 16px;
-transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+font-size: 14px;
+transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 flex-shrink: 0;
 z-index: 20;
-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+opacity: 1;
 }
+.listen-again-carousel-prev{ left: 10px; }
+.listen-again-carousel-next{ right: 10px; }
 .listen-again-carousel-btn:hover:not(:disabled) {
-background: var(--md-sys-color-primary-container);
-border-color: var(--md-sys-color-primary);
-color: var(--md-sys-color-on-primary-container);
-transform: scale(1.08);
-box-shadow: 0 4px 16px rgba(var(--md-sys-color-primary-rgb), 0.25);
+background: var(--md-sys-color-primary);
+filter: brightness(1.12);
+color: var(--md-sys-color-on-primary);
+box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+transform: translateY(-50%) scale(1.05);
 }
-.listen-again-carousel-btn:disabled{ opacity: 0.3; cursor: not-allowed; }
-.listen-again-carousel-btn:disabled:hover{ transform: none; }
+.listen-again-carousel-btn:active:not(:disabled) {
+background: var(--md-sys-color-primary);
+filter: brightness(0.92);
+color: var(--md-sys-color-on-primary);
+transform: translateY(-50%) scale(0.97);
+}
+/* Only rendered when scrollable in that direction — see updateListenAgainScrollState() */
+.listen-again-carousel-btn:disabled{ display: none; }
 .listen-again-scroll-wrapper {
-flex: 1;
+width: 100%;
 min-width: 0;
 overflow: hidden;
-padding: 0 16px;
+padding: 0;
 }
 .listen-again-grid-wrapper {
 order: 2;
@@ -7760,36 +7905,8 @@ text-transform: uppercase;
 color: var(--md-sys-color-primary);
 opacity: 0.8;
 }
-/* --- Folder grid size variants --- */
-.folder-grid.size-small{ grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 16px 12px; }
-.folder-grid.size-medium{ grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 24px 20px; }
-.folder-grid.size-large{ grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 28px 24px; }
-/* Folder grid size toolbar (top of folder screen) */
-.folder-grid-toolbar {
-display: flex;
-align-items: center;
-gap: 4px;
-background: var(--md-sys-color-surface-variant);
-border-radius: 12px;
-padding: 4px;
-margin-left: auto;
-}
-.fg-size-btn {
-display: flex;
-align-items: center;
-justify-content: center;
-width: 32px;
-height: 32px;
-border-radius: 8px;
-border: none;
-background: transparent;
-color: var(--md-sys-color-on-surface-variant);
-cursor: pointer;
-transition: all 0.18s ease;
-}
-.fg-size-btn i{ font-size: 12px; }
-.fg-size-btn:hover{ background: color-mix(in srgb, var(--md-sys-color-primary) 15%, transparent); }
-.fg-size-btn.active{ background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+/* Folder grid now uses a single fluid, self-scaling column size (see .folder-grid rule above) —
+no manual size selector needed. */
 /* Pinned items in all-played grid use same card style but with a heart badge */
 .all-played-grid-card .pinned-badge-ap {
 position: absolute;
@@ -12354,18 +12471,11 @@ font-size: 17px;
 }
 /* ── Folder grid ── */
 .folder-grid {
-grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
-gap: 12px !important;
+gap: clamp(8px, 2.5vw, 12px) !important;
 padding: 16px 12px !important;
 }
-.folder-grid.size-small {
-grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
-gap: 8px !important;
-}
-.folder-grid.size-large{ grid-template-columns: repeat(2, 1fr) !important; gap: 14px !important; }
 .other-versions-grid {
-grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
-gap: 10px !important;
+gap: clamp(8px, 2.5vw, 10px) !important;
 padding: 0 12px 12px !important;
 }
 /* ── Song rows ── */
@@ -12815,42 +12925,23 @@ text-transform: uppercase !important;
 #mobileUpNextList .song-row{ padding-left: 16px !important; padding-right: 16px !important; }
 /* ── Album view ── */
 /* ── Listen Again mobile overrides ── */
-.listen-again-container{ padding: 0 16px !important; margin-top: 24px !important; }
+.listen-again-container{ padding: 0 16px !important; margin-top: 32px !important; }
 .listen-again-header {
 padding: 0 !important;
 margin-bottom: 16px !important;
 align-items: flex-end !important;
 }
-.listen-again-title{ font-size: 26px !important; letter-spacing: -0.5px !important; }
-/* Hide chip picker, show dropdown on mobile */
-.la-period-picker{ display: none !important; }
-.la-period-dropdown {
-display: flex !important;
-align-items: center;
-background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
-border: 1.5px solid var(--md-sys-color-outline);
-border-radius: 100px;
-padding: 0 12px 0 14px;
-height: 34px;
-cursor: pointer;
-font-family: inherit;
-font-size: 13px;
-font-weight: 600;
-color: var(--md-sys-color-on-surface);
--webkit-appearance: none;
-appearance: none;
-background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e2e2e6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-background-repeat: no-repeat;
-background-position: right 10px center;
-background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
-padding-right: 28px;
-outline: none;
-}
-.la-period-dropdown:focus{ border-color: var(--md-sys-color-primary); }
-/* Stack period chips + show all on same row, smaller */
+.listen-again-title{ font-size: 32px !important; letter-spacing: -0.6px !important; }
+.listen-again-icon{ width: 44px !important; height: 44px !important; border-radius: 14px !important; font-size: 18px !important; }
+.listen-again-title-group{ gap: 12px !important; }
+.listen-again-subtitle{ font-size: 12px !important; margin-top: 4px !important; }
+/* New unified period button already adapts; just shrink slightly on mobile */
+.la-period-trigger{ padding: 7px 12px !important; font-size: 12px !important; }
+/* Stack period selector + show all on same row, smaller */
 .listen-again-actions{ gap: 6px !important; flex-wrap: nowrap !important; }
 .listen-again-expand-btn {
-padding: 8px 14px !important;
+width: 36px !important;
+height: 36px !important;
 font-size: 13px !important;
 gap: 5px !important;
 }
@@ -12861,20 +12952,19 @@ padding: 4px 0 12px !important;
 scrollbar-width: none !important;
 }
 .listen-again-scroll-container::-webkit-scrollbar{ display: none !important; }
-/* Track cards — square on mobile */
+/* Track cards — square art on mobile, caption panel sizes itself */
 .listen-again-track-card {
 width: 140px !important;
 min-width: 140px !important;
-height: 140px !important;
 border-radius: 14px !important;
 }
 .listen-again-track-art {
-width: 140px !important;
-height: 140px !important;
-border-radius: 14px !important;
+width: 100% !important;
+height: auto !important;
+aspect-ratio: 1/1 !important;
 }
-.listen-again-track-art img{ border-radius: 14px !important; }
-.listen-again-track-info{ border-radius: 14px !important; }
+.listen-again-track-card .play-overlay{ bottom: 50px !important; }
+.listen-again-track-info{ height: 50px !important; }
 /* Hide nav arrows on mobile */
 .listen-again-carousel-btn,
 .listen-again-carousel-prev,
@@ -12889,11 +12979,7 @@ width: calc((100vw - 60px) / 3) !important;
 min-width: calc((100vw - 60px) / 3) !important;
 max-width: 160px !important;
 }
-.listen-again-track-art {
-width: 100% !important;
-height: auto !important;
-aspect-ratio: 1 !important;
-}
+.listen-again-track-card.show-all-card{ height: calc((100vw - 60px) / 3 + 50px) !important; max-height: 210px !important; }
 /* ── Misc ── */
 /* ── Hide queue sidebar on mobile ── */
 #sidebar{ display: none !important; }
@@ -12909,7 +12995,7 @@ aspect-ratio: 1 !important;
 /* ── Track info text - handled above ── */
 /* ── Folder grid tweaks ── */
 .folder-card-art{ border-radius: 12px !important; }
-.folder-info span{ font-size: 12px; }
+.folder-info span{ font-size: 13.5px; }
 /* ── Modal sheet improvements ── */
 .playlist-modal {
 border-radius: 20px 20px 0 0 !important;
@@ -13537,11 +13623,6 @@ style="margin:0;font-size:54px;font-weight:700;flex:1;min-width:0;"></h1>
 </div>
 <div id="folderActionsRow" style="display:flex;align-items:center;gap:0;width:100%;margin-bottom:4px;">
 <div id="folderActions" style="display:none;gap:12px;align-items:center;flex-wrap:wrap;flex:1;">
-</div>
-<div class="folder-grid-toolbar" id="folderGridToolbar" style="margin-left:auto;flex-shrink:0;">
-<button class="fg-size-btn" id="fgSizeSmall" onclick="setFolderGridSize('small')" title="Small grid"><i class="fa-solid fa-border-all"></i></button>
-<button class="fg-size-btn" id="fgSizeMedium" onclick="setFolderGridSize('medium')" title="Medium grid"><i class="fa-solid fa-th-large"></i></button>
-<button class="fg-size-btn" id="fgSizeLarge" onclick="setFolderGridSize('large')" title="Large grid"><i class="fa-solid fa-square-full"></i></button>
 </div>
 </div>
 </div>
@@ -14521,7 +14602,7 @@ Split
 <div class="m3-card" id="settings-panel-data" style="display:none;">
 <div style="font-size:12px; font-weight:600; opacity:0.45; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Backup &amp; Export</div>
 <div class="m3-settings-btn-row">
-<button class="m3-btn m3-btn-filled" onclick="exportAllData()" style="flex:1; justify-content:center;"><i class="fa-solid fa-download"></i><span>Export All Data</span></button>
+<button class="m3-btn m3-btn-filled" onclick="exportAllData(event)" style="flex:1; justify-content:center;"><i class="fa-solid fa-download"></i><span>Export All Data</span></button>
 <button class="m3-btn m3-btn-tonal" onclick="document.getElementById('importAllDataFile').click()" style="flex:1; justify-content:center;"><i class="fa-solid fa-upload"></i><span>Import All Data</span></button>
 </div>
 <input type="file" id="importAllDataFile" accept=".json" style="display:none" onchange="importAllData(this)">
@@ -17417,12 +17498,8 @@ const canScrollLeft = scrollLeft > 5;
 const hasMoreContent = scrollWidth > clientWidth + 10;
 const atEnd = scrollLeft >= scrollWidth - clientWidth - 10;
 const canScrollRight = hasMoreContent ? !atEnd : true;
-prevBtn.style.opacity = canScrollLeft ? '1' : '0.3';
-prevBtn.style.cursor = canScrollLeft ? 'pointer' : 'not-allowed';
-prevBtn.style.pointerEvents = canScrollLeft ? 'auto' : 'none';
-nextBtn.style.opacity = canScrollRight ? '1' : '0.3';
-nextBtn.style.cursor = canScrollRight ? 'pointer' : 'not-allowed';
-nextBtn.style.pointerEvents = canScrollRight ? 'auto' : 'none';
+prevBtn.disabled = !canScrollLeft;
+nextBtn.disabled = !canScrollRight;
 }
 }, 16); // 60fps throttle
 }
@@ -17482,7 +17559,67 @@ let qIndex = -1;
 let currentPlaylistName = "";
 let currentQueueSource = null;
 let currentAlbumView = null; // Stores current album data for album folder view
-let trackMetadata = {}; // Will be loaded from IndexedDB
+// ── Self-healing trackMetadata store ──
+// Only Listen Again's getLocalTrackMetadata() was ever calling
+// _refreshYTTrackIfStale() to re-fetch fresh title/artist from Innertube.
+// Every other view (queue, playlist rows, folder rows, album modal, "all
+// played tracks", now-playing bar, etc.) reads trackMetadata[id] directly,
+// so a YouTube track that ever got cached as "Unknown Track" / "YouTube
+// Video" / "YouTube" stayed stuck that way everywhere except Listen Again,
+// forever. Wrapping the store in a Proxy means ANY read of a stale/
+// placeholder YouTube entry, from any render path, kicks off the same
+// background Innertube refetch, and the result is written back + patched
+// onto any visible card automatically.
+//
+// That fix only covered "__yt__..." keys, though. A regular (non-YouTube)
+// track whose metadata simply hadn't finished loading yet at the moment
+// Listen Again first rendered (D1/R2 fetch still in flight) got the exact
+// same 'Unknown Track' placeholder — but nothing ever re-fetched or
+// re-rendered it, so renderListenAgainSection's "skip unresolved tracks"
+// filter dropped it and it never came back, even after the real metadata
+// loaded a moment later. YouTube tracks self-healed and reappeared; regular
+// tracks didn't — which is exactly why Listen Again ended up showing only
+// YouTube videos while "All Played Tracks" (which never filtered on
+// resolved-ness) kept showing everything. Generalizing the same self-heal
+// to any stale entry, YouTube or not, fixes that asymmetry.
+function _isStaleYTMeta(m) {
+    if (!m) return true;
+    const t = m.title, a = m.artist;
+    const badTitle  = !t || t === 'Unknown Track' || t === 'Unknown Title' || t === 'YouTube Video' || t === 'Loading...' || t === '...';
+    const badArtist = !a || a === 'Unknown Artist' || a === 'YouTube' || a === '...';
+    return badTitle || badArtist;
+}
+function _isStaleLocalMeta(m) {
+    if (!m) return true;
+    const t = m.title, a = m.artist;
+    const badTitle  = !t || t === 'Unknown Track' || t === 'Unknown Title' || t === 'Loading...' || t === '...';
+    const badArtist = !a || a === 'Unknown Artist' || a === '...';
+    return badTitle || badArtist;
+}
+function wrapTrackMetadataStore(obj) {
+    return new Proxy(obj || {}, {
+        get(target, key, receiver) {
+            const val = Reflect.get(target, key, receiver);
+            if (typeof key === 'string') {
+                if (key.startsWith('__yt__') && _isStaleYTMeta(val)) {
+                    // typeof-guarded because this store can be read before
+                    // _refreshYTTrackIfStale (defined later in the file) exists;
+                    // by the time real renders happen post-load, it always does.
+                    if (typeof _refreshYTTrackIfStale === 'function') {
+                        const videoId = key.slice('__yt__'.length);
+                        _refreshYTTrackIfStale(key, videoId);
+                    }
+                } else if (!key.startsWith('__yt__') && _isStaleLocalMeta(val)) {
+                    if (typeof _refreshLocalTrackIfStale === 'function') {
+                        _refreshLocalTrackIfStale(key);
+                    }
+                }
+            }
+            return val;
+        }
+    });
+}
+let trackMetadata = wrapTrackMetadataStore({}); // Will be loaded from IndexedDB
 const metadataLoadingState = new Map(); // trackId -> Promise
 const metadataUpdateListeners = new Set();
 /**
@@ -18569,7 +18706,7 @@ return `album-art/${normalized}.jpg`;
 let allTracks = []; // Global array for all loaded tracks
 let allFolders = []; // Global array for all folders in the library
 const albumColorCache = new Map(); // Pre-extracted colors per album
-const COLOR_CACHE_VERSION = 'v30_r2_extract_fix';
+const COLOR_CACHE_VERSION = 'v31_yt_meta_selfheal';
 async function saveColorToIDB(album, color) {
 if (!album) return;
 try {
@@ -18641,7 +18778,7 @@ _saveAccentCacheMirror();
 } catch(e) { /* non-critical */ }
 }
 (function() {
-const REQUIRED_COLOR_CACHE_VERSION = 'v29_sl_weight';
+const REQUIRED_COLOR_CACHE_VERSION = 'v30_yt_meta_selfheal';
 let cache = JSON.parse(localStorage.getItem('goot_album_accent_cache') || '{}');
 if (!cache._version || cache._version !== REQUIRED_COLOR_CACHE_VERSION) {
 console.log('🔥 FORCING CACHE CLEAR ON PAGE LOAD');
@@ -18759,7 +18896,7 @@ let isBulkMetadataLoading = false; // Flag to prevent color extraction lag durin
 const DB_NAME = 'GootPlayerDB';
 const DB_VERSION = 4; // v4: added pinnedItems store (migrated from localStorage)
 const LISTEN_AGAIN_STORAGE_VERSION = 5; // Version 5: pinned art stored as Cache API blob URLs, not base64
-const METADATA_STORE_VERSION = 'metadata-store-v16'; // Bump this (and only this) to force a full trackMetadata cache wipe/migration
+const METADATA_STORE_VERSION = 'metadata-store-v17'; // Bump this (and only this) to force a full trackMetadata cache wipe/migration — v17: self-healing YT metadata fix
 let metaDB = null;
 let metaDBReady = false;
 async function initMetaDB() {
@@ -18896,7 +19033,7 @@ store.clear();
 localStorage.removeItem('goot_meta_cache');
 localStorage.removeItem('goot_album_art_cache');
 _clearAccentCacheMirror();
-trackMetadata = {};
+trackMetadata = wrapTrackMetadataStore({});
 trackLoudnessCache = {};
 if (typeof albumColorCache !== 'undefined') albumColorCache.clear();
 if (typeof folderContentsCache !== 'undefined') folderContentsCache.clear();
@@ -19127,12 +19264,25 @@ return null;
 };
 async function saveMostPlayedToDB(trackData) {
 try {
-const validTracks = (trackData || []).filter(t => t.title && t.title !== 'Unknown Track').map(t => ({
+// Merge rather than replace: a full overwrite meant any track that
+// couldn't resolve its title *this particular pass* (e.g. metadata
+// cache mid-reload) got silently dropped from the snapshot forever,
+// even though it had a perfectly good cached entry from last time.
+const existing = await loadMostPlayedFromDB().catch(() => []);
+const merged = new Map(existing.map(t => [t.id, t]));
+(trackData || []).forEach(t => {
+if (t.title && t.title !== 'Unknown Track') {
+merged.set(t.id, {
 id: t.id, title: t.title, artist: t.artist, album: t.album,
 albumArt: t.albumArt?.startsWith('blob:') ? '' : (t.albumArt || ''),
 playCount: t.playCount, timestamp: Date.now()
-}));
-localStorage.setItem('goot_most_played', JSON.stringify(validTracks));
+});
+} else if (merged.has(t.id)) {
+// Keep the last-known-good entry, just refresh its play count.
+merged.set(t.id, { ...merged.get(t.id), playCount: t.playCount });
+}
+});
+localStorage.setItem('goot_most_played', JSON.stringify(Array.from(merged.values())));
 } catch (e) {}
 return true;
 }
@@ -19189,7 +19339,7 @@ AlbumArtManager.preloadAll(), // Run in parallel with DB reads — no reason to 
 preloadAllColorsFromIDB(),    // Bulk-load all album colors so folder opens are instant
 ]);
 if (trackMeta && Object.keys(trackMeta).length > 0) {
-trackMetadata = trackMeta;
+trackMetadata = wrapTrackMetadataStore(trackMeta);
 for (const meta of Object.values(trackMetadata)) {
 if (meta.album && meta.album !== 'Unknown' && meta.artist && !albumArtistIndex[meta.album]) {
 albumArtistIndex[meta.album] = meta.artist;
@@ -20811,6 +20961,10 @@ return;
 }
 mediaSession = navigator.mediaSession;
 mediaSession.setActionHandler('play', () => {
+if (typeof isYTMode !== 'undefined' && isYTMode) {
+const ytVid = document.getElementById('ytVideo');
+if (ytVid) { ytVid.play().catch(() => {}); return; }
+}
 if (audioCtx && audioCtx.state === 'suspended') {
 audioCtx.resume().then(() => { currentPlayer.play().catch(() => {}); }).catch(() => { currentPlayer.play().catch(() => {}); });
 } else {
@@ -20818,6 +20972,10 @@ currentPlayer.play().catch(() => {});
 }
 });
 mediaSession.setActionHandler('pause', () => {
+if (typeof isYTMode !== 'undefined' && isYTMode) {
+const ytVid = document.getElementById('ytVideo');
+if (ytVid) { ytVid.pause(); return; }
+}
 currentPlayer.pause();
 });
 mediaSession.setActionHandler('previoustrack', () => {
@@ -20897,6 +21055,19 @@ return '';
 if ('mediaSession' in navigator) {
 document.addEventListener('DOMContentLoaded', () => initMediaSession(), { once: true });
 }
+document.addEventListener('DOMContentLoaded', () => {
+const ytVid = document.getElementById('ytVideo');
+if (!ytVid) return;
+// Keep the lock-screen/notification play-pause state and icon in sync
+// whenever the YT <video> element's own state changes for any reason
+// (its own controls, autoplay policy pausing it, tab backgrounding, etc.)
+// — not just when toggled through our own UI buttons.
+['play', 'pause'].forEach(evt => {
+ytVid.addEventListener(evt, () => {
+if (typeof updateMediaSessionPlaybackState === 'function') updateMediaSessionPlaybackState();
+});
+});
+}, { once: true });
 let _mediaSessionUpdateRetries = new Map(); // Track retries per track
 async function updateMediaSessionMetadata(forceUpdate = false) {
 if (!mediaSession) return;
@@ -20935,6 +21106,10 @@ mediaSession.metadata = new MediaMetadata({ title, artist, album, artwork: _buil
 }
 function updateMediaSessionPlaybackState() {
 if (!mediaSession) return;
+if (typeof isYTMode !== 'undefined' && isYTMode) {
+const ytVid = document.getElementById('ytVideo');
+if (ytVid) { mediaSession.playbackState = ytVid.paused ? 'paused' : 'playing'; return; }
+}
 mediaSession.playbackState = currentPlayer.paused ? 'paused' : 'playing';
 }
 function updateMediaSessionPositionState() {
@@ -21779,7 +21954,7 @@ const META_ENDPOINT = `${SCANNER_WORKER_URL}/metadata/bulk`;
 const USE_SERVER_META = false; // /metadata/bulk does not exist on the worker; use localStorage fallback
 function loadFromLocalStorage() {
 try {
-trackMetadata = JSON.parse(localStorage.getItem('goot_trackMetadata') || '{}');
+trackMetadata = wrapTrackMetadataStore(JSON.parse(localStorage.getItem('goot_trackMetadata') || '{}'));
 if (typeof cleanMeta === 'function') Object.values(trackMetadata).forEach(cleanMeta);
 playlists = JSON.parse(localStorage.getItem('goot_playlists') || '{}');
 const _rawPC = JSON.parse(localStorage.getItem('goot_playCounts') || '{}');
@@ -21808,7 +21983,7 @@ try {
 const resp = await fetch(META_ENDPOINT);
 if (resp.ok) {
 const data = await resp.json();
-trackMetadata = data.trackMetadata || {};
+trackMetadata = wrapTrackMetadataStore(data.trackMetadata || {});
 playlists = data.playlists || {};
 playCounts = data.playCounts || {};
 localStorage.setItem('goot_trackMetadata', JSON.stringify(trackMetadata));
@@ -21966,7 +22141,6 @@ if (folderGridSkeleton) folderGridSkeleton.style.display = 'none';
 const grid = document.getElementById('folderGrid');
 if (grid && !document.getElementById('library-screen')?.classList.contains('album-view')) {
 grid.style.display = '';
-applyFolderGridSize();
 }
 const listenAgainSkeleton = document.getElementById('listenAgainSkeleton');
 const listenAgainContent = document.getElementById('listenAgainContent');
@@ -22288,7 +22462,9 @@ grid.querySelectorAll('.folder-card:not(.loaded)').forEach(c => c.classList.add(
 } else {
 void grid.offsetHeight;
 requestAnimationFrame(() => {
-grid.querySelectorAll('.folder-card:not(.loaded)').forEach(c => c.classList.add('loaded'));
+grid.querySelectorAll('.folder-card:not(.loaded)').forEach((c, i) => {
+setTimeout(() => c.classList.add('loaded'), 25 * Math.min(i, 14));
+});
 });
 }
 const _eagerShowAlbumView = depth >= 3 && !_isSpecialFolder && (!hasFolders || hasOnlyVariantFolders);
@@ -22445,9 +22621,6 @@ header.querySelector('.artist-section-toggle').setAttribute('aria-expanded', Str
 singlesGridEl.style.display = isNowCollapsed ? 'none' : '';
 localStorage.setItem('goot-singles-collapsed', isNowCollapsed ? '1' : '0');
 });
-if (typeof folderGridSize === 'string') {
-section.querySelector('.singles-grid').classList.add(`size-${folderGridSize}`);
-}
 const singlesGrid = document.getElementById('singlesGrid');
 const _animOff2 = document.documentElement.classList.contains('animations-disabled') ||
 document.documentElement.classList.contains('anim-speed-0');
@@ -22564,10 +22737,11 @@ singlesGrid.querySelectorAll('.folder-card:not(.loaded)').forEach(c => c.classLi
 } else {
 void singlesGrid.offsetHeight;
 requestAnimationFrame(() => {
-singlesGrid.querySelectorAll('.folder-card:not(.loaded)').forEach(c => c.classList.add('loaded'));
+singlesGrid.querySelectorAll('.folder-card:not(.loaded)').forEach((c, i) => {
+setTimeout(() => c.classList.add('loaded'), 25 * Math.min(i, 14));
+});
 });
 }
-applyFolderGridSize();
 if (typeof updateNowPlayingRowIndicator === 'function') updateNowPlayingRowIndicator();
 } else {
 renderTrackTable(tracks, listBody);
@@ -23046,6 +23220,36 @@ infoEl.classList.add('has-accent');
 infoEl.dataset.colorSet = '1';
 const card = infoEl.closest('.folder-card');
 if (card) card.style.setProperty('--card-accent', color);
+}
+/* Same accent-extraction idea as folder cards, applied to the Listen Again
+strip so its caption panels pick up a tint from the album art too. */
+function _applyListenAgainCardColor(imgEl) {
+if (!_albumColorEnabled) return;
+const card = imgEl.closest('.listen-again-track-card');
+if (!card) return;
+const infoEl = card.querySelector('.listen-again-track-info');
+if (!infoEl || infoEl.dataset.colorSet === '1') return;
+const cacheKey = 'la__' + imgEl.src;
+const cached = albumColorCache.get(cacheKey);
+if (cached) {
+_setListenAgainInfoColor(infoEl, card, cached === 'grayscale' ? '#888888' : cached);
+return;
+}
+const xImg = new Image();
+xImg.crossOrigin = 'anonymous';
+xImg.onload = () => extractColorOffThread(xImg).then(color => {
+albumColorCache.set(cacheKey, color || 'grayscale');
+if (infoEl.dataset.colorSet !== '1')
+_setListenAgainInfoColor(infoEl, card, color || '#888888');
+});
+xImg.onerror = () => {};
+xImg.src = imgEl.src;
+}
+function _setListenAgainInfoColor(infoEl, card, color) {
+infoEl.style.setProperty('--card-accent', color);
+infoEl.classList.add('has-accent');
+infoEl.dataset.colorSet = '1';
+card.style.setProperty('--card-accent', color);
 }
 function _applyFolderInfoColor(fid) {
 const card = document.querySelector(`.folder-card[data-folder-id="${fid}"]`);
@@ -24420,9 +24624,10 @@ return { metadata: [], albumCount: 0, artCount: 0 };
 const source = options.source || 'unknown';
 const startTime = performance.now();
 const uncachedIds = options.forceRefresh
-? trackIds.filter(id => !id.startsWith('__yt__')) // never fetch YT IDs from worker
+? trackIds.filter(id => !id.startsWith('__yt__') && !id.startsWith('__drv__')) // never fetch YT/Drive-video synthetic IDs from worker
 : trackIds.filter(id => {
 if (id.startsWith('__yt__')) return false; // YT tracks self-contain metadata
+if (id.startsWith('__drv__')) return false; // Drive videos resolve their own metadata via driveVideoLoad
 const cached = trackMetadata[id];
 return !cached || !cached.title || cached.title === 'Loading...' || cached.title === 'Unknown Title';
 });
@@ -25056,6 +25261,26 @@ setup('queueList'); setup('deQueueList');
 setTimeout(() => { setup('queueList'); setup('deQueueList'); }, 500);
 }
 }());
+// Resolve display title/artist/album for a queue row. For YouTube tracks
+// this used to read ONLY t.title/t.artist off the queue object itself and
+// never touched trackMetadata[t.id] at all — so it never benefited from
+// the self-healing Proxy above, and once a queue entry's own title/artist
+// went stale/blank (e.g. restored from a saved queue) it stayed that way
+// forever in the queue view specifically, even after Listen Again healed
+// the same track. Reading trackMetadata[t.id] here too both (a) triggers
+// the background Innertube refetch via the Proxy and (b) lets a freshly
+// healed value win over a stale value baked into the queue object.
+function _resolveQueueItemMeta(t) {
+    if (!t._isYT) return trackMetadata[t.id] || {};
+    const healed = trackMetadata[t.id]; // touching this triggers self-heal
+    const goodTitle  = healed && healed.title  && healed.title  !== 'Unknown Track' && healed.title  !== 'YouTube Video' ? healed.title  : null;
+    const goodArtist = healed && healed.artist && healed.artist !== 'Unknown Artist' && healed.artist !== 'YouTube'      ? healed.artist : null;
+    return {
+        title:  goodTitle  || t.title  || t.id,
+        artist: goodArtist || t.artist || 'YouTube',
+        album:  'YouTube',
+    };
+}
 function renderVirtualQueueItems(container, startIndex, endIndex) {
 const itemsContainer = container._itemsContainer;
 if (!itemsContainer) return;
@@ -25087,9 +25312,7 @@ const existingAtPos = rendered.get(i);
 if (existingAtPos && existingAtPos.dataset.trackId === t.id) {
 existingAtPos.classList.toggle('active', isActive);
 existingAtPos.dataset.actualIndex = actualIndex;
-const m = t._isYT
-? { title: t.title || t.id, artist: t.artist || 'YouTube' }
-: (trackMetadata[t.id] || {});
+const m = _resolveQueueItemMeta(t);
 const titleEl = existingAtPos.querySelector('.q-title');
 const artistEl = existingAtPos.querySelector('.q-artist');
 if (titleEl && m.title && m.title !== '...' && m.title !== 'Loading...') titleEl.textContent = cleanDisplayName(m.title);
@@ -25117,9 +25340,7 @@ item.classList.toggle('active', isActive);
 item.dataset.virtualIndex = i;
 item.dataset.actualIndex = actualIndex;
 item.style.top = `${i * QUEUE_ITEM_HEIGHT}px`;
-const m = t._isYT
-? { title: t.title || t.id, artist: t.artist || 'YouTube' }
-: (trackMetadata[t.id] || {});
+const m = _resolveQueueItemMeta(t);
 const titleEl = item.querySelector('.q-title');
 const artistEl = item.querySelector('.q-artist');
 if (titleEl && m.title && m.title !== '...') titleEl.textContent = cleanDisplayName(m.title);
@@ -25142,7 +25363,7 @@ item.classList.toggle('blocked-track', typeof isTrackBlocked === 'function' && i
 rendered.set(i, item);
 } else {
 const m = t._isYT
-? { title: t.title || t.id, artist: t.artist || 'YouTube', album: 'YouTube' }
+? _resolveQueueItemMeta(t)
 : (trackMetadata[t.id] || {title:'...', artist:'...', album:'...'});
 const albumArtSrc = getAlbumArtForTrack(t);
 const artHTML = albumArtSrc
@@ -25249,9 +25470,13 @@ function loadQueueMetadataInBackground(filteredQueue) {
 const albumsInQueue = new Map();
 const itemsNeedingArt = [];
 const tracksMissingMeta = filteredQueue.filter(t => {
-// YT tracks carry their own metadata on the track object — never send them
-// to the worker's /metadata/folder endpoint (they'd just fire useless requests).
+// YT and Drive-video tracks carry/resolve their own metadata and are never
+// present in the worker's /metadata/folder table under their synthetic
+// __yt__/__drv__ id — sending them there just fires a request that can
+// never succeed, and since it never populates trackMetadata[id].title,
+// every re-render re-queues the same doomed request forever. Skip both.
 if (t._isYT || (t.id && t.id.startsWith('__yt__'))) return false;
+if (t._isDriveVideo || (t.id && t.id.startsWith('__drv__'))) return false;
 const m = trackMetadata[t.id];
 return !m || !m.title || m.title === '...' || m.title === 'Loading...';
 });
@@ -25263,8 +25488,10 @@ if (!albumsInQueue.has(albumKey)) {
 albumsInQueue.set(albumKey, []);
 }
 albumsInQueue.get(albumKey).push(t.id);
-// YT tracks always resolve art from ytimg — skip them from the worker art batch.
+// YT tracks always resolve art from ytimg, Drive videos resolve their own
+// thumbnail via driveVideoLoad — skip both from the worker art batch.
 if (t._isYT || (t.id && t.id.startsWith('__yt__'))) return;
+if (t._isDriveVideo || (t.id && t.id.startsWith('__drv__'))) return;
 const hasArt = m.albumArt || tempArtCache[t.id] || albumArtCache[album];
 if (!hasArt && album !== 'Unknown' && !albumsWithArtLoaded.has(album)) {
 itemsNeedingArt.push(t.id);
@@ -27306,7 +27533,11 @@ const playlist = playlists[playlistName];
 if (!playlist || !Array.isArray(playlist) || playlist.length === 0) {
 return { success: false, count: 0 };
 }
-const trackIds = playlist.map(t => t.id).filter(Boolean);
+const trackIds = playlist.map(t => t.id).filter(Boolean)
+// YT/Drive-video synthetic ids self-contain their metadata and are never
+// resolvable via the worker's D1 table — sending them just wastes a slot
+// in the batch and never returns a hit.
+.filter(id => !id.startsWith('__yt__') && !id.startsWith('__drv__'));
 if (trackIds.length === 0) {
 return { success: false, count: 0 };
 }
@@ -30427,7 +30658,7 @@ localStorage.removeItem('goot_trackMetadata'); // primary metadata store
 localStorage.removeItem('goot_most_played');   // cached track list with art refs
 localStorage.removeItem('goot_listen_again_cache');
 _clearAccentCacheMirror();
-trackMetadata = {};
+trackMetadata = wrapTrackMetadataStore({});
 trackLoudnessCache = {};
 albumColorCache.clear();
 pendingAlbumArtSaves.clear();
@@ -30506,7 +30737,7 @@ const keysToRemove = [
 keysToRemove.forEach(key => {
 localStorage.removeItem(key);
 });
-trackMetadata = {};
+trackMetadata = wrapTrackMetadataStore({});
 AlbumArtManager.clear(); // Clears both tempArtCache and albumArtCache
 playCounts = {};
 playlists = {};
@@ -35107,6 +35338,28 @@ listenAgainRendered = false;
 renderListenAgainSection(true, true).catch(() => {});
 const ap = document.getElementById('all-played-screen');
 if (ap?.classList.contains('active')) renderAllPlayedTracksGrid();
+}
+function toggleLaPeriodMenu() {
+const menu    = document.getElementById('laPeriodMenu');
+const trigger = document.getElementById('laPeriodTrigger');
+if (!menu || !trigger) return;
+const isOpen = menu.classList.contains('open');
+if (isOpen) { closeLaPeriodMenu(); }
+else {
+menu.classList.add('open');
+trigger.classList.add('open');
+trigger.setAttribute('aria-expanded', 'true');
+}
+}
+function closeLaPeriodMenu() {
+const menu    = document.getElementById('laPeriodMenu');
+const trigger = document.getElementById('laPeriodTrigger');
+if (menu)    menu.classList.remove('open');
+if (trigger) { trigger.classList.remove('open'); trigger.setAttribute('aria-expanded', 'false'); }
+}
+function selectLaPeriod(optEl, period, label) {
+closeLaPeriodMenu();
+setListenAgainPeriod(period);
 } // Track album-level plays for consolidation
 let pinnedItems = { albums: [], playlists: [], tracks: [] }; // Pinned items for Listen Again
 let _pinnedTrackSet = new Set();
@@ -35115,7 +35368,6 @@ let _pinnedItemsReadyResolve;
 const pinnedItemsReady = new Promise(resolve => { _pinnedItemsReadyResolve = resolve; });
 let allPlayedViewMode = localStorage.getItem('goot_all_played_view') || 'grid'; // 'grid' | 'rows'
 let allPlayedGridSize = localStorage.getItem('goot_all_played_grid_size') || 'medium'; // 'small'|'medium'|'large'
-let folderGridSize = localStorage.getItem('goot_folder_grid_size') || 'medium'; // 'small'|'medium'|'large'
 let lastTrackedPosition = {};
 const PLAY_COUNT_THRESHOLD_DEFAULT = 0.50;
 Object.defineProperty(window, 'PLAY_COUNT_THRESHOLD', {
@@ -35508,18 +35760,26 @@ async function updateListenAgainSection(updatedTrackId = null) {
 await renderListenAgainSection();
 }
 async function refreshMostPlayedCache() {
+// Fall back to whatever was cached last time before ever giving up and
+// calling a track "Unknown" — trackMetadata can be transiently empty right
+// after a METADATA_STORE_VERSION wipe (or just before a folder's metadata
+// finishes reloading), and this used to treat that gap as "this track has
+// no title" for every track not currently in the live queue, then
+// overwrite the entire most-played snapshot with that incomplete result.
+const cachedTracks = await loadMostPlayedFromDB().catch(() => []);
 const tracks = [];
 Object.entries(playCounts).forEach(([trackId, val]) => {
 const count = _normPC(val).c;
 if (count > 0) {
 const meta = trackMetadata[trackId];
 const queueTrack = queue.find(t => t.id === trackId);
+const cachedTrack = cachedTracks.find(t => t.id === trackId);
 tracks.push({
 id: trackId,
-title: meta?.title || queueTrack?.title || queueTrack?.name || 'Unknown Track',
-artist: meta?.artist || queueTrack?.artist || queueTrack?.artistName || 'Unknown Artist',
-album: meta?.album || queueTrack?.album || '',
-albumArt: meta?.albumArt || meta?.art || queueTrack?.albumArt || queueTrack?.art || '',
+title: meta?.title || queueTrack?.title || queueTrack?.name || cachedTrack?.title || 'Unknown Track',
+artist: meta?.artist || queueTrack?.artist || queueTrack?.artistName || cachedTrack?.artist || 'Unknown Artist',
+album: meta?.album || queueTrack?.album || cachedTrack?.album || '',
+albumArt: meta?.albumArt || meta?.art || queueTrack?.albumArt || queueTrack?.art || cachedTrack?.albumArt || '',
 playCount: count
 });
 }
@@ -35548,12 +35808,128 @@ const allTracksMeta = allTracks?.find(t => t.id === trackId);
 const rawId = trackId.startsWith('__drv__') ? trackId.slice(7) : null;
 const rawMeta = rawId ? (trackMetadata[rawId] || null) : null;
 const rawAllTracks = rawId ? (allTracks?.find(t => t.id === rawId) || null) : null;
+// YouTube tracks: always resolve art from the official ytimg thumbnail API
+// rather than whatever got cached/proxied at play time, and kick off a
+// background fetch to refresh title/artist/art from Innertube — see
+// _refreshYTTrackIfStale below. This means even a stale/blank cache entry
+// gets self-healed the next time the track is rendered anywhere, instead
+// of permanently showing "Unknown Track".
+const ytVideoId = trackId.startsWith('__yt__') ? trackId.slice('__yt__'.length) : null;
+if (ytVideoId) _refreshYTTrackIfStale(trackId, ytVideoId);
+// The generic "YouTube Video" / "YouTube" strings are placeholders, not
+// real metadata — never treat them as a resolved title/artist, or a saved
+// track would get stuck showing the default forever instead of falling
+// through to another source (or triggering another refresh attempt).
+const metaTitle = (meta?.title && meta.title !== 'YouTube Video') ? meta.title : null;
+const metaArtist = (meta?.artist && meta.artist !== 'YouTube') ? meta.artist : null;
+const rawMetaTitle = (rawMeta?.title && rawMeta.title !== 'YouTube Video') ? rawMeta.title : null;
+const rawMetaArtist = (rawMeta?.artist && rawMeta.artist !== 'YouTube') ? rawMeta.artist : null;
 return {
-title: meta?.title || queueTrack?.title || queueTrack?.name || cachedTrack?.title || allTracksMeta?.title || allTracksMeta?.name || rawMeta?.title || rawAllTracks?.title || rawAllTracks?.name || 'Unknown Track',
-artist: meta?.artist || queueTrack?.artist || queueTrack?.artistName || cachedTrack?.artist || allTracksMeta?.artist || rawMeta?.artist || rawAllTracks?.artist || 'Unknown Artist',
+title: metaTitle || queueTrack?.title || queueTrack?.name || cachedTrack?.title || allTracksMeta?.title || allTracksMeta?.name || rawMetaTitle || rawAllTracks?.title || rawAllTracks?.name || 'Unknown Track',
+artist: metaArtist || queueTrack?.artist || queueTrack?.artistName || cachedTrack?.artist || allTracksMeta?.artist || rawMetaArtist || rawAllTracks?.artist || 'Unknown Artist',
 album: meta?.album || queueTrack?.album || cachedTrack?.album || allTracksMeta?.album || rawMeta?.album || rawAllTracks?.album || '',
-albumArt: meta?.albumArt || meta?.art || queueTrack?.albumArt || queueTrack?.art || cachedTrack?.albumArt || cachedTrack?.art || allTracksMeta?.albumArt || allTracksMeta?.art || rawMeta?.albumArt || rawAllTracks?.albumArt || rawAllTracks?.thumbnailLink || ''
+albumArt: ytVideoId ? `https://i.ytimg.com/vi/${ytVideoId}/mqdefault.jpg` : (meta?.albumArt || meta?.art || queueTrack?.albumArt || queueTrack?.art || cachedTrack?.albumArt || cachedTrack?.art || allTracksMeta?.albumArt || allTracksMeta?.art || rawMeta?.albumArt || rawAllTracks?.albumArt || rawAllTracks?.thumbnailLink || '')
 };
+}
+/**
+* Background self-heal for YouTube tracks shown in Listen Again / All Played
+* Tracks: fetches fresh title/author/art from Innertube (via YT_SEARCH_WORKER)
+* and, if it differs from what's cached, patches trackMetadata + IndexedDB
+* and any matching card already on screen. Safe to call on every render —
+* fetchFreshYTMeta de-dupes in-flight requests and short-TTL-caches results.
+*/
+const _ytStaleRefreshInFlight = new Set();
+async function _refreshYTTrackIfStale(trackId, videoId) {
+if (typeof fetchFreshYTMeta !== 'function' || _ytStaleRefreshInFlight.has(trackId)) return;
+_ytStaleRefreshInFlight.add(trackId);
+try {
+const fresh = await fetchFreshYTMeta(videoId);
+if (!fresh) return;
+const existing = trackMetadata[trackId] || {};
+// Only ever accept *real* title/artist values from the fetch. Never write
+// the generic "YouTube Video" / "YouTube" placeholder into saved
+// metadata — doing that used to make a track look "resolved" and stop
+// future retries, which is exactly why some cards got stuck showing the
+// default label forever the first time a fetch came back empty (rate
+// limit, transient network error, etc). Real values always win; a blank
+// fetch result just leaves the existing (possibly still-empty) value
+// alone so the next render tries again.
+const nextTitle = fresh.title || existing.title || '';
+const nextArtist = fresh.artist || existing.artist || '';
+const nextArt = fresh.albumArt || existing.albumArt || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+const gotRealTitle  = !!fresh.title  && fresh.title  !== existing.title;
+const gotRealArtist = !!fresh.artist && fresh.artist !== existing.artist;
+const gotRealArt    = !!fresh.albumArt && fresh.albumArt !== existing.albumArt;
+if (!gotRealTitle && !gotRealArtist && !gotRealArt) return; // nothing new yet — try again on next render
+const updated = { ...existing, title: nextTitle || existing.title, artist: nextArtist || existing.artist, album: 'YouTube', albumArt: nextArt, _isYT: true, _ytVideoId: videoId };
+trackMetadata[trackId] = updated;
+if (typeof saveCompleteTrackMetadata === 'function') saveCompleteTrackMetadata(trackId, updated).catch(() => {});
+// Patch any visible Listen Again / All Played Tracks cards for this track in place.
+document.querySelectorAll(`[data-track-id="${CSS.escape(trackId)}"]`).forEach(card => {
+const titleEl = card.querySelector('.listen-again-track-title, .card-title, .title');
+const artistEl = card.querySelector('.listen-again-track-artist, .card-subtitle, .artist');
+const imgEl = card.querySelector('img');
+if (titleEl && nextTitle) titleEl.textContent = nextTitle;
+if (artistEl && nextArtist) artistEl.textContent = nextArtist;
+if (imgEl && nextArt && imgEl.src !== nextArt) imgEl.src = nextArt;
+});
+} catch (e) {
+console.warn('[_refreshYTTrackIfStale] failed for', trackId, e);
+} finally {
+_ytStaleRefreshInFlight.delete(trackId);
+}
+}
+/**
+* Background self-heal for regular (non-YouTube) tracks shown in Listen
+* Again whose metadata simply hadn't finished loading (D1/R2 fetch still in
+* flight, or never kicked off) at the moment they were first read. Uses the
+* same full fallback chain as everywhere else (getCentralTrackMetadata:
+* queue → cache → D1/R2 → client-side extraction) and, once it resolves,
+* patches trackMetadata + any matching card already on screen — same
+* mechanism as _refreshYTTrackIfStale, just without the Innertube-specific
+* bits. This is what lets a track that briefly looked "Unknown Track" on
+* the very first Listen Again render reappear once its real title/artist
+* comes back, instead of staying excluded forever.
+*/
+const _localStaleRefreshInFlight = new Set();
+async function _refreshLocalTrackIfStale(trackId) {
+if (typeof getCentralTrackMetadata !== 'function' || _localStaleRefreshInFlight.has(trackId)) return;
+_localStaleRefreshInFlight.add(trackId);
+try {
+const fresh = await getCentralTrackMetadata(trackId, { forceRefresh: true, extractIfMissing: true });
+if (!fresh) return;
+const existing = trackMetadata[trackId] || {};
+const nextTitle = (fresh.title && fresh.title !== 'Unknown Track') ? fresh.title : existing.title || '';
+const nextArtist = (fresh.artist && fresh.artist !== 'Unknown Artist') ? fresh.artist : existing.artist || '';
+const nextArt = fresh.albumArt || existing.albumArt || '';
+const gotRealTitle  = !!nextTitle  && nextTitle  !== existing.title;
+const gotRealArtist = !!nextArtist && nextArtist !== existing.artist;
+const gotRealArt    = !!nextArt && nextArt !== existing.albumArt;
+if (!gotRealTitle && !gotRealArtist && !gotRealArt) return; // nothing new yet — try again on next render
+const updated = { ...existing, title: nextTitle || existing.title, artist: nextArtist || existing.artist, album: fresh.album || existing.album, albumArt: nextArt };
+trackMetadata[trackId] = updated;
+if (typeof saveCompleteTrackMetadata === 'function') saveCompleteTrackMetadata(trackId, updated).catch(() => {});
+// Patch any visible Listen Again / All Played Tracks cards for this track in place.
+document.querySelectorAll(`[data-track-id="${CSS.escape(trackId)}"]`).forEach(card => {
+const titleEl = card.querySelector('.listen-again-track-title, .card-title, .title');
+const artistEl = card.querySelector('.listen-again-track-artist, .card-subtitle, .artist');
+const imgEl = card.querySelector('img');
+if (titleEl && nextTitle) titleEl.textContent = nextTitle;
+if (artistEl && nextArtist) artistEl.textContent = nextArtist;
+if (imgEl && nextArt && imgEl.src !== nextArt) imgEl.src = nextArt;
+});
+// A track that was previously excluded from Listen Again for being
+// unresolved now has real metadata — force a re-render so it can appear
+// instead of waiting for some unrelated trigger (play count tick, etc).
+if (typeof listenAgainRendered !== 'undefined') {
+listenAgainRendered = false;
+if (typeof renderListenAgainSection === 'function') renderListenAgainSection(true, true).catch(() => {});
+}
+} catch (e) {
+console.warn('[_refreshLocalTrackIfStale] failed for', trackId, e);
+} finally {
+_localStaleRefreshInFlight.delete(trackId);
+}
 }
 /**
 * Build the display items array (pinned + regular tracks)
@@ -35561,12 +35937,13 @@ albumArt: meta?.albumArt || meta?.art || queueTrack?.albumArt || queueTrack?.art
 function buildListenAgainDisplayItems(tracks, maxItems, isExpanded) {
 const displayItems = [];
 pinnedItems.tracks?.forEach(pinned => {
+const _ytVideoId = pinned.id && pinned.id.startsWith('__yt__') ? pinned.id.slice('__yt__'.length) : null;
 const trackData = tracks.find(t => t.id === pinned.id) || {
 id: pinned.id,
 title: pinned.title || 'Unknown Track',
 artist: pinned.artist || 'Unknown Artist',
 album: pinned.album || '',
-albumArt: trackMetadata[pinned.id]?.albumArt || pinned.albumArt || pinned.art || '',
+albumArt: _ytVideoId ? `https://i.ytimg.com/vi/${_ytVideoId}/mqdefault.jpg` : (trackMetadata[pinned.id]?.albumArt || pinned.albumArt || pinned.art || ''),
 playCount: 0
 };
 displayItems.push({ type: 'pinned-track', ...trackData, pinnedAt: pinned.pinnedAt });
@@ -35599,6 +35976,10 @@ pinnedAt: pinned.pinnedAt
 tracks.forEach(track => {
 if (displayItems.length >= maxItems) return;
 let resolvedArt = '';
+const _ytVideoId = track.id && track.id.startsWith('__yt__') ? track.id.slice('__yt__'.length) : null;
+if (_ytVideoId) {
+resolvedArt = `https://i.ytimg.com/vi/${_ytVideoId}/mqdefault.jpg`;
+} else {
 if (track.album && track.album !== 'Unknown') {
 resolvedArt = albumArtCache[track.album] || '';
 }
@@ -35606,6 +35987,7 @@ if (!resolvedArt) {
 resolvedArt = track.albumArt || trackMetadata[track.id]?.albumArt || '';
 }
 if (!resolvedArt) resolvedArt = (typeof tempArtCache !== 'undefined' && tempArtCache[track.id]) || '';
+}
 displayItems.push({ type: 'track', ...track, albumArt: resolvedArt });
 });
 return displayItems;
@@ -35626,7 +36008,7 @@ data-album="${item.name}"
 id="listen-album-${globalIndex}">
 <div class="listen-again-track-art">
 <img src="${artUrl}" alt="${item.name}"
-onload="this.classList.add('fade-in', 'loaded');"
+onload="this.classList.add('fade-in', 'loaded'); _applyListenAgainCardColor(this);"
 onerror="this.src='${fallbackImg}'">
 <div class="pinned-badge"><i class="fa-solid fa-heart"></i></div>
 </div>
@@ -35646,7 +36028,7 @@ onerror="this.src='${fallbackImg}'">
 </div>
 <div class="listen-again-track-info">
 <div class="listen-again-track-title">${item.name}</div>
-<div class="listen-again-track-artist" style="color: white !important;">${label}</div>
+<div class="listen-again-track-artist">${label}</div>
 </div>
 </div>`;
 }
@@ -35659,7 +36041,7 @@ id="listen-playlist-${globalIndex}"
 data-playlist="${item.name}">
 <div class="listen-again-track-art">
 <img src="${artUrl}" alt="${item.name}"
-onload="this.classList.add('fade-in', 'loaded');"
+onload="this.classList.add('fade-in', 'loaded'); _applyListenAgainCardColor(this);"
 onerror="this.src='${fallbackImg}'">
 <div class="pinned-badge"><i class="fa-solid fa-heart"></i></div>
 </div>
@@ -35688,7 +36070,8 @@ item = { ...item, id: item.id.slice('__yt__'.length), _isDriveVideo: true };
 }
 const _isDrvCard = !!(item._isDriveVideo || item._isVideo || (item.id && item.id.startsWith('__drv__')));
 const _drvRawId = _isDrvCard ? (item._driveId || (item.id.startsWith('__drv__') ? item.id.slice(7) : item.id)) : null;
-const albumArtUrl = item.albumArt || (item.album && item.album !== 'YouTube' && albumArtCache[item.album]) || fallbackImg;
+const _cardYtVideoId = item.id && item.id.startsWith('__yt__') ? item.id.slice('__yt__'.length) : null;
+const albumArtUrl = (_cardYtVideoId ? `https://i.ytimg.com/vi/${_cardYtVideoId}/mqdefault.jpg` : null) || item.albumArt || (item.album && item.album !== 'YouTube' && albumArtCache[item.album]) || fallbackImg;
 const _displayArtist = _isDrvCard ? (item.artist || 'Drive Video') : item.artist;
 const isPinnedTrack = item.type === 'pinned-track';
 return `
@@ -35698,7 +36081,7 @@ onclick="playMostPlayedTrack('${item.id}')"
 id="listen-track-${globalIndex}">
 <div class="listen-again-track-art">
 <img src="${albumArtUrl}" alt="${item.title}"
-onload="this.classList.add('fade-in', 'loaded');"
+onload="this.classList.add('fade-in', 'loaded'); _applyListenAgainCardColor(this);"
 onerror="this.src='${fallbackImg}'; this.classList.add('loaded');">
 ${isPinnedTrack ? '<div class="pinned-badge"><i class="fa-solid fa-heart"></i></div>' : ''}
 </div>
@@ -35902,24 +36285,58 @@ albumArtCache[album] = R2AlbumArt.getR2Url(album, artist);
 }));
 const displayItems = buildListenAgainDisplayItems(tracks, maxItems, isExpanded);
 const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Crect width='24' height='24' fill='%231a1c1e'/%3E%3Cpath d='M9 17V7l11-2v10' stroke='%23555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='7' cy='17' r='2' fill='%23555'/%3E%3Ccircle cx='18' cy='15' r='2' fill='%23555'/%3E%3C/svg%3E";
+// Skip the DOM rebuild entirely if nothing actually changed. innerHTML was
+// being reassigned on every trigger (play count tick, pin/unpin, page nav,
+// cloud sync, etc), which recreates every <img> in the carousel from
+// scratch even when its src is identical — that's what caused the visible
+// "reload flash" on album art. A cheap signature over what actually affects
+// the rendered output lets us bail out before touching the DOM at all when
+// it would produce the same result.
+const _laSignature = JSON.stringify({
+period: listenAgainPeriod,
+expanded: isExpanded,
+items: displayItems.map(it => [it.id || it.name, it.albumArt || it.art || '', it.playCount || 0, it.title || it.name])
+});
+const _laContentChanged = container.dataset.laSig !== _laSignature;
+if (_laContentChanged) {
+container.dataset.laSig = _laSignature;
 const _laScrollContainer = document.getElementById('listenAgainScrollContainer');
 const _savedScrollLeft = _laScrollContainer ? _laScrollContainer.scrollLeft : 0;
 container.innerHTML = displayItems.length > 0 ? `
 <div class="listen-again-header">
+<div class="listen-again-title-group">
+<div class="listen-again-icon"><i class="fa-solid fa-music"></i></div>
+<div>
 <h2 class="listen-again-title">Listen Again</h2>
-<div class="listen-again-actions">
-<div class="la-period-picker">
-<button class="la-period-chip${listenAgainPeriod==='week'?' active':''}" data-period="week" onclick="setListenAgainPeriod('week')">Week</button>
-<button class="la-period-chip${listenAgainPeriod==='month'?' active':''}" data-period="month" onclick="setListenAgainPeriod('month')">Month</button>
-<button class="la-period-chip${listenAgainPeriod==='lifetime'?' active':''}" data-period="lifetime" onclick="setListenAgainPeriod('lifetime')">All Time</button>
+<p class="listen-again-subtitle">Your most played tracks, albums, and playlists</p>
 </div>
-<select class="la-period-dropdown" onchange="setListenAgainPeriod(this.value)">
-<option value="week"${listenAgainPeriod==='week'?' selected':''}>Week</option>
-<option value="month"${listenAgainPeriod==='month'?' selected':''}>Month</option>
-<option value="lifetime"${listenAgainPeriod==='lifetime'?' selected':''}>All Time</option>
-</select>
-<button class="listen-again-expand-btn" onclick="showAllPlayedTracks()">
-<span>Show all</span>
+</div>
+<div class="listen-again-actions">
+<div class="la-period-dropdown-wrap" id="laPeriodDropdownWrap">
+<button class="la-period-trigger has-selection" id="laPeriodTrigger" type="button" onclick="toggleLaPeriodMenu()" aria-haspopup="listbox" aria-expanded="false">
+<span class="la-period-trigger-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+<span class="la-period-trigger-label" id="laPeriodLabel1">${listenAgainPeriod==='week'?'Week':listenAgainPeriod==='month'?'Month':'All Time'}</span>
+<span class="la-period-trigger-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+</button>
+<div class="la-period-menu" id="laPeriodMenu" role="listbox" aria-label="Listen Again time range">
+<button class="la-period-option${listenAgainPeriod==='week'?' selected':''}" role="option" onclick="selectLaPeriod(this,'week','Week')">
+<span class="la-period-opt-icon"><i class="fa-solid fa-calendar-week"></i></span>
+<span class="la-period-opt-label">Week</span>
+<span class="la-period-opt-check"><i class="fa-solid fa-check"></i></span>
+</button>
+<button class="la-period-option${listenAgainPeriod==='month'?' selected':''}" role="option" onclick="selectLaPeriod(this,'month','Month')">
+<span class="la-period-opt-icon"><i class="fa-solid fa-calendar-days"></i></span>
+<span class="la-period-opt-label">Month</span>
+<span class="la-period-opt-check"><i class="fa-solid fa-check"></i></span>
+</button>
+<button class="la-period-option${listenAgainPeriod==='lifetime'?' selected':''}" role="option" onclick="selectLaPeriod(this,'lifetime','All Time')">
+<span class="la-period-opt-icon"><i class="fa-solid fa-infinity"></i></span>
+<span class="la-period-opt-label">All Time</span>
+<span class="la-period-opt-check"><i class="fa-solid fa-check"></i></span>
+</button>
+</div>
+</div>
+<button class="listen-again-expand-btn" onclick="showAllPlayedTracks()" title="Show all">
 <i class="fa-solid fa-chevron-right"></i>
 </button>
 </div>
@@ -35946,18 +36363,38 @@ ${displayItems.map((item, i) => renderListenAgainCard(item, i, 0, fallbackImg)).
 </div>
 ` : `
 <div class="listen-again-header">
+<div class="listen-again-title-group">
+<div class="listen-again-icon"><i class="fa-solid fa-music"></i></div>
+<div>
 <h2 class="listen-again-title">Listen Again</h2>
-<div class="listen-again-actions">
-<div class="la-period-picker">
-<button class="la-period-chip${listenAgainPeriod==='week'?' active':''}" data-period="week" onclick="setListenAgainPeriod('week')">Week</button>
-<button class="la-period-chip${listenAgainPeriod==='month'?' active':''}" data-period="month" onclick="setListenAgainPeriod('month')">Month</button>
-<button class="la-period-chip${listenAgainPeriod==='lifetime'?' active':''}" data-period="lifetime" onclick="setListenAgainPeriod('lifetime')">All Time</button>
+<p class="listen-again-subtitle">Your most played tracks, albums, and playlists</p>
 </div>
-<select class="la-period-dropdown" onchange="setListenAgainPeriod(this.value)">
-<option value="week"${listenAgainPeriod==='week'?' selected':''}>Week</option>
-<option value="month"${listenAgainPeriod==='month'?' selected':''}>Month</option>
-<option value="lifetime"${listenAgainPeriod==='lifetime'?' selected':''}>All Time</option>
-</select>
+</div>
+<div class="listen-again-actions">
+<div class="la-period-dropdown-wrap" id="laPeriodDropdownWrap">
+<button class="la-period-trigger has-selection" id="laPeriodTrigger" type="button" onclick="toggleLaPeriodMenu()" aria-haspopup="listbox" aria-expanded="false">
+<span class="la-period-trigger-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+<span class="la-period-trigger-label" id="laPeriodLabel2">${listenAgainPeriod==='week'?'Week':listenAgainPeriod==='month'?'Month':'All Time'}</span>
+<span class="la-period-trigger-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+</button>
+<div class="la-period-menu" id="laPeriodMenu" role="listbox" aria-label="Listen Again time range">
+<button class="la-period-option${listenAgainPeriod==='week'?' selected':''}" role="option" onclick="selectLaPeriod(this,'week','Week')">
+<span class="la-period-opt-icon"><i class="fa-solid fa-calendar-week"></i></span>
+<span class="la-period-opt-label">Week</span>
+<span class="la-period-opt-check"><i class="fa-solid fa-check"></i></span>
+</button>
+<button class="la-period-option${listenAgainPeriod==='month'?' selected':''}" role="option" onclick="selectLaPeriod(this,'month','Month')">
+<span class="la-period-opt-icon"><i class="fa-solid fa-calendar-days"></i></span>
+<span class="la-period-opt-label">Month</span>
+<span class="la-period-opt-check"><i class="fa-solid fa-check"></i></span>
+</button>
+<button class="la-period-option${listenAgainPeriod==='lifetime'?' selected':''}" role="option" onclick="selectLaPeriod(this,'lifetime','All Time')">
+<span class="la-period-opt-icon"><i class="fa-solid fa-infinity"></i></span>
+<span class="la-period-opt-label">All Time</span>
+<span class="la-period-opt-check"><i class="fa-solid fa-check"></i></span>
+</button>
+</div>
+</div>
 </div>
 </div>
 <div class="listen-again-empty">
@@ -35972,6 +36409,7 @@ if (_savedScrollLeft > 0) {
 const _newScrollContainer = document.getElementById('listenAgainScrollContainer');
 if (_newScrollContainer) _newScrollContainer.scrollLeft = _savedScrollLeft;
 }
+updateListenAgainScrollState();
 if (!skipAnimation) {
 setTimeout(() => {
 container.querySelectorAll('.listen-again-track-card').forEach((card, i) => {
@@ -35981,8 +36419,6 @@ setTimeout(() => card.classList.add('loaded'), 50 * i);
 } else {
 container.querySelectorAll('.listen-again-track-card').forEach(card => {
 card.classList.add('loaded');
-card.style.opacity = '1';
-card.style.transform = 'none';
 });
 }
 setTimeout(() => {
@@ -36004,6 +36440,7 @@ unpinItem(type, name);
 });
 });
 }, 50);
+} // end if (_laContentChanged)
 listenAgainRendered = true;
 if (typeof updateNowPlayingRowIndicator === 'function') updateNowPlayingRowIndicator();
 if (tracks.length > 0 && !skipSave) {
@@ -36014,7 +36451,7 @@ lazyLoadListenAgainArt(displayItems);
 const trackIds = Object.keys(playCounts);
 const tracksNeedingMetadata = trackIds.filter(id => {
 const meta = trackMetadata[id];
-return !meta || meta.title === 'Unknown Track' || !meta.title;
+return !meta || !meta.title || meta.title === 'Unknown Track' || meta.title === 'YouTube Video';
 });
 if (tracksNeedingMetadata.length > 0) {
 getBatchTrackMetadata(tracksNeedingMetadata).catch(() => {});
@@ -36276,7 +36713,13 @@ track._resolvedArt = track.albumArt || '';
 });
 container.innerHTML = `
 <div class="listen-again-header">
+<div class="listen-again-title-group">
+<div class="listen-again-icon"><i class="fa-solid fa-music"></i></div>
+<div>
 <h2 class="listen-again-title">Listen Again</h2>
+<p class="listen-again-subtitle">Your most played tracks, albums, and playlists</p>
+</div>
+</div>
 <div class="listen-again-actions">
 ${hasTracks ? `
 <button class="listen-again-expand-btn" onclick="showAllPlayedTracks()">
@@ -36412,32 +36855,6 @@ document.getElementById('apPeriodLifetime')?.classList.toggle('active', listenAg
 document.querySelectorAll('.la-period-chip').forEach(c =>
 c.classList.toggle('active', c.dataset.period === listenAgainPeriod));
 }
-function setFolderGridSize(size) {
-folderGridSize = size;
-localStorage.setItem('goot_folder_grid_size', size);
-applyFolderGridSize();
-}
-function applyFolderGridSize() {
-const grid = document.getElementById('folderGrid');
-if (grid) {
-grid.classList.remove('size-small', 'size-medium', 'size-large');
-grid.classList.add(`size-${folderGridSize}`);
-}
-const ovGrid = document.getElementById('otherVersionsGrid');
-if (ovGrid) {
-ovGrid.classList.remove('size-small', 'size-medium', 'size-large');
-ovGrid.classList.add(`size-${folderGridSize}`);
-}
-const singlesGrid = document.getElementById('singlesGrid');
-if (singlesGrid) {
-singlesGrid.classList.remove('size-small', 'size-medium', 'size-large');
-singlesGrid.classList.add(`size-${folderGridSize}`);
-}
-['Small','Medium','Large'].forEach(s => {
-const btn = document.getElementById(`fgSize${s}`);
-if (btn) btn.classList.toggle('active', folderGridSize === s.toLowerCase());
-});
-}
 async function renderAllPlayedTracksGrid() {
 const container = document.getElementById('allPlayedTracksContainer');
 if (!container) return;
@@ -36447,12 +36864,19 @@ let tracks = [];
 Object.entries(_apFiltered).forEach(([trackId, count]) => {
 const meta = trackMetadata[trackId];
 const queueTrack = queue.find(t => t.id === trackId);
+const ytVideoId = trackId.startsWith('__yt__') ? trackId.slice('__yt__'.length) : null;
+if (ytVideoId && typeof _refreshYTTrackIfStale === 'function') _refreshYTTrackIfStale(trackId, ytVideoId);
+// Never treat the generic "YouTube Video" / "YouTube" placeholder as a
+// resolved title/artist here either — same fix as getLocalTrackMetadata,
+// this grid has its own separate lookup so it needs it applied directly.
+const metaTitle = (meta?.title && meta.title !== 'YouTube Video') ? meta.title : null;
+const metaArtist = (meta?.artist && meta.artist !== 'YouTube') ? meta.artist : null;
 tracks.push({
 id: trackId,
-title: meta?.title || queueTrack?.title || queueTrack?.name || 'Unknown Track',
-artist: meta?.artist || queueTrack?.artist || queueTrack?.artistName || 'Unknown Artist',
+title: metaTitle || queueTrack?.title || queueTrack?.name || 'Unknown Track',
+artist: metaArtist || queueTrack?.artist || queueTrack?.artistName || 'Unknown Artist',
 album: meta?.album || queueTrack?.album || '',
-albumArt: meta?.albumArt || meta?.art || queueTrack?.albumArt || queueTrack?.art || '',
+albumArt: ytVideoId ? `https://i.ytimg.com/vi/${ytVideoId}/mqdefault.jpg` : (meta?.albumArt || meta?.art || queueTrack?.albumArt || queueTrack?.art || ''),
 playCount: count
 });
 });
@@ -36790,10 +37214,12 @@ const meta = trackMetadata[id];
 const queueTrack = queue.find(t => t.id === id);
 const album = meta?.album || queueTrack?.album || '';
 const cachedArt = (album && album !== 'Unknown' && albumArtCache[album]) ? albumArtCache[album] : '';
+const metaTitle = (meta?.title && meta.title !== 'YouTube Video') ? meta.title : null;
+const metaArtist = (meta?.artist && meta.artist !== 'YouTube') ? meta.artist : null;
 return {
 id,
-title: meta?.title || queueTrack?.title || queueTrack?.name || 'Unknown Track',
-artist: meta?.artist || queueTrack?.artist || queueTrack?.artistName || 'Unknown Artist',
+title: metaTitle || queueTrack?.title || queueTrack?.name || 'Unknown Track',
+artist: metaArtist || queueTrack?.artist || queueTrack?.artistName || 'Unknown Artist',
 album,
 albumArt: meta?.albumArt || meta?.art || cachedArt || queueTrack?.albumArt || queueTrack?.art || '',
 path: meta?.path || queueTrack?.path || '',
@@ -37322,7 +37748,6 @@ updateLayoutVariables();
 }, 50);
 setupMetadataUISync();
 updateAllPlayedToolbar();
-applyFolderGridSize();
 });
 window.addEventListener('load', () => {
 updateLayoutVariables();
@@ -37459,6 +37884,14 @@ updateQueueActiveState(next);
 play(next);
 }
 function togglePlay() {
+if (typeof isYTMode !== 'undefined' && isYTMode) {
+const ytVid = document.getElementById('ytVideo');
+if (ytVid) {
+if (ytVid.paused) ytVid.play().catch(() => {});
+else ytVid.pause();
+return;
+}
+}
 const isGuest = typeof partyState !== 'undefined' && partyState.active &&
 partyState.role === 'guest' && !(typeof _isPartyDJ === 'function' && _isPartyDJ());
 if (isGuest) {
@@ -37645,38 +38078,22 @@ a.href = URL.createObjectURL(blob);
 a.download = "backup.goot2";
 a.click();
 }
-async function exportAllData() {
+async function exportAllData(evt) {
 try {
-const exportBtn = event.target.closest('button');
-const originalHTML = exportBtn.innerHTML;
+const exportBtn = (evt && evt.target && evt.target.closest) ? evt.target.closest('button') : document.querySelector('[onclick^="exportAllData"]');
+const originalHTML = exportBtn ? exportBtn.innerHTML : '';
+if (exportBtn) {
 exportBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exporting...';
 exportBtn.disabled = true;
+}
 const localStorageData = {};
 const gootKeys = [
-'goot_meta_cache',
 'goot_play_counts',
 'goot_playlists',
-'goot_most_played',
 'goot_pinned_items',
-'goot_accent',
-'goot_accent_base',
-'goot_accent_saturation',
-'goot_accent_brightness',
-'goot_album_color',
-'goot_theme',
-'goot_hide_played',
-'goot_sort_order',
-'goot_auto_play',
-'goot_volume',
-'goot_queue',
 'goot_listen_again_cache',
-'goot_folder_state',
-'goot_eq_state',
-'goot_norm_enabled',
-'goot_norm_target',
-'goot_animations_disabled',
-'goot_album_accent_cache',
-'goot_sidebar_width'
+'goot_account_token',
+'goot_account_username'
 ];
 gootKeys.forEach(key => {
 const value = localStorage.getItem(key);
@@ -37686,54 +38103,28 @@ localStorageData[key] = value;
 });
 const indexedDBData = {};
 if (!metaDB) await initMetaDB();
-const trackMetadataArray = await new Promise((resolve, reject) => {
-const transaction = metaDB.transaction(['trackMetadata'], 'readonly');
-const store = transaction.objectStore('trackMetadata');
+// Some store names here are leftover from an older schema and don't exist
+// in the current DB_VERSION upgrade path — calling .transaction() on a
+// nonexistent store throws synchronously (NotFoundError) and aborts the
+// whole export. Read each store defensively instead.
+async function _readStoreIfExists(storeName) {
+if (!metaDB.objectStoreNames.contains(storeName)) return [];
+return new Promise((resolve, reject) => {
+try {
+const transaction = metaDB.transaction([storeName], 'readonly');
+const store = transaction.objectStore(storeName);
 const request = store.getAll();
 request.onsuccess = () => resolve(request.result || []);
 request.onerror = () => reject(request.error);
+} catch (e) { reject(e); }
 });
-indexedDBData.trackMetadata = trackMetadataArray;
-const playCountsArray = await new Promise((resolve, reject) => {
-const transaction = metaDB.transaction(['playCounts'], 'readonly');
-const store = transaction.objectStore('playCounts');
-const request = store.getAll();
-request.onsuccess = () => resolve(request.result || []);
-request.onerror = () => reject(request.error);
-});
-indexedDBData.playCounts = playCountsArray;
-const playlistsArray = await new Promise((resolve, reject) => {
-const transaction = metaDB.transaction(['playlists'], 'readonly');
-const store = transaction.objectStore('playlists');
-const request = store.getAll();
-request.onsuccess = () => resolve(request.result || []);
-request.onerror = () => reject(request.error);
-});
-indexedDBData.playlists = playlistsArray;
-const albumArtArray = await new Promise((resolve, reject) => {
-const transaction = metaDB.transaction(['albumArt'], 'readonly');
-const store = transaction.objectStore('albumArt');
-const request = store.getAll();
-request.onsuccess = () => resolve(request.result || []);
-request.onerror = () => reject(request.error);
-});
-indexedDBData.albumArt = albumArtArray;
-const mostPlayedArray = await new Promise((resolve, reject) => {
-const transaction = metaDB.transaction(['mostPlayed'], 'readonly');
-const store = transaction.objectStore('mostPlayed');
-const request = store.getAll();
-request.onsuccess = () => resolve(request.result || []);
-request.onerror = () => reject(request.error);
-});
-indexedDBData.mostPlayed = mostPlayedArray;
-const albumCountsArray = await new Promise((resolve, reject) => {
-const transaction = metaDB.transaction(['albumCounts'], 'readonly');
-const store = transaction.objectStore('albumCounts');
-const request = store.getAll();
-request.onsuccess = () => resolve(request.result || []);
-request.onerror = () => reject(request.error);
-});
-indexedDBData.albumCounts = albumCountsArray;
+}
+// Only export what's needed for Listen Again + playlists + account.
+// trackMetadata/albumArt/albumCounts/albumColors/mostPlayed are re-fetched
+// from the backend automatically and don't need to travel in the backup.
+indexedDBData.playCounts = await _readStoreIfExists('playCounts');
+indexedDBData.playlists = await _readStoreIfExists('playlists');
+indexedDBData.pinnedItems = await _readStoreIfExists('pinnedItems');
 const exportData = {
 exportVersion: '1.0',
 exportDate: new Date().toISOString(),
@@ -37742,7 +38133,6 @@ localStorage: localStorageData,
 indexedDB: indexedDBData,
 currentState: {
 playlists: playlists,
-trackMetadata: Object.keys(trackMetadata).length,
 playCounts: Object.keys(playCounts).length,
 pinnedItems: pinnedItems
 }
@@ -37755,16 +38145,21 @@ a.href = URL.createObjectURL(blob);
 a.download = `goot-full-backup-${timestamp}.json`;
 a.click();
 URL.revokeObjectURL(a.href);
+if (exportBtn) {
 exportBtn.innerHTML = '<i class="fa-solid fa-check"></i> Export Complete!';
 setTimeout(() => {
 exportBtn.innerHTML = originalHTML;
 exportBtn.disabled = false;
 }, 2000);
+}
 } catch (error) {
-alert('Failed to export data. Check console for details.');
-const exportBtn = event.target.closest('button');
+console.error('[exportAllData] failed:', error);
+alert('Failed to export data: ' + (error && (error.message || error)) + '\n\n(See console for full details.)');
+const exportBtn = (evt && evt.target && evt.target.closest) ? evt.target.closest('button') : document.querySelector('[onclick^="exportAllData"]');
+if (exportBtn) {
 exportBtn.innerHTML = '<i class="fa-solid fa-download"></i> Export All Data';
 exportBtn.disabled = false;
+}
 }
 }
 async function importAllData(input) {
@@ -37786,21 +38181,6 @@ if (!metaDB) await initMetaDB();
 Object.keys(importData.localStorage).forEach(key => {
 localStorage.setItem(key, importData.localStorage[key]);
 });
-if (importData.indexedDB.trackMetadata && importData.indexedDB.trackMetadata.length > 0) {
-const transaction = metaDB.transaction(['trackMetadata'], 'readwrite');
-const store = transaction.objectStore('trackMetadata');
-await new Promise((resolve) => {
-const clearRequest = store.clear();
-clearRequest.onsuccess = () => resolve();
-});
-for (const item of importData.indexedDB.trackMetadata) {
-item.metadataVersion = METADATA_STORE_VERSION;
-store.put(item);
-}
-await new Promise((resolve) => {
-transaction.oncomplete = () => resolve();
-});
-}
 if (importData.indexedDB.playCounts && importData.indexedDB.playCounts.length > 0) {
 const transaction = metaDB.transaction(['playCounts'], 'readwrite');
 const store = transaction.objectStore('playCounts');
@@ -37829,42 +38209,14 @@ await new Promise((resolve) => {
 transaction.oncomplete = () => resolve();
 });
 }
-if (importData.indexedDB.albumArt && importData.indexedDB.albumArt.length > 0) {
-const transaction = metaDB.transaction(['albumArt'], 'readwrite');
-const store = transaction.objectStore('albumArt');
+if (importData.indexedDB.pinnedItems && importData.indexedDB.pinnedItems.length > 0 && metaDB.objectStoreNames.contains('pinnedItems')) {
+const transaction = metaDB.transaction(['pinnedItems'], 'readwrite');
+const store = transaction.objectStore('pinnedItems');
 await new Promise((resolve) => {
 const clearRequest = store.clear();
 clearRequest.onsuccess = () => resolve();
 });
-for (const item of importData.indexedDB.albumArt) {
-store.put(item);
-}
-await new Promise((resolve) => {
-transaction.oncomplete = () => resolve();
-});
-}
-if (importData.indexedDB.mostPlayed && importData.indexedDB.mostPlayed.length > 0) {
-const transaction = metaDB.transaction(['mostPlayed'], 'readwrite');
-const store = transaction.objectStore('mostPlayed');
-await new Promise((resolve) => {
-const clearRequest = store.clear();
-clearRequest.onsuccess = () => resolve();
-});
-for (const item of importData.indexedDB.mostPlayed) {
-store.put(item);
-}
-await new Promise((resolve) => {
-transaction.oncomplete = () => resolve();
-});
-}
-if (importData.indexedDB.albumCounts && importData.indexedDB.albumCounts.length > 0) {
-const transaction = metaDB.transaction(['albumCounts'], 'readwrite');
-const store = transaction.objectStore('albumCounts');
-await new Promise((resolve) => {
-const clearRequest = store.clear();
-clearRequest.onsuccess = () => resolve();
-});
-for (const item of importData.indexedDB.albumCounts) {
+for (const item of importData.indexedDB.pinnedItems) {
 store.put(item);
 }
 await new Promise((resolve) => {
@@ -39212,8 +39564,6 @@ if (!listBody) return;
 const listenAgainSection = document.getElementById('listenAgainSection');
 if (listenAgainSection) listenAgainSection.style.display = 'none';
 if (grid) grid.style.display = 'none';
-const toolbar = document.getElementById('folderGridToolbar');
-if (toolbar) toolbar.style.display = 'none';
 const folderHeader = document.getElementById('folderHeader');
 if (folderHeader) folderHeader.style.display = 'flex';
 const breadcrumb = document.getElementById('breadcrumb');
@@ -39317,7 +39667,6 @@ section.innerHTML = '<h2 class="other-versions-title">Other Versions</h2><div cl
 const table = listBody.closest('table') || listBody;
 table.parentElement.appendChild(section);
 const grid = document.getElementById('otherVersionsGrid');
-if (typeof folderGridSize === 'string') grid.classList.add(`size-${folderGridSize}`);
 siblingFolders.forEach(f => {
 const card = document.createElement('div');
 card.className = 'folder-card playlist-card loaded';
@@ -45801,6 +46150,57 @@ window.refreshDeMarquees = refreshDeMarquees;
 const YT_PROXY        = 'https://fedoramsi.tail399583.ts.net/yt';
 const YT_STREAM_PROXY = 'https://gootstream.peneener2001.workers.dev';
 const YT_SEARCH_WORKER = 'https://ytsearch.goot-api.workers.dev/';
+/**
+* Always resolves title/author fresh from the Innertube worker (YT_SEARCH_WORKER
+* ?id=videoId → youtubei/v1/player) rather than trusting locally cached
+* trackMetadata, which is what caused titles to randomly revert to
+* "Unknown Track" and thumbnails to go missing in Listen Again / All Played
+* Tracks. The worker itself caches server-side for 300s, so calling this on
+* every render is cheap — we only add a short in-flight de-dupe here so a
+* grid of N cards showing the same video doesn't fire N simultaneous
+* requests, plus a 60s local memory cache to avoid re-hitting the worker on
+* rapid re-renders (scroll, resize, animation frames) of the same screen.
+*/
+const _ytFreshMetaCache = new Map();   // videoId → { data, ts }
+const _ytFreshMetaInFlight = new Map(); // videoId → Promise
+const YT_FRESH_META_TTL = 60000;
+async function fetchFreshYTMeta(videoId) {
+if (!videoId) return null;
+const cached = _ytFreshMetaCache.get(videoId);
+if (cached && (Date.now() - cached.ts) < YT_FRESH_META_TTL) return cached.data;
+if (_ytFreshMetaInFlight.has(videoId)) return _ytFreshMetaInFlight.get(videoId);
+const p = (async () => {
+try {
+const res = await fetch(`${YT_SEARCH_WORKER}?id=${encodeURIComponent(videoId)}`);
+if (!res.ok) throw new Error(`Innertube meta HTTP ${res.status}`);
+const data = await res.json();
+const hit = Array.isArray(data) ? data[0] : data;
+if (!hit || hit.error) throw new Error(hit?.error || 'no result');
+const result = {
+title: hit.title || '',
+artist: hit.author || hit.channel || '',
+albumArt: hit.thumb || hit.thumbnail || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+duration: hit.duration || 0,
+};
+_ytFreshMetaCache.set(videoId, { data: result, ts: Date.now() });
+return result;
+} catch (e) {
+console.warn('[fetchFreshYTMeta] failed for', videoId, e);
+// Fall back to the canonical ytimg thumbnail even on total failure —
+// never let this resolve to nothing, so callers never have to fall
+// back to "Unknown Track" for the art at least.
+const fallback = { title: '', artist: '', albumArt: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`, duration: 0 };
+return fallback;
+} finally {
+_ytFreshMetaInFlight.delete(videoId);
+}
+})();
+_ytFreshMetaInFlight.set(videoId, p);
+return p;
+}
+function ytVideoIdFromTrackId(trackId) {
+return (trackId && trackId.startsWith('__yt__')) ? trackId.slice('__yt__'.length) : null;
+}
 let isYTMode       = false;   // true when YouTube is the active audio source
 let _ytDash        = null;    // dash.js MediaPlayer instance
 let _ytCurrentData = null;    // { videoId, title, author, thumb, duration }
@@ -46015,6 +46415,12 @@ if (e.code === 'KeyF' && isYTMode) { e.preventDefault(); ytToggleFullscreen(); }
 async function ytLoad(videoId, meta) {
 _ytTeardown();
 _ytCurrentData = meta;
+// Always fetch fresh title/author/thumb from Innertube (via the worker) as
+// soon as we know the videoId, in parallel with the stream URL lookup below.
+// Whatever caller passed in `meta` (search result snippet, queue leftover,
+// etc) is treated as a placeholder only — this is what stops titles from
+// randomly reverting to "Unknown Track" from stale/partial cached data.
+const _freshMetaPromise = videoId ? fetchFreshYTMeta(videoId) : Promise.resolve(null);
 if (videoId) {
 const _fakeId = '__yt__' + videoId;
 const _earlyMeta = {
@@ -46045,6 +46451,35 @@ const thumb = document.getElementById('ytNowThumb');
 if (thumb) thumb.innerHTML = meta.thumb
 ? `<img src="${meta.thumb}" onerror="this.style.display='none'">`
 : '';
+// Apply the fresh Innertube metadata as soon as it lands, independent of
+// the stream-URL fetch below — so the title/artist/art update immediately
+// even if stream resolution is slow, and never silently stay blank.
+_freshMetaPromise.then((fresh) => {
+if (!fresh || _ytCurrentData !== meta) return; // a newer ytLoad call superseded this one
+if (fresh.title) meta.title = fresh.title;
+if (fresh.artist) meta.author = fresh.artist;
+if (fresh.albumArt) meta.thumb = fresh.albumArt;
+const titleEl = document.getElementById('ytNowTitle');
+const artistEl = document.getElementById('ytNowArtist');
+if (titleEl) titleEl.textContent = meta.title || '—';
+if (artistEl) artistEl.textContent = meta.author || '—';
+const thumbEl = document.getElementById('ytNowThumb');
+if (thumbEl && fresh.albumArt) thumbEl.innerHTML = `<img src="${fresh.albumArt}" onerror="this.style.display='none'">`;
+if (videoId && typeof trackMetadata !== 'undefined') {
+const _fakeId = '__yt__' + videoId;
+const _freshMeta = {
+title: meta.title || 'YouTube Video',
+artist: meta.author || 'YouTube',
+album: 'YouTube',
+albumArt: meta.thumb || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+_isYT: true,
+_ytVideoId: videoId,
+};
+trackMetadata[_fakeId] = _freshMeta;
+if (typeof saveCompleteTrackMetadata === 'function') saveCompleteTrackMetadata(_fakeId, _freshMeta).catch(() => {});
+if (typeof updateMediaSessionMetadata === 'function') updateMediaSessionMetadata(true);
+}
+}).catch(() => {});
 try {
 const res  = await fetch(`${YT_PROXY}/urls?v=${videoId}`);
 const data = await res.json();
@@ -47181,9 +47616,11 @@ const fxWrap = document.getElementById('fxPresetDropdownWrap');
 if (fxWrap && !fxWrap.contains(e.target)) closeFxPresetMenu();
 const eqWrap = document.getElementById('eqPresetDropdownWrap');
 if (eqWrap && !eqWrap.contains(e.target)) closeEqPresetMenu();
+const laWrap = document.getElementById('laPeriodDropdownWrap');
+if (laWrap && !laWrap.contains(e.target)) closeLaPeriodMenu();
 }, true);
 document.addEventListener('keydown', function(e) {
-if (e.key === 'Escape') { closeFxPresetMenu(); closeEqPresetMenu(); }
+if (e.key === 'Escape') { closeFxPresetMenu(); closeEqPresetMenu(); closeLaPeriodMenu(); }
 });
 document.addEventListener('visibilitychange', function() {
 if (document.visibilityState === 'visible') {
