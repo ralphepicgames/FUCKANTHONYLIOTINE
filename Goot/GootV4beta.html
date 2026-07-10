@@ -2640,6 +2640,8 @@ margin: 0 auto;
 background: var(--md-sys-color-background);
 transition: max-width 0.4s var(--motion-standard), width 0.4s var(--motion-standard);
 isolation: isolate;
+container-type: inline-size;
+container-name: library;
 }
 /* Allow absolute-positioned dropdowns to overflow on the YouTube screen */
 #youtube-screen{ overflow: visible; }
@@ -3715,8 +3717,12 @@ causes unnecessary paint work on every image (thumbnails, icons, etc.) */
 #fsArt img.loaded { opacity: 1; }
 .folder-grid {
 display: grid;
-grid-template-columns: repeat(auto-fill, minmax(clamp(140px, 15vw, 230px), 1fr));
-gap: clamp(14px, 1.8vw, 26px);
+/* Fallback for browsers without container query support: fluid auto-fill
+so it never collapses to 1 huge column. Container queries below override
+this with exact, intentional column counts once supported (~all evergreen
+browsers as of 2026). */
+grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+gap: 20px;
 position: relative;
 z-index: 1;
 width: 100%;
@@ -3725,6 +3731,29 @@ padding: 32px 24px 16px 24px;
 transition: max-width 0.4s var(--motion-standard);
 contain: content;
 }
+/* Column counts are driven by the *actual rendered width* of the library
+pane via container queries, not the browser viewport — this is what makes
+it size correctly whether the sidebar is expanded or collapsed, and on
+any laptop/desktop width, instead of guessing from vw. See .main-container
+which establishes the "library" containment context. */
+@container library (min-width: 480px) {
+.folder-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; }
+}
+@container library (min-width: 640px) {
+.folder-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+}
+@container library (min-width: 860px) {
+.folder-grid { grid-template-columns: repeat(4, 1fr); gap: 22px; }
+}
+@container library (min-width: 1140px) {
+.folder-grid { grid-template-columns: repeat(5, 1fr); gap: 26px; }
+}
+@container library (min-width: 1480px) {
+.folder-grid { grid-template-columns: repeat(6, 1fr); gap: 28px; }
+}
+/* Belt-and-suspenders: never let a card balloon past a sensible width even
+if a container query tier doesn't land exactly right (e.g. mid-resize). */
+.folder-card{ max-width: 280px; justify-self: center; width: 100%; }
 /* Hide grid entirely in album view — Other Versions section replaces it */
 #library-screen.album-view #folderGrid{ display: none !important; padding: 0 !important; }
 /* Breathing room between cover banner and track list */
@@ -3875,19 +3904,19 @@ margin: 0 auto;
 padding: 0 24px;
 transition: max-width 0.4s var(--motion-standard);
 }
-/* ── M3 Folder Card — redesigned ─────────────────────────────────────── */
-/* ── Folder card — styled like all-played-grid-card ─────────────────── */
+/* ── M3 Folder Card — redesigned to match the Listen Again card system ── */
 .folder-card {
 position: relative;
-background: var(--md-sys-color-surface-variant);
-border-radius: 20px;
+width: 100%;
+background: var(--md-sys-color-surface-container);
+border-radius: 18px;
 cursor: pointer;
 overflow: hidden;
 transition: opacity 0.15s var(--motion-standard), transform 0.15s var(--motion-standard), box-shadow 0.2s ease, border-color 0.2s ease;
 opacity: 0;
 transform: translateY(12px);
 transform-origin: center center;
-border: 1px solid color-mix(in srgb, var(--card-accent, var(--md-sys-color-outline)) 35%, var(--md-sys-color-outline));
+border: 1px solid var(--md-sys-color-outline);
 z-index: 1;
 display: flex;
 flex-direction: column;
@@ -4154,7 +4183,7 @@ position: relative;
 width: 100%;
 aspect-ratio: 1/1;
 overflow: hidden;
-background: var(--md-sys-color-surface);
+background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
 flex-shrink: 0;
 transform: translateZ(0);
 -webkit-transform: translateZ(0);
@@ -4169,11 +4198,11 @@ display: flex;
 align-items: center;
 justify-content: center;
 z-index: 1;
-background: var(--md-sys-color-surface);
+background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
 }
 /* No-art placeholder icon */
 .folder-art > i {
-font-size: 36px;
+font-size: 44px;
 color: var(--md-sys-color-primary);
 opacity: 0.22;
 }
@@ -4190,12 +4219,16 @@ backface-visibility: hidden;
 -webkit-backface-visibility: hidden;
 }
 .folder-art img.loaded{ opacity: 1; }
-/* Info panel — inside the card below art, like all-played .card-info */
+/* Info panel — solid caption strip below art, same pattern as
+.listen-again-track-info but scaled up for the bigger folder cards */
 .folder-info {
-padding: 10px 12px 12px;
+height: 64px;
+box-sizing: border-box;
+padding: 11px 14px 12px;
 display: flex;
 flex-direction: column;
-gap: 0;
+justify-content: center;
+gap: 3px;
 background: transparent;
 position: relative;
 z-index: 2;
@@ -4208,24 +4241,23 @@ background: color-mix(in srgb, var(--card-accent) 55%, #111111);
 .folder-info.has-accent .folder-artist.visible { opacity: 0.9; }
 .folder-info span {
 font-weight: 600;
-font-size: clamp(14.5px, 0.9vw + 10.5px, 17px);
+font-size: 15px;
 color: var(--md-sys-color-on-surface);
 white-space: nowrap;
 overflow: hidden;
 text-overflow: ellipsis;
-line-height: 1.4;
+line-height: 1.3;
 transition: font-size 0.2s var(--motion-standard);
 }
 /* Artist subtitle in folder card */
 .folder-artist {
-font-size: clamp(12px, 0.45vw + 10.5px, 14.5px);
+font-size: 12.5px;
 font-weight: 400;
 color: var(--md-sys-color-on-surface-variant);
 opacity: 0;
 white-space: nowrap;
 overflow: hidden;
 text-overflow: ellipsis;
-margin-top: 1px;
 transition: opacity 0.3s ease, font-size 0.2s var(--motion-standard);
 }
 .folder-artist.visible { opacity: 0.75; }
@@ -9105,7 +9137,6 @@ opacity: 1 !important;
 [data-theme="light"] .desktop-extended .clean-queue .m3-btn,
 [data-theme="light"] .desktop-extended .clean-queue .m3-btn i{ color: white; }
 /* Light Mode Fixes */
-[data-theme="light"] .folder-card{ background: var(--md-sys-color-surface-variant); }
 [data-theme="light"] .folder-card:hover{ box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15); }
 [data-theme="light"] .folder-info{ background: transparent; }
 [data-theme="light"] .folder-info span{ color: var(--md-sys-color-on-surface); text-shadow: none; }
@@ -12473,10 +12504,13 @@ width: 24px;
 text-align: center;
 font-size: 17px;
 }
-/* ── Folder grid ── */
+/* ── Folder grid ──
+Column count is handled by the @container "library" rules on .folder-grid
+now (they apply at any viewport, including mobile) — just tighten gap and
+padding here for touch-sized screens. */
 .folder-grid {
-gap: clamp(8px, 2.5vw, 12px) !important;
-padding: 16px 12px !important;
+gap: clamp(10px, 3vw, 16px) !important;
+padding: 20px 16px 16px !important;
 }
 .other-versions-grid {
 gap: clamp(8px, 2.5vw, 10px) !important;
