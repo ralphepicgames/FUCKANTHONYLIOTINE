@@ -4114,6 +4114,7 @@ flex-direction: column;
 gap: 10px;
 min-width: 0;
 flex: 1;
+padding-right: 324px;
 }
 /* Right-side "Top Songs" panel — populated from the Goot Charts API
    (charts/artist endpoint) so the hero banner surfaces the artist's
@@ -4122,6 +4123,9 @@ flex: 1;
    same box the real rows will use) so data arriving later never resizes
    or "pops" the banner — only the row contents cross-fade in place. */
 .artist-hero-top-tracks {
+position: absolute;
+right: 24px;
+top: 100px;
 flex-shrink: 0;
 width: 300px;
 max-width: 38%;
@@ -4132,6 +4136,7 @@ border: 1px solid rgba(255,255,255,0.14);
 border-radius: 16px;
 padding: 12px 12px 8px;
 box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+z-index: 4;
 }
 .artist-hero-top-tracks-title {
 display: flex;
@@ -4228,6 +4233,7 @@ background: rgba(255,255,255,0.12);
 }
 @media (max-width: 900px) {
 .artist-hero-top-tracks { display: none !important; }
+.artist-hero-content-left { padding-right: 0; }
 }
 #artistHeroName {
 font-size: 48px;
@@ -4250,12 +4256,17 @@ text-shadow: 0 1px 8px rgba(0,0,0,0.45);
    instead of the light AOTY card background. Hidden entirely (not just
    empty) when no AOTY data is found for the artist. */
 .artist-hero-aoty-scores {
-display: none;
+display: flex;
 align-items: center;
 gap: 10px;
 margin-top: 2px;
+height: 34px;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.25s ease;
+overflow: hidden;
 }
-.artist-hero-aoty-scores.visible { display: flex; }
+.artist-hero-aoty-scores.visible { opacity: 1; pointer-events: auto; }
 .artist-hero-aoty-badge {
 display: flex;
 align-items: center;
@@ -16211,6 +16222,7 @@ let _gcAlbumsData = [];
 let _gcInited = false;
 let _gcWs     = null;
 let _gcWsTimer = null;
+let _gcPollTimer = null; // fallback poller when WS unavailable - must be tracked to avoid stacking
 
 // Artist search state
 let _gcAcItems = [];
@@ -16321,10 +16333,10 @@ function _gcConnectWS() {
         }
       } catch(_) {}
     };
-    _gcWs.onclose = () => { _gcWsTimer = setTimeout(_gcConnectWS, 5000); };
+    _gcWs.onclose = () => { clearTimeout(_gcWsTimer); _gcWsTimer = setTimeout(_gcConnectWS, 5000); };
     _gcWs.onerror = () => _gcWs.close();
   } catch(_) {
-    setInterval(_gcFetchAll, 30000);
+    if (!_gcPollTimer) _gcPollTimer = setInterval(_gcFetchAll, 30000);
   }
 }
 
@@ -18080,6 +18092,8 @@ function wrapTrackMetadataStore(obj) {
 }
 let trackMetadata = wrapTrackMetadataStore({}); // Will be loaded from IndexedDB
 const metadataLoadingState = new Map(); // trackId -> Promise
+const metadataMissCache = new Map(); // trackId -> timestamp of last "not found" result
+const METADATA_MISS_COOLDOWN_MS = 5 * 60 * 1000; // don't re-fetch known-missing track for 5 min
 const metadataUpdateListeners = new Set();
 /**
 * MAIN ENTRY POINT: Get metadata for a track with proper fallback chain
@@ -18089,6 +18103,12 @@ async function getCentralTrackMetadata(trackId, options = {}) {
 const { forceRefresh = false, extractIfMissing = true } = options;
 if (!forceRefresh && metadataLoadingState.has(trackId)) {
 return metadataLoadingState.get(trackId);
+}
+if (!forceRefresh) {
+const missedAt = metadataMissCache.get(trackId);
+if (missedAt && (Date.now() - missedAt) < METADATA_MISS_COOLDOWN_MS) {
+return { id: trackId, title: 'Unknown Track', artist: 'Unknown Artist', album: '', albumArt: '', source: 'miss-cache' };
+}
 }
 const loadPromise = (async () => {
 try {
@@ -18117,6 +18137,7 @@ genre: meta.genre,
 duration: meta.duration || null,
 });
 saveCompleteTrackMetadata(trackId, trackMetadata[trackId]).catch(() => {});
+metadataMissCache.delete(trackId);
 return { id: trackId, ...trackMetadata[trackId], source: 'd1r2' };
 }
 if (extractIfMissing) {
@@ -18161,6 +18182,7 @@ body: JSON.stringify({ folderId: _scanFolderId, fileIds: [trackId] })
 if (extracted.albumArt && extracted.album && extracted.album !== 'Unknown') {
 R2AlbumArt.uploadFresh(extracted.album, extracted.albumArt, extracted.artist || '');
 }
+metadataMissCache.delete(trackId);
 return { id: trackId, ...extracted, source: 'extracted' };
 }
 }
@@ -18169,6 +18191,7 @@ console.warn(`[Metadata] Client-side extraction failed: ${trackId}`, extractErr)
 }
 }
 console.warn(`[Metadata] No metadata found for: ${trackId}`);
+metadataMissCache.set(trackId, Date.now());
 return { id: trackId, title: 'Unknown Track', artist: 'Unknown Artist', album: '', albumArt: '', source: 'fallback' };
 } finally {
 metadataLoadingState.delete(trackId);
@@ -18180,14 +18203,19 @@ return loadPromise;
 /**
 * Get metadata for multiple tracks in batch - ONE CALL, updates EVERYTHING
 */
+const DURATION_RECHECK_COOLDOWN_MS = 30 * 1000; // worker backfills duration async; don't hammer for it more than this often
 async function getBatchTrackMetadata(trackIds, options = {}) {
 if (!trackIds || trackIds.length === 0) return [];
 const needFetch = trackIds.filter(id => {
 if (options.forceRefresh) return true;
 const cached = trackMetadata[id];
 if (!cached || !cached.title || cached.title === 'Loading...') return true;
-if (!cached.duration) return true;
-if (!cached.release_date) return true;
+// Never fetched from the server yet at all — go get it.
+if (!cached._fetchedAt) return true;
+// Duration can legitimately arrive late (worker backfills it in the background),
+// so give it a bounded retry window — but release_date and other optional fields
+// being empty is NOT a reason to refetch forever once we've actually asked the server.
+if (!cached.duration && (Date.now() - cached._fetchedAt) > DURATION_RECHECK_COOLDOWN_MS) return true;
 return false;
 });
 const cachedCount = trackIds.length - needFetch.length;
@@ -18209,17 +18237,66 @@ year: meta.year,
 genre: meta.genre,
 duration: meta.duration || trackMetadata[trackId]?.duration || null,
 release_date: meta.release_date || trackMetadata[trackId]?.release_date || null,
+_version: meta.timestamp || trackMetadata[trackId]?._version || null,
 });
+trackMetadata[trackId]._fetchedAt = Date.now();
 saveCompleteTrackMetadata(trackId, trackMetadata[trackId]).catch(() => {});
 });
 notifyCentralMetadataUpdate(Array.from(d1Metadata.keys()));
 }
+// Even tracks the server didn't return anything for still count as "asked" —
+// otherwise they'd be requeued on every subsequent call forever. This has to
+// run even when trackMetadata[id] was never created (a track with NO metadata
+// at all, e.g. some Listen Again entries) — previously the `if (trackMetadata[id])`
+// guard skipped exactly those tracks, so they never got an entry, never got
+// _fetchedAt, and getBatchTrackMetadata's needFetch filter picked them up again
+// on every single call. Listen Again re-renders on lots of unrelated triggers
+// (play count tick, pin/unpin, page nav, cloud sync...), so that turned into a
+// tight loop hammering /metadata/batch with the same handful of IDs hundreds of
+// times a minute. Stub the entry in so it's recognized as "checked" and also
+// mark the miss-cache so other call sites' cooldown checks see it too.
+chunk.forEach(id => {
+if (!d1Metadata || !d1Metadata.has(id)) {
+if (!trackMetadata[id]) {
+trackMetadata[id] = { title: 'Unknown Track', artist: 'Unknown Artist', album: '', albumArt: '' };
+}
+trackMetadata[id]._fetchedAt = trackMetadata[id]._fetchedAt || Date.now();
+metadataMissCache.set(id, Date.now());
+} else if (trackMetadata[id]) {
+trackMetadata[id]._fetchedAt = trackMetadata[id]._fetchedAt || Date.now();
+}
+});
 } catch (err) {
 console.warn('[Metadata Batch] Fetch error:', err);
 }
 }
 }
 return trackIds.map(id => trackMetadata[id] || { id, title: 'Unknown Track', artist: 'Unknown Artist', album: '', albumArt: '' });
+}
+// Coalescing layer: many places (card renders, folder lists) each used to call
+// getBatchTrackMetadata([singleId]) independently, meaning a 300-track view fired
+// 300 separate requests. This collects every ID requested within a short window
+// and sends them as ONE batch request instead — same idea as request batching in
+// other streaming clients. Callers just await it and then read trackMetadata[id]
+// themselves once it resolves, same as before.
+const _metaCoalesceQueue = new Set();
+let _metaCoalesceTimer = null;
+let _metaCoalescePromise = null;
+function queueBatchedMetadata(id) {
+if (!id) return Promise.resolve([]);
+_metaCoalesceQueue.add(id);
+if (!_metaCoalescePromise) {
+_metaCoalescePromise = new Promise(resolve => {
+_metaCoalesceTimer = setTimeout(() => {
+const ids = Array.from(_metaCoalesceQueue);
+_metaCoalesceQueue.clear();
+_metaCoalesceTimer = null;
+_metaCoalescePromise = null;
+getBatchTrackMetadata(ids).then(resolve).catch(() => resolve([]));
+}, 30);
+});
+}
+return _metaCoalescePromise;
 }
 /**
 * Register a listener for metadata updates
@@ -18781,10 +18858,18 @@ console.error('[R2] Fresh upload failed:', e);
 */
 async get(album, artist = '') {
 if (!album || album === 'Unknown') return null;
+// Redirect albums used to always re-fetch here with cache:'no-store', even
+// on the 2nd/3rd/10th call for the same album in the same session — this
+// check ran before the albumArtCache lookup below, so a successful redirect
+// fetch never actually got used from cache afterward. Now it shares the same
+// memory cache and in-flight dedup as every other album.
 if (typeof _artRedirectRegistry !== 'undefined' && _artRedirectRegistry.has(album.toLowerCase())) {
+if (albumArtCache[album]) return albumArtCache[album];
+if (this._pendingFetches.has(album)) return this._pendingFetches.get(album);
 if (!artist || artist === 'Unknown Artist') artist = albumArtistIndex[album] || '';
-const redirectUrl = this.getR2Url(album, artist);
+const redirectPromise = (async () => {
 try {
+const redirectUrl = this.getR2Url(album, artist);
 const r = await fetch(redirectUrl, { cache: 'no-store' });
 if (r && r.ok) {
 const blob = await r.blob();
@@ -18794,6 +18879,9 @@ return blobUrl;
 }
 } catch(_) {}
 return null;
+})().finally(() => this._pendingFetches.delete(album));
+this._pendingFetches.set(album, redirectPromise);
+return redirectPromise;
 }
 if (albumArtCache[album]) return albumArtCache[album];
 if (!artist || artist === 'Unknown Artist') artist = albumArtistIndex[album] || '';
@@ -18824,20 +18912,31 @@ return blobUrl;
 } catch (_) {}
 if (this._pendingFetches.has(album)) return this._pendingFetches.get(album);
 if (!artist) {
+if (!this._noArtistAttempted) this._noArtistAttempted = new Set();
+if (this._noArtistAttempted.has(album)) return null;
+this._noArtistAttempted.add(album);
 this._triggerExtractionForAlbum(album);
 return null;
 }
 const fetchPromise = (async () => {
 try {
-const urls = [this.getR2Url(album, '')];
-if (artist) urls.unshift(this.getR2Url(album, artist));
+// Previously this always fired BOTH the artist-specific URL and a blank-artist
+// URL in parallel via Promise.any, "just in case" the art was stored without
+// an artist tag. In practice the artist-specific lookup succeeds the vast
+// majority of the time, so that meant every album art fetch — even
+// successful ones — sent an extra, usually-pointless request with an empty
+// artist field. Now the blank-artist URL is only tried as a genuine fallback
+// after the real one comes back non-ok, cutting album art requests roughly
+// in half without losing the ability to recover old artist-less uploads.
 let response = null;
-if (urls.length > 1) {
-response = await Promise.any(
-urls.map(u => fetch(u).then(r => r.ok ? r : Promise.reject()))
-).catch(() => null);
-} else {
-const r = await fetch(urls[0]).catch(() => null);
+if (artist) {
+const primaryUrl = this.getR2Url(album, artist);
+const r = await fetch(primaryUrl).catch(() => null);
+if (r && r.ok) response = r;
+}
+if (!response) {
+const fallbackUrl = this.getR2Url(album, '');
+const r = await fetch(fallbackUrl).catch(() => null);
 if (r && r.ok) response = r;
 }
 if (response) {
@@ -18878,18 +18977,21 @@ console.warn(`[R2] _triggerExtractionForAlbum: no trackId found for album "${alb
 return;
 }
 if (albumsWithArtLoaded.has(album)) return; // already have art in memory
-if (artExtractionAttempted.has(trackId)) {
-artExtractionAttempted.delete(trackId); // unblock any prior attempt
-}
+if (artExtractionAttempted.has(trackId)) return; // already tried this track — don't force a retry
+if (this._extractionInFlight && this._extractionInFlight.has(trackId)) return;
+if (!this._extractionInFlight) this._extractionInFlight = new Set();
+this._extractionInFlight.add(trackId);
 console.log(`[R2] Miss for "${album}" — triggering file extraction for ${trackId}`);
 const _doExtract = (buf) => {
 if (!buf || buf.byteLength === 0) {
 console.warn(`[R2] Extraction aborted for "${album}" — empty buffer`);
 artExtractionAttempted.add(trackId);
+R2AlbumArt._extractionInFlight?.delete(trackId);
 return;
 }
 jsmediatags.read(new Blob([buf]), {
 onSuccess: tag => {
+R2AlbumArt._extractionInFlight?.delete(trackId);
 if (!tag.tags?.picture) {
 console.warn(`[R2] Extraction: no picture tag found in "${album}" (${trackId})`);
 artExtractionAttempted.add(trackId);
@@ -18911,6 +19013,7 @@ updateQueueAndNowPlayingWithMetadata(trackId);
 onError: (err) => {
 console.warn(`[R2] jsmediatags onError for "${album}" (${trackId}):`, err);
 artExtractionAttempted.add(trackId);
+R2AlbumArt._extractionInFlight?.delete(trackId);
 }
 });
 };
@@ -18938,7 +19041,7 @@ mode: 'cors',
 credentials: 'omit',
 cache: 'default',
 priority: 'low',
-headers: { 'Range': 'bytes=0-4194303' }
+headers: { 'Range': 'bytes=0-1048576' }
 });
 if (!res.ok) throw new Error(`fetchBytes status ${res.status}`);
 const buf = await res.arrayBuffer();
@@ -18946,6 +19049,7 @@ _doExtract(buf);
 } catch (e) {
 console.warn(`[R2] fetchTrackBytes failed for "${album}" (${trackId}):`, e);
 artExtractionAttempted.add(trackId);
+R2AlbumArt._extractionInFlight?.delete(trackId);
 }
 })();
 }
@@ -18953,6 +19057,12 @@ artExtractionAttempted.add(trackId);
 const R2FolderCovers = {
 _memoryCache: new Map(), // folderId → blob URL (session only)
 _resolvedMeta: new Map(), // folderId → { id, name, mimeType } from /folder/cover-resolve (session only, avoids re-resolving)
+// Dedupes concurrent /folder/cover-resolve calls for the same folder id.
+// Without this, scrolling a folder grid back and forth (re-triggering
+// fetchFolderArtBatch for cards still mid-resolve) or a batch render
+// overlapping with a single fetchFolderArt() retry both fire their own
+// resolve request for the same fid — same bug shape as the album color spam.
+_pendingResolves: new Map(),
 getFromCache(folderId) { return Promise.resolve(this._memoryCache.get(folderId) || null); },
 async batch(folderIds) {
 const result = new Map();
@@ -19185,14 +19295,26 @@ body: JSON.stringify({ album, color, version: COLOR_CACHE_VERSION }),
 }).catch(() => {}); // Silently ignore network errors
 } catch(e) {}
 }
+// Dedupes concurrent /color requests for the same album. Without this, every
+// queue row for the same album calls extractAndApplyColorInstant independently,
+// and since albumColorCache only gets populated once this async call resolves,
+// a burst of rows for one album (e.g. a whole album queued back to back) each
+// see "not cached yet" and fire their own fetch — 10+ identical requests within
+// the same ~100ms window. Concurrent callers now share one in-flight promise.
+const _colorFetchInFlight = new Map();
 async function fetchColorFromWorker(album) {
 if (!album || !COLOR_WORKER_URL) return null;
+if (_colorFetchInFlight.has(album)) return _colorFetchInFlight.get(album);
+const fetchPromise = (async () => {
 try {
 const res = await fetch(COLOR_WORKER_URL + '/color?album=' + encodeURIComponent(album));
 if (!res.ok) return null;
 const data = await res.json();
 return data.color || null;
 } catch(e) { return null; }
+})().finally(() => _colorFetchInFlight.delete(album));
+_colorFetchInFlight.set(album, fetchPromise);
+return fetchPromise;
 }
 async function loadColorFromIDB(album) {
 if (!album) return null;
@@ -23038,7 +23160,7 @@ if (!el || el.dataset.filled === '1') return;
 try {
 await getFolderWithMeta(f.id, false);
 const first = _firstTrackByFilename(f.id);
-if (first) getBatchTrackMetadata([first.id]).catch(() => {});
+if (first) queueBatchedMetadata(first.id).catch(() => {});
 } catch(e) {}
 }));
 }, 1500);
@@ -23187,7 +23309,7 @@ _playSingleFromQueue();
 });
 card.addEventListener('click', () => _playSingleFromQueue());
 if (!artSrc || !m.duration || !m.title || !m.artist) {
-getBatchTrackMetadata([t.id]).then(() => {
+queueBatchedMetadata(t.id).then(() => {
 const meta = trackMetadata[t.id];
 const art = meta?.albumArt || (meta?.album && albumArtCache[meta.album]) || '';
 if (art) {
@@ -23853,10 +23975,17 @@ if (notInMemory.length === 0) return;
 // of all-at-once after the whole batch returns.
 notInMemory.forEach(async (fid) => {
 try {
+let resolvePromise = R2FolderCovers._pendingResolves.get(fid);
+if (!resolvePromise) {
+resolvePromise = (async () => {
 const resolveRes = await fetch(`${GOOT_LOCAL_DIRECT_BASE}/folder/cover-resolve?ids=${encodeURIComponent(fid)}`);
-if (!resolveRes.ok) return;
+if (!resolveRes.ok) return null;
 const resolved = await resolveRes.json();
-const cover = resolved[fid];
+return resolved[fid] || null;
+})().finally(() => R2FolderCovers._pendingResolves.delete(fid));
+R2FolderCovers._pendingResolves.set(fid, resolvePromise);
+}
+const cover = await resolvePromise;
 if (!cover) return;
 R2FolderCovers._resolvedMeta.set(fid, cover);
 if (!document.getElementById(`f-art-${fid}`)) return;
@@ -23897,6 +24026,7 @@ img.src = src;
 *
 * Returns a blob URL on success, or falls back to a direct URL if caching fails.
 */
+const _folderCoverBlobFetchInFlight = new Map();
 async function getFolderCoverBlobUrl(coverFileId, mimeType) {
 const memKey = `folder-cover-${coverFileId}`;
 try {
@@ -23914,7 +24044,10 @@ ImageCacheAPI.memoryCache.set(memKey, blobUrl);
 return { url: blobUrl, blob };
 }
 }
-// Tier 3: network
+// Tier 3: network — dedupe concurrent callers (4 call sites can all want the
+// same cover before the first one finishes writing to Cache API/memory).
+if (_folderCoverBlobFetchInFlight.has(coverFileId)) return _folderCoverBlobFetchInFlight.get(coverFileId);
+const fetchPromise = (async () => {
 const imageUrl = getImageUrl(coverFileId, mimeType);
 const response = await fetch(imageUrl);
 if (!response.ok) return null;
@@ -23924,6 +24057,9 @@ await cache.put(cacheUrl, new Response(blob.slice(0), { headers: { 'Content-Type
 const blobUrl = URL.createObjectURL(blob);
 ImageCacheAPI.memoryCache.set(memKey, blobUrl);
 return { url: blobUrl, blob }; // Return blob so caller can upload to R2 without re-fetching
+})().finally(() => _folderCoverBlobFetchInFlight.delete(coverFileId));
+_folderCoverBlobFetchInFlight.set(coverFileId, fetchPromise);
+return fetchPromise;
 } catch (e) {
 console.warn('[FolderCover] fetch error for', coverFileId, e);
 return { url: getImageUrl(coverFileId, mimeType), blob: null };
@@ -23937,10 +24073,17 @@ async function fetchFolderArt(fid) {
 const container = document.getElementById(`f-art-${fid}`);
 if (!container) return; // Card not in DOM — bail immediately
 try {
+let resolvePromise = R2FolderCovers._pendingResolves.get(fid);
+if (!resolvePromise) {
+resolvePromise = (async () => {
 const resolveRes = await fetch(`${GOOT_LOCAL_DIRECT_BASE}/folder/cover-resolve?ids=${encodeURIComponent(fid)}`);
-if (!resolveRes.ok) return;
+if (!resolveRes.ok) return null;
 const resolved = await resolveRes.json();
-const cover = resolved[fid];
+return resolved[fid] || null;
+})().finally(() => R2FolderCovers._pendingResolves.delete(fid));
+R2FolderCovers._pendingResolves.set(fid, resolvePromise);
+}
+const cover = await resolvePromise;
 if (!cover) return;
 R2FolderCovers._resolvedMeta.set(fid, cover);
 if (!document.getElementById(`f-art-${fid}`)) return;
@@ -24225,8 +24368,10 @@ if (data.user_score != null) {
 const normalized = data.user_score <= 5 ? data.user_score * 20 : data.user_score;
 badges.push(`<div class="artist-hero-aoty-badge"><span class="artist-hero-aoty-badge-num ${_artistHeroScoreClass(normalized)}">${data.user_score}</span><span class="artist-hero-aoty-badge-label">User</span></div>`);
 }
-if (!badges.length) { wrapEl.classList.remove('visible'); wrapEl.innerHTML = ''; return; }
+if (!badges.length) { wrapEl.classList.remove('visible'); wrapEl.style.height = '0'; wrapEl.style.marginTop = '0'; wrapEl.innerHTML = ''; return; }
 wrapEl.innerHTML = badges.join('');
+wrapEl.style.height = '';
+wrapEl.style.marginTop = '';
 wrapEl.classList.add('visible');
 }
 /**
@@ -25001,6 +25146,11 @@ function renderPlaylistTracks(tracks, container, playlistName) {
 renderTrackTable(tracks, container, true, playlistName, true, true);
 }
 async function loadMetadataSequentially(tracks, index) {
+tracks = tracks.filter(t =>
+!t._isVideo && !t._isYT && !t._isDriveVideo &&
+!(t.id && (t.id.startsWith('__yt__') || t.id.startsWith('__drv__')))
+);
+if (tracks.length === 0) return;
 if (index === 0 && tracks.length > 0) {
 albumsWithArtLoaded.clear();
 isBulkMetadataLoading = true;
@@ -25102,7 +25252,12 @@ updateMediaSessionMetadata();
 if (uncachedTrackIds.length > 0) {
 Promise.resolve().then(async () => {
 const batchResults = await fetchBatchMetadataFromBackend(uncachedTrackIds);
-const notInD1 = uncachedTrackIds.filter(id => !batchResults.has(id));
+const notInD1 = uncachedTrackIds.filter(id => {
+if (batchResults.has(id)) return false;
+const missedAt = metadataMissCache.get(id);
+if (missedAt && (Date.now() - missedAt) < METADATA_MISS_COOLDOWN_MS) return false;
+return true;
+});
 if (notInD1.length > 0) {
 try {
 const scanResponse = await fetch(`${METADATA_API_URL}/metadata/scan`, {
@@ -25116,8 +25271,15 @@ if (scanResult.scanned && scanResult.scanned.length > 0) {
 const reFetchResults = await fetchBatchMetadataFromBackend(scanResult.scanned.map(s => s.id));
 reFetchResults.forEach((meta, trackId) => {
 batchResults.set(trackId, meta);
+metadataMissCache.delete(trackId);
 });
 }
+const scannedIds = new Set((scanResult.scanned || []).map(s => s.id));
+notInD1.forEach(id => {
+if (!batchResults.has(id) && !scannedIds.has(id)) metadataMissCache.set(id, Date.now());
+});
+} else {
+notInD1.forEach(id => metadataMissCache.set(id, Date.now()));
 }
 } catch (e) {
 }
@@ -25165,7 +25327,12 @@ updateMediaSessionMetadata();
 });
 });
 const allCachedIds = new Set([...Object.keys(cachedMetadata), ...batchResults.keys()]);
-const stillUncachedTracks = tracks.filter(t => !allCachedIds.has(t.id));
+const stillUncachedTracks = tracks.filter(t => {
+if (allCachedIds.has(t.id)) return false;
+const missedAt = metadataMissCache.get(t.id);
+if (missedAt && (Date.now() - missedAt) < METADATA_MISS_COOLDOWN_MS) return false;
+return true;
+});
 if (stillUncachedTracks.length > 0) {
 const parseBatchSize = 3;
 for (let i = 0; i < stillUncachedTracks.length; i += parseBatchSize) {
@@ -25176,11 +25343,11 @@ const res = await fetch(`${STREAMING_URL}?id=${t.id}`, {
 mode: 'cors',
 credentials: 'omit',
 cache: 'no-store',
-headers: { 'Range': 'bytes=0-15728640' }
+headers: { 'Range': 'bytes=0-1048576' }
 });
-if (!res.ok) return;
+if (!res.ok) { metadataMissCache.set(t.id, Date.now()); return; }
 const buf = await res.arrayBuffer();
-if (!buf || buf.byteLength === 0) return;
+if (!buf || buf.byteLength === 0) { metadataMissCache.set(t.id, Date.now()); return; }
 await new Promise((resolve) => {
 jsmediatags.read(new Blob([buf]), {
 onSuccess: tag => {
@@ -25222,10 +25389,11 @@ updateMediaSessionMetadata();
 });
 resolve();
 },
-onError: () => resolve()
+onError: () => { metadataMissCache.set(t.id, Date.now()); resolve(); }
 });
 });
 } catch (e) {
+metadataMissCache.set(t.id, Date.now());
 }
 }));
 await new Promise(resolve => setTimeout(resolve, 100));
@@ -25243,7 +25411,7 @@ const firstTrackIds = Array.from(albumsNeedingArt.values());
 const artBatchSize = 3;
 for (let i = 0; i < firstTrackIds.length; i += artBatchSize) {
 const artBatch = firstTrackIds.slice(i, i + artBatchSize);
-await Promise.all(artBatch.map(id => loadMetaAndArt(id, '')));
+await Promise.all(artBatch.map(id => loadMetaAndArt(id, '', { skipExtraction: true })));
 await new Promise(resolve => setTimeout(resolve, 15));
 }
 let artAppliedCount = 0;
@@ -25324,7 +25492,8 @@ year: item.year,
 genre: item.genre,
 duration: item.duration || null,
 release_date: item.release_date || null,
-thumbnailLink: item.thumbnailLink
+thumbnailLink: item.thumbnailLink,
+timestamp: item.timestamp || null
 });
 }
 });
@@ -25514,11 +25683,20 @@ body: JSON.stringify({ ids: uncachedIds })
 });
 let scannedItems = [];
 if (options.folderId) {
+// Only ask the worker to scan IDs we haven't already tried (and failed) recently.
+// Without this, revisiting the same folder re-triggers a full scan every time.
+const idsToScan = options.forceRefresh
+? uncachedIds
+: uncachedIds.filter(id => {
+const missedAt = metadataMissCache.get(id);
+return !(missedAt && (Date.now() - missedAt) < METADATA_MISS_COOLDOWN_MS);
+});
+if (idsToScan.length > 0) {
 try {
 const scanResponse = await fetch(`${METADATA_API_URL}/metadata/scan`, {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ folderId: options.folderId, fileIds: uncachedIds })
+body: JSON.stringify({ folderId: options.folderId, fileIds: idsToScan })
 });
 if (scanResponse.ok) {
 const scanResult = await scanResponse.json();
@@ -25532,13 +25710,21 @@ album: item.album || '',
 albumArt: item.thumbnailLink || '',
 duration: item.duration || null
 };
+metadataMissCache.delete(item.id);
 });
 if (options.onProgress) {
 options.onProgress({ phase: 'scanned', count: scannedItems.length });
 }
 }
+const scannedIds = new Set(scannedItems.map(s => s.id));
+idsToScan.forEach(id => {
+if (!scannedIds.has(id)) metadataMissCache.set(id, Date.now());
+});
+} else {
+idsToScan.forEach(id => metadataMissCache.set(id, Date.now()));
 }
 } catch (scanError) {
+}
 }
 }
 const response = await folderFetchPromise;
@@ -25701,7 +25887,8 @@ syncNowPlayingArt(null, meta.album || '');
 updateNowPlayingLosslessBadge();
 }
 const artExtractionAttempted = new Set();
-async function loadMetaAndArt(id, name) {
+async function loadMetaAndArt(id, name, options = {}) {
+const { skipExtraction = false } = options;
 if (pendingMetadataLoads.has(id)) return;
 if (metadataLoadingState.has(id)) {
 await metadataLoadingState.get(id).catch(() => {});
@@ -25746,7 +25933,7 @@ return; // ✓ Found in R2 - skip file extraction
 } catch (e) {
 console.error('[R2] Album art fetch failed:', e);
 }
-if (R2AlbumArt._notInR2.has(album)) artExtractionAttempted.delete(id);
+// R2 confirmed no art for this album — extraction (if attempted) already ran; don't force a retry loop.
 }
 if (album && album !== "Unknown" && albumArtCache[album]) {
 const artData = albumArtCache[album];
@@ -25781,6 +25968,7 @@ return;
 if (album && album !== "Unknown" && albumsWithArtLoaded.has(album)) {
 return;
 }
+if (skipExtraction) return;
 if (artExtractionAttempted.has(id)) return;
 pendingMetadataLoads.add(id);
 artExtractionAttempted.add(id); // mark attempted regardless of outcome
@@ -28336,7 +28524,12 @@ const artist = m?.artist || albumArtistIndex[album] || '';
 albumEntries.push({ albumKey, trackId: firstNeedingArt, album, artist, trackIds });
 }
 if (albumEntries.length === 0) return;
-const CONCURRENCY = 2;
+// Each album entry here is already deduped (R2AlbumArt._pendingFetches + this
+// function's own _artBatchProcessing guard), and most hits resolve from memory/
+// Cache API rather than network, so raising this doesn't multiply requests —
+// it just lets more distinct albums' art come in at once instead of queueing
+// behind each other. 2 was overly conservative for how cheap these fetches are.
+const CONCURRENCY = 6;
 let i = 0;
 async function runNext() {
 if (i >= albumEntries.length) return;
@@ -28601,7 +28794,7 @@ return; // ✓ Found in R2 - skip file extraction
 } catch (e) {
 console.error('[R2] Load failed:', e);
 }
-if (R2AlbumArt._notInR2.has(album)) artExtractionAttempted.delete(trackId);
+// R2 confirmed no art for this album — don't force a retry loop.
 }
 if (artExtractionAttempted.has(trackId)) return;
 artExtractionAttempted.add(trackId);
@@ -31932,7 +32125,7 @@ if (m) return m[1];
 return input; // fallback: return as-is
 }
 // ── Local file upload helpers for redirect / lossless panels ──────────────
-const _LOCAL_UPLOAD_BASE = 'https://fuckinthedog.tail1ec02c.ts.net';
+const _LOCAL_UPLOAD_BASE = typeof GOOT_LOCAL_DIRECT_BASE !== 'undefined' ? GOOT_LOCAL_DIRECT_BASE : 'https://goot-api.duckdns.org:3500';
 const _LOCAL_UPLOAD_KEY  = 'penis';
 // Hidden folder for redirect/lossless uploads — keeps the root tidy.
 // This is the same folder all other track redirects and lossless files already
@@ -36705,10 +36898,12 @@ albumArt: ytVideoId ? `https://i.ytimg.com/vi/${ytVideoId}/mqdefault.jpg` : (met
 const _ytStaleRefreshInFlight = new Set();
 async function _refreshYTTrackIfStale(trackId, videoId) {
 if (typeof fetchFreshYTMeta !== 'function' || _ytStaleRefreshInFlight.has(trackId)) return;
+const missedAt = metadataMissCache.get(trackId);
+if (missedAt && (Date.now() - missedAt) < METADATA_MISS_COOLDOWN_MS) return;
 _ytStaleRefreshInFlight.add(trackId);
 try {
 const fresh = await fetchFreshYTMeta(videoId);
-if (!fresh) return;
+if (!fresh) { metadataMissCache.set(trackId, Date.now()); return; }
 const existing = trackMetadata[trackId] || {};
 // Only ever accept *real* title/artist values from the fetch. Never write
 // the generic "YouTube Video" / "YouTube" placeholder into saved
@@ -36724,7 +36919,7 @@ const nextArt = fresh.albumArt || existing.albumArt || `https://i.ytimg.com/vi/$
 const gotRealTitle  = !!fresh.title  && fresh.title  !== existing.title;
 const gotRealArtist = !!fresh.artist && fresh.artist !== existing.artist;
 const gotRealArt    = !!fresh.albumArt && fresh.albumArt !== existing.albumArt;
-if (!gotRealTitle && !gotRealArtist && !gotRealArt) return; // nothing new yet — try again on next render
+if (!gotRealTitle && !gotRealArtist && !gotRealArt) { metadataMissCache.set(trackId, Date.now()); return; } // nothing new yet — try again after cooldown
 const updated = { ...existing, title: nextTitle || existing.title, artist: nextArtist || existing.artist, album: 'YouTube', albumArt: nextArt, _isYT: true, _ytVideoId: videoId };
 trackMetadata[trackId] = updated;
 if (typeof saveCompleteTrackMetadata === 'function') saveCompleteTrackMetadata(trackId, updated).catch(() => {});
@@ -36757,19 +36952,29 @@ _ytStaleRefreshInFlight.delete(trackId);
 */
 const _localStaleRefreshInFlight = new Set();
 async function _refreshLocalTrackIfStale(trackId) {
-if (typeof getCentralTrackMetadata !== 'function' || _localStaleRefreshInFlight.has(trackId)) return;
+if (typeof queueBatchedMetadata !== 'function' || _localStaleRefreshInFlight.has(trackId)) return;
+// Checking the miss-cache here (instead of relying on forceRefresh's own check)
+// stops a track that's genuinely missing from D1 from being re-asked-about on
+// every single render that touches it.
+const missedAt = metadataMissCache.get(trackId);
+if (missedAt && (Date.now() - missedAt) < METADATA_MISS_COOLDOWN_MS) return;
 _localStaleRefreshInFlight.add(trackId);
 try {
-const fresh = await getCentralTrackMetadata(trackId, { forceRefresh: true, extractIfMissing: true });
-if (!fresh) return;
 const existing = trackMetadata[trackId] || {};
+// Route through the same coalescing queue as everything else instead of firing
+// our own individual request — on initial page load, dozens of cards can read
+// a still-loading track in the same instant, and without this they'd each fire
+// a separate request instead of sharing one.
+await queueBatchedMetadata(trackId);
+const fresh = trackMetadata[trackId];
+if (!fresh || fresh === existing) { if (!fresh) metadataMissCache.set(trackId, Date.now()); return; }
 const nextTitle = (fresh.title && fresh.title !== 'Unknown Track') ? fresh.title : existing.title || '';
 const nextArtist = (fresh.artist && fresh.artist !== 'Unknown Artist') ? fresh.artist : existing.artist || '';
 const nextArt = fresh.albumArt || existing.albumArt || '';
 const gotRealTitle  = !!nextTitle  && nextTitle  !== existing.title;
 const gotRealArtist = !!nextArtist && nextArtist !== existing.artist;
 const gotRealArt    = !!nextArt && nextArt !== existing.albumArt;
-if (!gotRealTitle && !gotRealArtist && !gotRealArt) return; // nothing new yet — try again on next render
+if (!gotRealTitle && !gotRealArtist && !gotRealArt) { metadataMissCache.set(trackId, Date.now()); return; } // nothing new yet — try again after cooldown
 const updated = { ...existing, title: nextTitle || existing.title, artist: nextArtist || existing.artist, album: fresh.album || existing.album, albumArt: nextArt };
 trackMetadata[trackId] = updated;
 if (typeof saveCompleteTrackMetadata === 'function') saveCompleteTrackMetadata(trackId, updated).catch(() => {});
@@ -37315,7 +37520,16 @@ lazyLoadListenAgainArt(displayItems);
 const trackIds = Object.keys(playCounts);
 const tracksNeedingMetadata = trackIds.filter(id => {
 const meta = trackMetadata[id];
-return !meta || !meta.title || meta.title === 'Unknown Track' || meta.title === 'YouTube Video';
+if (!meta || !meta.title || meta.title === 'Unknown Track' || meta.title === 'YouTube Video') {
+// Respect the miss-cache cooldown here too — this render function can fire on
+// almost any UI event (play count tick, pin/unpin, page nav, cloud sync...), so
+// without this check a track with genuinely no metadata anywhere gets re-asked
+// about on every single one of those triggers instead of once per cooldown window.
+const missedAt = metadataMissCache.get(id);
+if (missedAt && (Date.now() - missedAt) < METADATA_MISS_COOLDOWN_MS) return false;
+return true;
+}
+return false;
 });
 if (tracksNeedingMetadata.length > 0) {
 getBatchTrackMetadata(tracksNeedingMetadata).catch(() => {});
@@ -50586,10 +50800,10 @@ bodyObs.observe(document.getElementById('library-screen') || document.body, { at
 (function() {
 'use strict';
 
-const GFM_BASE = typeof PLAYER_WORKER_URL !== 'undefined'
-    ? (window.GOOT_LOCAL_BASE || 'https://fuckinthedog.tail1ec02c.ts.net')
-    : 'https://fuckinthedog.tail1ec02c.ts.net';
-const LOCAL_BASE = 'https://fuckinthedog.tail1ec02c.ts.net';
+const GFM_BASE = typeof GOOT_LOCAL_DIRECT_BASE !== 'undefined'
+    ? (window.GOOT_LOCAL_BASE || GOOT_LOCAL_DIRECT_BASE)
+    : 'https://goot-api.duckdns.org:3500';
+const LOCAL_BASE = typeof GOOT_LOCAL_DIRECT_BASE !== 'undefined' ? GOOT_LOCAL_DIRECT_BASE : 'https://goot-api.duckdns.org:3500';
 const ADMIN_KEY = 'penis';
 
 let _gfmStack = []; // [{id, name}]
