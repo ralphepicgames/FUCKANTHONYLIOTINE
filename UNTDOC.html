@@ -2459,10 +2459,13 @@ function closeGame() {
         try { URL.revokeObjectURL(frame.dataset.blobUrl); } catch(e) {}
         delete frame.dataset.blobUrl;
     }
-    frame.src = 'about:blank';
-    frame.contentDocument?.open();
-    frame.contentDocument?.write('<!DOCTYPE html><html><head></head><body style="background:#000"></body></html>');
-    frame.contentDocument?.close();
+    // Navigating src alone doesn't reliably kill running audio/timers/WebGL
+    // inside the old document (race with about:blank load). Destroy and
+    // replace the iframe node so the old document is fully torn down.
+    const freshFrame = frame.cloneNode(false);
+    freshFrame.removeAttribute('src');
+    delete freshFrame.dataset.blobUrl;
+    frame.parentNode.replaceChild(freshFrame, frame);
     if (consoleOpen) toggleConsole();
 }
 
