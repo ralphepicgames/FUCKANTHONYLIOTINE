@@ -17560,6 +17560,27 @@ Object.keys(_clientAudioBlobUrls).forEach(k => delete _clientAudioBlobUrls[k]);
 await caches.delete(CLIENT_AUDIO_CACHE);
 } catch (_) {}
 }
+// Evict a single track's cached audio (both lossy and lossless keys) when
+// playback detects it's corrupted/truncated -- e.g. the "ended" fired way
+// before duration was reached. Without this, the same bad cache entry keeps
+// getting picked up on every future play/skip of that track until the user
+// manually clears the entire audio cache.
+async function _evictBadTrackCache(trackId) {
+try {
+const keys = ['https://goot-audio-cache/' + trackId + ':lossless', 'https://goot-audio-cache/' + trackId + ':lossy'];
+for (const key of keys) {
+if (_clientAudioBlobUrls[key]) {
+URL.revokeObjectURL(_clientAudioBlobUrls[key]);
+delete _clientAudioBlobUrls[key];
+}
+completedTrackBuffers.delete(trackId);
+}
+const cache = await caches.open(CLIENT_AUDIO_CACHE);
+for (const key of keys) {
+await cache.delete(key);
+}
+} catch (_) {}
+}
 let _queuePrefetchGen = 0;
 /**
 * filterUncachedIds — open the Cache API once and return only the IDs that are
@@ -18959,7 +18980,17 @@ if (!album || album === 'Unknown') return null;
 // check ran before the albumArtCache lookup below, so a successful redirect
 // fetch never actually got used from cache afterward. Now it shares the same
 // memory cache and in-flight dedup as every other album.
-if (typeof _artRedirectRegistry !== 'undefined' && _artRedirectRegistry.has(album.toLowerCase())) {
+// _artRedirectRegistry keys come from the worker's /art-redirect/list, which
+// keys everything by its fully-stripped normAlbum (lowercased, all spaces/
+// punctuation removed -- "Donda (Deluxe)" -> "dondadeluxe"). Checking with
+// plain .toLowerCase() here only ever matched single-word, punctuation-free
+// album names -- every real multi-word album silently missed this branch,
+// fell through to the normal fetch path, and got PERMANENTLY cached into
+// IndexedDB/Cache Storage as if it had no redirect at all. That cached copy
+// is then served forever from local storage, even after the redirect is
+// later fixed or removed server-side, since the normal path checks local
+// cache before ever touching the network again.
+if (typeof _artRedirectRegistry !== 'undefined' && _artRedirectRegistry.has(_normAlbumForRedirect(album))) {
 if (albumArtCache[album]) return albumArtCache[album];
 if (this._pendingFetches.has(album)) return this._pendingFetches.get(album);
 if (!artist || artist === 'Unknown Artist') artist = albumArtistIndex[album] || '';
@@ -19534,7 +19565,17 @@ headers: { 'Range': 'bytes=0-524288' }
 });
 if (!res.ok) throw new Error('fetchTrackBytes: status ' + res.status);
 const buf = await res.arrayBuffer();
-if (buf) {
+// This request is Range-limited to the first 512KB purely so tag/loudness
+// reading doesn't have to wait on a full download. If the server actually
+// honors the Range header (206, or a Content-Range header present), `buf`
+// is only a SLICE of the track, not the whole file. Only cache it into
+// completedTrackBuffers -- which saveTrackToClientCache() trusts as "the
+// full track, safe to persist" -- when the server ignored the Range and
+// handed back everything. Otherwise a partial slice gets written to the
+// persistent cache as if it were complete, and playback cuts off wherever
+// that slice ends.
+const isPartial = res.status === 206 || !!res.headers.get('Content-Range');
+if (buf && !isPartial) {
 completedTrackBuffers.set(trackId, buf);
 if (completedTrackBuffers.size > 30)
 completedTrackBuffers.delete(completedTrackBuffers.keys().next().value);
@@ -22122,6 +22163,18 @@ partyState.active && partyState.role === 'guest' && !_isPartyDJ();
 const _isAndroidChrome = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 function _applyPlaybackRate(el, rate) {
 if (!el) return;
+// iOS-only: while backgrounded with the Web Audio graph disconnected (native
+// <audio> fallback active), the native element must play at 1x with pitch
+// preserved — the Web Audio graph is what applies speed effects, and it's not
+// in the loop right now. Forcing preservesPitch=false + a fast rate here is
+// what caused the lock-screen "sped up and pitched up" bug.
+if (typeof window._iosNativeFallbackActive === 'function' && window._iosNativeFallbackActive()) {
+el.preservesPitch        = true;
+el.mozPreservesPitch     = true;
+el.webkitPreservesPitch  = true;
+el.playbackRate          = 1.0;
+return;
+}
 const clampedRate = Math.max(0.1, Math.min(4.0, rate));
 el.preservesPitch        = false;
 el.mozPreservesPitch     = false;
@@ -29507,6 +29560,13 @@ const _resumeAt = player.currentTime || 0;
 const _wasPlaying = !player.paused;
 player.src = cachedUrl;
 if (_resumeAt > 0.05) player.currentTime = _resumeAt;
+// Setting .src reloads the media element, which resets playbackRate (and the
+// preservesPitch flags) back to defaults in most browsers. Reapply the current
+// speed setting here or the swap silently reverts the user's speed/effects
+// until they touch the slider again.
+if (!_isPartyGuest()) {
+_applyPlaybackRate(player, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
+}
 if (_wasPlaying) player.play().catch(() => {});
 }).catch(() => {});
 }
@@ -31817,7 +31877,12 @@ for (const name of cacheNames) {
 const cache = await caches.open(name);
 const keys = await cache.keys();
 for (const req of keys) {
-if (req.url.includes(PLAYER_WORKER_URL) || req.url.includes('workers.dev')) {
+// Audio entries are stored under the synthetic 'goot-audio-cache' key
+// (see _audioCacheKey), not under the actual worker URL -- matching on
+// PLAYER_WORKER_URL/workers.dev here never hit those entries, so this
+// count was always 0 even though the cache was genuinely being cleared
+// below via clearClientAudioCache().
+if (req.url.includes('goot-audio-cache') || req.url.includes(PLAYER_WORKER_URL) || req.url.includes('workers.dev')) {
 await cache.delete(req);
 cleared++;
 }
@@ -33356,7 +33421,7 @@ const img    = document.getElementById('art-redirect-existing-img');
 img.src = data.to + '&_cb=' + Date.now();
 banner.style.display = '';
 artRedirectClearFile();
-_applyArtRedirectLocally(album.toLowerCase(), { artist, to: data.to });
+_applyArtRedirectLocally(_normAlbumForRedirect(album), { artist, to: data.to });
 if (typeof updateAllUIForAlbum === 'function') {
 const freshUrl = await R2AlbumArt.get(album, artist);
 if (freshUrl) updateAllUIForAlbum(album, freshUrl);
@@ -33549,8 +33614,15 @@ document.addEventListener('DOMContentLoaded', () => {
 loadBlockedTracks();
 loadArtRedirects();
 });
-let _artRedirectRegistry = new Set(); // lowercase album names that have an active redirect
-let _artRedirectFull = {};            // lowercase album → { artist, to } for direct URL use
+let _artRedirectRegistry = new Set(); // normAlbum strings (lowercased, alphanumeric-only) that have an active redirect
+let _artRedirectFull = {};            // normAlbum → { artist, to } for direct URL use
+// MUST match the worker's normAlbum exactly (lowercase, strip everything
+// that isn't a-z0-9) -- /art-redirect/list keys are built this way server-
+// side, so any client-side check against this registry has to normalize
+// the same way or it will never match a real album name.
+function _normAlbumForRedirect(album) {
+return (album || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 async function loadArtRedirects() {
 try {
 const res = await fetch(PLAYER_WORKER_URL + '/art-redirect/list', { cache: 'no-store' });
@@ -33568,7 +33640,7 @@ console.warn('[ArtRedirect] Failed to load redirects:', e);
 }
 function _evictLocalArtCache(albumLower) {
 for (const key of Object.keys(albumArtCache)) {
-if (key.toLowerCase() === albumLower) {
+if (_normAlbumForRedirect(key) === albumLower) {
 const val = albumArtCache[key];
 if (val && val.startsWith('blob:')) {
 try { URL.revokeObjectURL(val); } catch(_) {}
@@ -40256,10 +40328,11 @@ if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
 const duration = player.duration;
 const currentTime = player.currentTime;
 if (duration && currentTime && (duration - currentTime) > 5) {
-console.warn('Track ended prematurely - likely blob URL security error. Retrying with streaming URL...');
+console.warn('Track ended prematurely - likely a truncated/corrupted cache entry. Evicting and retrying with streaming URL...');
 _blobUrlsBlocked = true;
 const currentTrack = queue[qIndex];
 if (currentTrack) {
+_evictBadTrackCache(currentTrack.id);
 player.src = streamUrl(currentTrack.id);
 player.currentTime = currentTime;
 player.play().catch(err => console.error('Retry playback error:', err));
@@ -40324,10 +40397,11 @@ if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
 const duration = player2.duration;
 const currentTime = player2.currentTime;
 if (duration && currentTime && (duration - currentTime) > 5) {
-console.warn('Track ended prematurely - likely blob URL security error. Retrying with streaming URL...');
+console.warn('Track ended prematurely - likely a truncated/corrupted cache entry. Evicting and retrying with streaming URL...');
 _blobUrlsBlocked = true;
 const currentTrack = queue[qIndex];
 if (currentTrack) {
+_evictBadTrackCache(currentTrack.id);
 player2.src = streamUrl(currentTrack.id);
 player2.currentTime = currentTime;
 player2.play().catch(err => console.error('Retry playback error:', err));
@@ -42959,7 +43033,30 @@ const metadata = trackMetadata[trackId] || {};
 const title = metadata.title || 'Unknown Track';
 const artist = (metadata.artist || 'Unknown Artist').split(';').map(a => a.trim()).filter(Boolean).join(', ');
 const album = metadata.album || '';
-const duration = Math.round((metadata.duration || 0) / 1000); // Convert ms to seconds
+let duration = Math.round((metadata.duration || 0) / 1000); // Convert ms to seconds
+if (duration < 10) { // catalog duration missing/placeholder (0, or a bogus sub-10s value) - not a real song length
+const activePlayer = (typeof currentPlayer !== 'undefined' && currentPlayer) ? currentPlayer : document.getElementById('player');
+if (activePlayer && !isNaN(activePlayer.duration) && isFinite(activePlayer.duration) && activePlayer.duration >= 10) {
+duration = Math.round(activePlayer.duration);
+} else if (activePlayer) {
+// Duration not loaded onto the <audio> element yet (common right when a track starts) -
+// wait briefly for it rather than sending a misleading duration=0 to every lyrics source.
+duration = await new Promise(resolve => {
+const onLoaded = () => {
+clearTimeout(timeoutId);
+const d = activePlayer.duration;
+resolve((!isNaN(d) && isFinite(d) && d >= 10) ? Math.round(d) : 0);
+};
+const timeoutId = setTimeout(() => {
+activePlayer.removeEventListener('loadedmetadata', onLoaded);
+resolve(0);
+}, 4000);
+activePlayer.addEventListener('loadedmetadata', onLoaded, { once: true });
+});
+} else {
+duration = 0;
+}
+}
 const isrc = metadata.isrc || metadata.ISRC || null;
 titleEl.textContent = title;
 artistEl.textContent = artist;
@@ -42984,7 +43081,13 @@ if (!options.force) {
 window._lyricsInFlight[trackId] = new Promise(r => { _resolveInFlight = r; });
 }
 try {
-let data = await _tryLyricsplusAPI(title, artist, album, duration, isrc);
+let data = await _tryBinimumAPI(title, artist, album, duration, isrc);
+if (!data) {
+data = await _tryLyricsplusAPI(title, artist, album, duration, isrc);
+}
+if (!data) {
+data = await _tryBinimumSearchAPI(title, artist, album, duration, isrc);
+}
 if (!data) {
 const workerUrl = `${PLAYER_WORKER_URL}/lyrics?trackId=${encodeURIComponent(trackId)}&title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&force=true`;
 const response = await fetch(workerUrl, { cache: 'no-store' });
@@ -43046,6 +43149,46 @@ console.error('Error fetching lyrics:', error);
 showLyricsError('Failed to load lyrics. Please try again.', target);
 }
 }
+function _isTrulyWordLevel(lyricsArray) {
+if (!Array.isArray(lyricsArray) || lyricsArray.length === 0) return false;
+const withSyllabus = lyricsArray.filter(l => Array.isArray(l.syllabus) && l.syllabus.length > 0).length;
+return withSyllabus / lyricsArray.length >= 0.5;
+}
+function _parseLP(json, sourceTag = 'lyricsplus') {
+if (!json) return null;
+const lpSource = json.metadata?.source || json.source || null;
+if (Array.isArray(json.lyrics) && json.lyrics.length > 0) {
+const isWordLevel = _isTrulyWordLevel(json.lyrics);
+return {
+type: isWordLevel ? 'Word' : 'Line',
+lyrics: json.lyrics,
+songParts: json.metadata?.songParts || null,
+_source: sourceTag,
+_lpSource: lpSource,
+_isWordLevel: isWordLevel
+};
+}
+if (typeof json.lyrics === 'string' && json.lyrics.trim().length > 0) {
+const parsed = [];
+for (const line of json.lyrics.split('\n')) {
+const match = line.match(/^\[(\d+):(\d+\.\d+)\]\s?(.*)/);
+if (match) {
+const time = (parseInt(match[1], 10) * 60 + parseFloat(match[2])) * 1000;
+parsed.push({ time, text: match[3] || '' });
+}
+}
+if (parsed.length > 0) {
+return {
+type: 'Line',
+lyrics: parsed,
+_source: sourceTag,
+_lpSource: lpSource,
+_isWordLevel: false
+};
+}
+}
+return null;
+}
 async function _tryLyricsplusAPI(title, artist, album, durationSecs, isrc) {
 async function _lpFetch() {
 const endpoints = [
@@ -43076,56 +43219,219 @@ console.warn(`[LyricsPlus] endpoint failed (${base}):`, e);
 }
 return null;
 }
-function _isTrulyWordLevel(lyricsArray) {
-if (!Array.isArray(lyricsArray) || lyricsArray.length === 0) return false;
-const withSyllabus = lyricsArray.filter(l => Array.isArray(l.syllabus) && l.syllabus.length > 0).length;
-return withSyllabus / lyricsArray.length >= 0.5;
-}
-function _parseLP(json) {
-if (!json) return null;
-const lpSource = json.metadata?.source || json.source || null;
-if (Array.isArray(json.lyrics) && json.lyrics.length > 0) {
-const isWordLevel = _isTrulyWordLevel(json.lyrics);
-return {
-type: isWordLevel ? 'Word' : 'Line',
-lyrics: json.lyrics,
-songParts: json.metadata?.songParts || null,
-_source: 'lyricsplus',
-_lpSource: lpSource,
-_isWordLevel: isWordLevel
-};
-}
-if (typeof json.lyrics === 'string' && json.lyrics.trim().length > 0) {
-const parsed = [];
-for (const line of json.lyrics.split('\n')) {
-const match = line.match(/^\[(\d+):(\d+\.\d+)\]\s?(.*)/);
-if (match) {
-const time = (parseInt(match[1], 10) * 60 + parseFloat(match[2])) * 1000;
-parsed.push({ time, text: match[3] || '' });
-}
-}
-if (parsed.length > 0) {
-return {
-type: 'Line',
-lyrics: parsed,
-_source: 'lyricsplus',
-_lpSource: lpSource,
-_isWordLevel: false
-};
-}
-}
-return null;
-}
 try {
 const json = await _lpFetch();
 console.log('[LyricsPlus] raw response:', JSON.stringify(json).slice(0, 400));
-const data = _parseLP(json);
+const data = _parseLP(json, 'lyricsplus');
 if (data) {
 console.log(`[LyricsPlus] ${data._isWordLevel ? 'word-level' : 'line-synced'} from ${data._lpSource}`);
 }
 return data || null;
 } catch (e) {
 console.warn('LyricsPlus API failed:', e);
+return null;
+}
+}
+async function _tryBinimumAPI(title, artist, album, durationSecs, isrc) {
+try {
+const params = new URLSearchParams({
+title:    title,
+artist:   artist,
+album:    album || '',
+duration: durationSecs || 0,
+});
+if (isrc) params.set('isrc', isrc);
+const binimumUrl = `https://lyricsplus.binimum.org/v2/lyrics/get?${params}`;
+console.log('[Binimum] fetching:', binimumUrl);
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 15000);
+let resp;
+try {
+resp = await fetch(binimumUrl, { cache: 'no-store', signal: controller.signal });
+} finally {
+clearTimeout(timeout);
+}
+if (!resp || !resp.ok) {
+console.warn(`[Binimum] request failed with status ${resp ? resp.status : 'no response'}`);
+return null;
+}
+const json = await resp.json();
+const data = _parseLP(json, 'binimum');
+if (data) {
+console.log(`[Binimum] ${data._isWordLevel ? 'word-level' : 'line-synced'} from ${data._lpSource || 'binimum'}`);
+}
+return data;
+} catch (e) {
+console.warn('[Binimum] lyrics fetch failed:', e);
+return null;
+}
+}
+async function _tryBinimumSearchAPI(title, artist, album, durationSecs, isrc) {
+try {
+const params = new URLSearchParams({
+track:    title,
+artist:   artist,
+album:    album || '',
+duration: durationSecs || 0,
+});
+if (isrc) params.set('isrc', isrc);
+const searchUrl = `https://lyrics-api.binimum.org/?${params}`;
+console.log('[BinimumSearch] fetching:', searchUrl);
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 15000);
+let resp;
+try {
+resp = await fetch(searchUrl, { cache: 'no-store', signal: controller.signal });
+} finally {
+clearTimeout(timeout);
+}
+if (!resp || !resp.ok) {
+console.warn(`[BinimumSearch] request failed with status ${resp ? resp.status : 'no response'}`);
+return null;
+}
+const bodyText = (await resp.text()).trim();
+if (!bodyText) {
+console.warn('[BinimumSearch] empty response body');
+return null;
+}
+let json;
+try {
+json = JSON.parse(bodyText);
+} catch (e) {
+console.warn('[BinimumSearch] JSON parse failed:', e);
+return null;
+}
+if (!Array.isArray(json.results) || json.results.length === 0 || !json.results[0].lyricsUrl) {
+console.warn('[BinimumSearch] no results with lyricsUrl');
+return null;
+}
+const lyricsUrl = json.results[0].lyricsUrl;
+console.log('[BinimumSearch] search hit, following lyricsUrl:', lyricsUrl);
+const lController = new AbortController();
+const lTimeout = setTimeout(() => lController.abort(), 15000);
+let lResp;
+try {
+lResp = await fetch(lyricsUrl, { cache: 'no-store', signal: lController.signal });
+} finally {
+clearTimeout(lTimeout);
+}
+if (!lResp || !lResp.ok) {
+console.warn(`[BinimumSearch] lyricsUrl fetch failed with status ${lResp ? lResp.status : 'no response'}`);
+return null;
+}
+const lBody = (await lResp.text()).trim();
+if (!lBody) {
+console.warn('[BinimumSearch] lyricsUrl returned empty body');
+return null;
+}
+if (lBody[0] === '{' || lBody[0] === '[') {
+let lJson;
+try {
+lJson = JSON.parse(lBody);
+} catch (e) {
+console.warn('[BinimumSearch] lyricsUrl JSON parse failed:', e);
+return null;
+}
+const data = _parseLP(lJson, 'binimum');
+if (data) console.log(`[BinimumSearch] ${data._isWordLevel ? 'word-level' : 'line-synced'} JSON via lyricsUrl (${data._lpSource || 'binimum'})`);
+return data;
+}
+const data = _parseBinimumTTML(lBody);
+if (data) console.log(`[BinimumSearch] ${data._isWordLevel ? 'word-level' : 'line-synced'} TTML via lyricsUrl`);
+return data;
+} catch (e) {
+console.warn('[BinimumSearch] lyrics fetch failed:', e);
+return null;
+}
+}
+function _parseBinimumTTML(ttmlText) {
+try {
+const xml = new DOMParser().parseFromString(ttmlText, 'application/xml');
+if (xml.querySelector('parsererror')) return null;
+const ns = 'http://www.w3.org/ns/ttml';
+const toMs = (val) => {
+if (!val) return 0;
+const parts = String(val).split(':');
+let secs = 0;
+if (parts.length === 3) {
+secs = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseFloat(parts[2]);
+} else if (parts.length === 2) {
+secs = parseInt(parts[0], 10) * 60 + parseFloat(parts[1]);
+} else {
+secs = parseFloat(parts[0]);
+}
+return Math.round(secs * 1000);
+};
+const divs = Array.from(xml.getElementsByTagNameNS(ns, 'div'));
+const paragraphs = divs.length > 0 ? divs : [xml.getElementsByTagNameNS(ns, 'body')[0] || xml.documentElement];
+const songParts = [];
+const lyrics = [];
+const useDivs = divs.length > 0 ? divs : [null];
+useDivs.forEach((div, divIdx) => {
+let partIndex = -1;
+if (div) {
+const partName = div.getAttribute('itunes:songPart');
+if (partName) {
+partIndex = songParts.length;
+songParts.push({ name: partName });
+}
+}
+const pNodes = div
+? Array.from(div.getElementsByTagNameNS(ns, 'p'))
+: Array.from(xml.getElementsByTagNameNS(ns, 'p'));
+pNodes.forEach(p => {
+const begin = toMs(p.getAttribute('begin'));
+const end = toMs(p.getAttribute('end'));
+const agent = p.getAttributeNS('http://www.w3.org/ns/ttml#metadata', 'agent') || p.getAttribute('ttm:agent') || '';
+const spans = Array.from(p.children).filter(el => el.localName === 'span');
+const syllabus = [];
+let plainText = '';
+const walkSpans = (spanList, isBg) => {
+spanList.forEach(span => {
+const role = span.getAttribute('ttm:role') || span.getAttributeNS('http://www.w3.org/ns/ttml#metadata', 'role');
+if (role === 'x-bg') {
+walkSpans(Array.from(span.children).filter(el => el.localName === 'span'), true);
+return;
+}
+const sBegin = span.getAttribute('begin');
+const sEnd = span.getAttribute('end');
+const rawText = span.textContent || '';
+const wordText = /\s$/.test(rawText) ? rawText : (rawText + ' ');
+if (sBegin !== null) {
+const sB = toMs(sBegin);
+const sE = toMs(sEnd);
+syllabus.push({ time: sB, duration: Math.max(0, sE - sB), text: wordText, isBackground: !!isBg });
+}
+plainText += (plainText && !plainText.endsWith(' ') ? ' ' : '') + rawText.trim();
+});
+};
+if (spans.length > 0) {
+walkSpans(spans, false);
+} else {
+plainText = (p.textContent || '').trim();
+}
+lyrics.push({
+time: begin,
+duration: Math.max(0, end - begin),
+text: plainText.trim(),
+syllabus: syllabus,
+element: { singer: agent, songPartIndex: partIndex }
+});
+});
+});
+if (lyrics.length === 0) return null;
+lyrics.sort((a, b) => a.time - b.time);
+const isWordLevel = lyrics.filter(l => Array.isArray(l.syllabus) && l.syllabus.length > 0).length / lyrics.length >= 0.5;
+return {
+type: isWordLevel ? 'Word' : 'Line',
+lyrics: lyrics,
+songParts: songParts.length > 0 ? songParts : null,
+_source: 'lyricsplus',
+_lpSource: 'binimum',
+_isWordLevel: isWordLevel
+};
+} catch (e) {
+console.warn('[Binimum] TTML parse failed:', e);
 return null;
 }
 }
@@ -43185,6 +43491,7 @@ const _providerMap = {
 'musixmatch': 'Musixmatch',
 'spotify': 'Spotify',
 'lyricsplus': 'LyricsPlus',
+'binimum': 'Binimum',
 };
 const _provider = _providerMap[_lpSrc] || (_lpSrc ? _lpSrc : 'LyricsPlus');
 _badgeLabel = `${_provider} · ${_typeLabel}`;
@@ -50692,6 +50999,12 @@ if (!_isIOS && !_isSafari) return;
 var _graphDisconnected = false;
 var _resumeTimer = null;
 
+// Exposed so _applyPlaybackRate (used on every track change / play call) can
+// check, without duplicating iOS/Safari detection or disconnect-state tracking.
+window._iosNativeFallbackActive = function() {
+return _graphDisconnected;
+};
+
 function _getCtx() {
 return (typeof audioCtx !== 'undefined' && audioCtx) ? audioCtx : null;
 }
@@ -50823,6 +51136,21 @@ src.start(0);
 } catch(e) {}
 }
 }, 25000);
+
+// Watchdog: while backgrounded, iOS Safari can silently drift/reset playbackRate
+// and preservesPitch on the native <audio> element (especially across track
+// changes fired via MediaSession handlers), which is what causes the "sped up
+// and pitched up" bug on the lock screen. Poll and correct frequently while hidden.
+setInterval(function() {
+if (!document.hidden || typeof _applyPlaybackRate !== 'function') return;
+var rate = (typeof effectsState !== 'undefined' && effectsState && effectsState.speed)
+? effectsState.speed / 100 : 1;
+[typeof player !== 'undefined' ? player : null,
+typeof player2 !== 'undefined' ? player2 : null].forEach(function(el) {
+if (!el) return;
+_applyPlaybackRate(el, rate); // no-op cost if already correct; corrects any iOS drift
+});
+}, 1000);
 
 })();
 </script>
