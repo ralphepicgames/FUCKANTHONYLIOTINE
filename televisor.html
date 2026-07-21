@@ -1578,6 +1578,351 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
+    /* ── Channel view panel ── */
+    #channelPanel { display: none; }
+    #channelPanel.visible { display: flex; }
+
+    .ch-lookup-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 0 14px 0;
+      flex-shrink: 0;
+    }
+    .ch-lookup-field {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .ch-lookup-field svg {
+      position: absolute;
+      left: 14px;
+      width: 18px; height: 18px;
+      fill: var(--md-sys-color-on-surface-variant);
+      pointer-events: none;
+      flex-shrink: 0;
+    }
+    #channelHandleInput {
+      width: 100%;
+      padding: 10px 14px 10px 42px;
+      border-radius: var(--md-shape-corner-full);
+      border: 1.5px solid var(--md-sys-color-outline-variant);
+      background: var(--md-sys-color-surface-container-high);
+      color: var(--md-sys-color-on-surface);
+      font-family: 'Google Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    #channelHandleInput:focus {
+      border-color: var(--md-sys-color-primary);
+      background: var(--md-sys-color-surface-container-highest);
+    }
+    #channelHandleInput::placeholder { color: var(--md-sys-color-on-surface-variant); }
+    .ch-lookup-btn {
+      padding: 10px 22px;
+      border-radius: var(--md-shape-corner-full);
+      border: none;
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      font-family: 'Google Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: filter 0.15s;
+    }
+    .ch-lookup-btn:hover { filter: brightness(1.12); }
+
+    /* Quick access row — saved channel chips, pinned across sessions */
+    .ch-quickaccess {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 2px 2px 14px 2px;
+      flex-shrink: 0;
+    }
+    .ch-quickaccess::-webkit-scrollbar { height: 4px; }
+    .ch-quickaccess::-webkit-scrollbar-thumb { background: var(--md-sys-color-outline-variant); border-radius: 2px; }
+    .ch-qa-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--md-sys-color-on-surface-variant);
+      opacity: 0.7;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .ch-qa-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px 5px 6px;
+      border-radius: var(--md-shape-corner-full);
+      background: var(--md-sys-color-surface-container-high);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .ch-qa-chip:hover { background: var(--md-sys-color-surface-container-highest); border-color: var(--md-sys-color-primary); }
+    .ch-qa-chip img {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--md-sys-color-surface-container-highest);
+      flex-shrink: 0;
+    }
+    .ch-qa-chip span {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--md-sys-color-on-surface);
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ch-qa-empty {
+      font-size: 12px;
+      color: var(--md-sys-color-on-surface-variant);
+      opacity: 0.55;
+    }
+
+    .ch-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      gap: 0;
+    }
+
+    /* Channel header: avatar, name, handle, sub count, quick-access toggle */
+    .ch-header {
+      display: none;
+      align-items: center;
+      gap: 14px;
+      padding: 4px 4px 16px 4px;
+      flex-shrink: 0;
+    }
+    .ch-header.visible { display: flex; }
+    .ch-header-avatar {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--md-sys-color-surface-container-highest);
+      flex-shrink: 0;
+    }
+    .ch-header-info { flex: 1; min-width: 0; }
+    .ch-header-name {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--md-sys-color-on-surface);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ch-header-meta {
+      font-size: 12px;
+      color: var(--md-sys-color-on-surface-variant);
+      opacity: 0.75;
+      margin-top: 2px;
+    }
+    .ch-header-add-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: var(--md-shape-corner-full);
+      border: 1.5px solid var(--md-sys-color-outline-variant);
+      background: transparent;
+      color: var(--md-sys-color-on-surface);
+      font-family: 'Google Sans', sans-serif;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .ch-header-add-btn svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; }
+    .ch-header-add-btn:hover { border-color: var(--md-sys-color-primary); color: var(--md-sys-color-primary); }
+    .ch-header-add-btn.added {
+      background: var(--md-sys-color-primary-container);
+      border-color: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+    }
+
+    /* Sub-tabs: Videos / Shorts / Playlists / Posts */
+    .ch-tabs {
+      display: flex;
+      gap: 2px;
+      background: var(--md-sys-color-surface-container-highest);
+      border-radius: var(--md-shape-corner-full);
+      padding: 3px;
+      flex-shrink: 0;
+      margin-bottom: 12px;
+      width: fit-content;
+    }
+    .ch-tab {
+      padding: 7px 18px;
+      border-radius: var(--md-shape-corner-full);
+      border: none;
+      background: transparent;
+      color: var(--md-sys-color-on-surface-variant);
+      cursor: pointer;
+      font-family: 'Google Sans', sans-serif;
+      font-size: 12.5px;
+      font-weight: 500;
+      transition: background 0.18s, color 0.18s;
+      white-space: nowrap;
+    }
+    .ch-tab.active {
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+    }
+
+    /* Content grid — reuses the same card shape as movies/niggle grids */
+    .ch-grid-wrap {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .ch-grid {
+      flex: 1;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      padding: 4px 4px 16px 4px;
+      align-content: start;
+      min-height: 0;
+    }
+    .ch-grid.shorts-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    .ch-grid::-webkit-scrollbar { width: 4px; }
+    .ch-grid::-webkit-scrollbar-thumb { background: var(--md-sys-color-outline-variant); border-radius: 2px; }
+
+    .ch-card {
+      position: relative;
+      border-radius: 10px;
+      cursor: pointer;
+      overflow: hidden;
+      background: var(--md-sys-color-surface-container-high);
+      transition: transform 0.2s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.2s ease;
+    }
+    .ch-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.4); }
+    .ch-card-thumb-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: var(--md-sys-color-surface-container-highest);
+      overflow: hidden;
+    }
+    .ch-grid.shorts-grid .ch-card-thumb-wrap { aspect-ratio: 9/16; }
+    .ch-card-thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ch-card-duration {
+      position: absolute;
+      bottom: 6px; right: 6px;
+      background: rgba(0,0,0,0.82);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .ch-card-body { padding: 8px 10px 10px 10px; }
+    .ch-card-title {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--md-sys-color-on-surface);
+      line-height: 1.35;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      margin-bottom: 3px;
+    }
+    .ch-card-sub {
+      font-size: 11px;
+      color: var(--md-sys-color-on-surface-variant);
+      opacity: 0.7;
+    }
+
+    /* Playlist card badge */
+    .ch-card-playlist-badge {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ch-card-playlist-badge svg { width: 32px; height: 32px; fill: rgba(255,255,255,0.9); }
+
+    /* Post card (text-forward, no forced 16:9 thumb) */
+    .ch-post-card {
+      border-radius: 12px;
+      background: var(--md-sys-color-surface-container-high);
+      padding: 14px;
+      cursor: default;
+    }
+    .ch-post-text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--md-sys-color-on-surface);
+      white-space: pre-wrap;
+    }
+    .ch-post-img { width: 100%; border-radius: 8px; margin-top: 10px; display: block; }
+    .ch-post-meta {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--md-sys-color-on-surface-variant);
+      opacity: 0.7;
+    }
+    .ch-post-play-btn {
+      margin-top: 10px;
+      padding: 6px 14px;
+      border-radius: var(--md-shape-corner-full);
+      border: none;
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      font-family: 'Google Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .ch-empty {
+      grid-column: 1/-1;
+      padding: 40px 0;
+      text-align: center;
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .ch-placeholder {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--md-sys-color-on-surface-variant);
+      text-align: center;
+    }
+    .ch-placeholder svg { width: 44px; height: 44px; opacity: 0.3; }
+    .ch-placeholder-title { font-weight: 600; font-size: 14px; }
+    .ch-placeholder-sub { font-size: 12px; opacity: 0.65; max-width: 280px; }
+
     /* ── Niggle Vids tab panel ── */
     #nigglePanel {
       display: none;
@@ -1915,6 +2260,19 @@
         grid-template-columns: repeat(4, 1fr);
       }
 
+      /* Channel panel */
+      #channelPanel {
+        height: auto !important;
+        overflow: visible !important;
+        padding: 8px 10px 12px !important;
+      }
+      .ch-grid {
+        max-height: 320px;
+        overflow-y: auto;
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .ch-grid.shorts-grid { grid-template-columns: repeat(3, 1fr); }
+
       /* Search bar: shrink for landscape */
       .unified-search-row {
         max-width: 100%;
@@ -1986,6 +2344,12 @@
             <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M21.58 7.19c-.23-.86-.91-1.54-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42c-.86.23-1.54.91-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81c.23.86.91 1.54 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42c.86-.23 1.54-.91 1.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81zM10 15V9l5.2 3-5.2 3z"/></svg>
           </div>
           <div class="nav-label">YouTube</div>
+        </div>
+        <div class="nav-item" id="navChannel" onclick="switchTab('channel')">
+          <div class="nav-icon-wrapper">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          </div>
+          <div class="nav-label">Channel</div>
         </div>
         <div class="nav-item" id="navMovies" onclick="switchTab('movies'); setMediaType('movie')">
           <div class="nav-icon-wrapper">
@@ -2314,6 +2678,61 @@
       </div>
 
     </div><!-- end moviesPanel -->
+
+        <!-- ── Channel View Panel ── -->
+        <div id="channelPanel" class="movies-layout">
+
+          <!-- Handle lookup bar -->
+          <div class="ch-lookup-bar">
+            <div class="ch-lookup-field">
+              <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+              <input id="channelHandleInput" type="text" placeholder="Look up a channel by @handle…" autocomplete="off"
+                onkeydown="if(event.key==='Enter')lookupChannel()">
+            </div>
+            <button class="ch-lookup-btn" onclick="lookupChannel()">Look up</button>
+          </div>
+
+          <!-- Quick access — saved channels, one tap to reopen -->
+          <div class="ch-quickaccess" id="channelQuickAccess"></div>
+
+          <div class="ch-body">
+
+            <!-- Channel header (hidden until a channel is loaded) -->
+            <div class="ch-header" id="channelHeader">
+              <img class="ch-header-avatar" id="channelHeaderAvatar" src="" alt="" onerror="this.style.visibility='hidden'">
+              <div class="ch-header-info">
+                <div class="ch-header-name" id="channelHeaderName">—</div>
+                <div class="ch-header-meta" id="channelHeaderMeta"></div>
+              </div>
+              <button class="ch-header-add-btn" id="channelAddBtn" onclick="toggleChannelQuickAccess()">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                <span id="channelAddBtnLabel">Add to quick access</span>
+              </button>
+            </div>
+
+            <!-- Sub-tabs -->
+            <div class="ch-tabs" id="channelTabs" style="display:none;">
+              <button class="ch-tab active" id="chTabVideos" onclick="switchChannelTab('videos')">Videos</button>
+              <button class="ch-tab" id="chTabShorts" onclick="switchChannelTab('shorts')">Shorts</button>
+              <button class="ch-tab" id="chTabPlaylists" onclick="switchChannelTab('playlists')">Playlists</button>
+              <button class="ch-tab" id="chTabPosts" onclick="switchChannelTab('posts')">Posts</button>
+            </div>
+
+            <!-- Content grid -->
+            <div class="ch-grid-wrap">
+              <div class="ch-grid" id="channelGrid" style="display:none;"></div>
+
+              <!-- Placeholder before any channel is loaded -->
+              <div class="ch-placeholder" id="channelPlaceholder">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <div class="ch-placeholder-title">Look up a channel</div>
+                <div class="ch-placeholder-sub">Enter an @handle above to see its videos, shorts, playlists, and posts — or pick a saved channel from quick access.</div>
+              </div>
+            </div>
+
+          </div><!-- end ch-body -->
+
+        </div><!-- end channelPanel -->
 
         <!-- ── Niggle Vids Panel (secret) ── -->
         <div id="nigglePanel" class="movies-layout">
@@ -3073,6 +3492,245 @@
     function extractVideoID(url){const regex=/(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;const match=url.match(regex);if(match)return match[1];if(/^[a-zA-Z0-9_-]{11}$/.test(url))return url;return null;}
     async function fetchVideoTitle(videoId){try{const res=await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);if(!res.ok)throw new Error();return(await res.json()).title;}catch{return null;}}
 
+    // ══════════════════════════════════════════════
+    //  CHANNEL VIEW — look up a channel by @handle,
+    //  browse its videos/shorts/playlists/posts, and
+    //  optionally pin it to a quick-access row.
+    // ══════════════════════════════════════════════
+    let _channelCurrent   = null;   // { channelId, name, handle, subscriberText, avatar }
+    let _channelTab       = 'videos';
+    let _channelCache     = {};     // `${channelId}:${tab}` -> items array (session cache)
+    let _channelLookupBusy = false;
+
+    function _channelQuickAccessList() {
+      try { return JSON.parse(localStorage.getItem('gootChannelQuickAccess') || '[]'); }
+      catch(e) { return []; }
+    }
+    function _saveChannelQuickAccessList(list) {
+      localStorage.setItem('gootChannelQuickAccess', JSON.stringify(list));
+    }
+
+    function _renderChannelQuickAccess() {
+      const row = document.getElementById('channelQuickAccess');
+      const list = _channelQuickAccessList();
+      if (!list.length) {
+        row.innerHTML = '<span class="ch-qa-label">Quick access</span><span class="ch-qa-empty">No saved channels yet — look one up and add it</span>';
+        return;
+      }
+      row.innerHTML = '<span class="ch-qa-label">Quick access</span>' + list.map(c => `
+        <div class="ch-qa-chip" onclick="openChannelById('${c.channelId}','${(c.handle||'').replace(/'/g,"\\'")}')" title="${(c.name||c.handle||'').replace(/"/g,'&quot;')}">
+          ${c.avatar ? `<img src="${c.avatar}" onerror="this.style.display='none'">` : ''}
+          <span>${c.name || c.handle || c.channelId}</span>
+        </div>`).join('');
+      _updateChannelAddBtn();
+    }
+
+    function _updateChannelAddBtn() {
+      const btn = document.getElementById('channelAddBtn');
+      const label = document.getElementById('channelAddBtnLabel');
+      if (!_channelCurrent) return;
+      const inList = _channelQuickAccessList().some(c => c.channelId === _channelCurrent.channelId);
+      btn.classList.toggle('added', inList);
+      label.textContent = inList ? 'Added to quick access' : 'Add to quick access';
+    }
+
+    function toggleChannelQuickAccess() {
+      if (!_channelCurrent) return;
+      let list = _channelQuickAccessList();
+      const idx = list.findIndex(c => c.channelId === _channelCurrent.channelId);
+      if (idx >= 0) {
+        list.splice(idx, 1);
+      } else {
+        list.push({
+          channelId: _channelCurrent.channelId,
+          name:      _channelCurrent.name,
+          handle:    _channelCurrent.handle,
+          avatar:    _channelCurrent.avatar,
+        });
+      }
+      _saveChannelQuickAccessList(list);
+      _renderChannelQuickAccess();
+    }
+
+    // Open a channel straight from a saved quick-access chip (skips handle resolution)
+    function openChannelById(channelId, handle) {
+      _channelCurrent = { channelId, name: '', handle: handle || '', subscriberText: '', avatar: '' };
+      document.getElementById('channelHandleInput').value = handle || '';
+      _loadChannelHeader(channelId);
+      switchChannelTab('videos', true);
+    }
+
+    async function lookupChannel() {
+      if (_channelLookupBusy) return;
+      const raw = document.getElementById('channelHandleInput').value.trim();
+      if (!raw) return alert('Enter a channel @handle');
+      _channelLookupBusy = true;
+      _showChannelGridMessage('Looking up channel…');
+      try {
+        const res = await fetch(SEARCH_WORKER + '?handle=' + encodeURIComponent(raw));
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        _channelCurrent = data;
+        _channelCache = {}; // fresh channel — drop any stale cached tabs
+        _renderChannelHeader(data);
+        switchChannelTab('videos', true);
+      } catch(e) {
+        _showChannelGridMessage(`Couldn't find that channel — ${e.message}`);
+      } finally {
+        _channelLookupBusy = false;
+      }
+    }
+
+    // Used by quick-access chips, which already know the channelId but may
+    // not have full header info cached — fetch header via the videos tab.
+    async function _loadChannelHeader(channelId) {
+      try {
+        const res = await fetch(SEARCH_WORKER + '?channel=' + encodeURIComponent(channelId) + '&tab=videos');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.error) return;
+        _channelCurrent = data;
+        _channelCache[`${channelId}:videos`] = data.items || [];
+        _renderChannelHeader(data);
+      } catch(e) { /* header will just stay minimal */ }
+    }
+
+    function _renderChannelHeader(data) {
+      const header = document.getElementById('channelHeader');
+      header.classList.add('visible');
+      document.getElementById('channelHeaderAvatar').src = data.avatar || '';
+      document.getElementById('channelHeaderAvatar').style.visibility = data.avatar ? '' : 'hidden';
+      document.getElementById('channelHeaderName').textContent = data.name || data.handle || 'Channel';
+      document.getElementById('channelHeaderMeta').textContent = [data.handle, data.subscriberText].filter(Boolean).join(' · ');
+      document.getElementById('channelTabs').style.display = 'flex';
+      document.getElementById('channelPlaceholder').style.display = 'none';
+      _updateChannelAddBtn();
+    }
+
+    function switchChannelTab(tab, force) {
+      _channelTab = tab;
+      ['Videos','Shorts','Playlists','Posts'].forEach(t => {
+        document.getElementById('chTab' + t).classList.toggle('active', t.toLowerCase() === tab);
+      });
+      _loadChannelTab(tab);
+    }
+
+    async function _loadChannelTab(tab) {
+      if (!_channelCurrent) return;
+      const channelId = _channelCurrent.channelId;
+      const cacheKey = `${channelId}:${tab}`;
+      const grid = document.getElementById('channelGrid');
+      grid.classList.toggle('shorts-grid', tab === 'shorts');
+
+      if (_channelCache[cacheKey]) {
+        _renderChannelItems(_channelCache[cacheKey], tab);
+        return;
+      }
+
+      _showChannelGridMessage('Loading…');
+      try {
+        const res = await fetch(SEARCH_WORKER + '?channel=' + encodeURIComponent(channelId) + '&tab=' + tab);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        // Header may have more complete info than what we had (e.g. from quick access)
+        if (data.name) { _channelCurrent = { ..._channelCurrent, ...data }; _renderChannelHeader(data); }
+        const items = data.items || [];
+        _channelCache[cacheKey] = items;
+        // Only render if the user hasn't already switched tabs while this was loading
+        if (_channelTab === tab) _renderChannelItems(items, tab);
+      } catch(e) {
+        if (_channelTab === tab) _showChannelGridMessage(`Couldn't load ${tab} — ${e.message}`);
+      }
+    }
+
+    function _showChannelGridMessage(msg) {
+      const grid = document.getElementById('channelGrid');
+      grid.style.display = 'grid';
+      grid.innerHTML = `<div class="ch-empty">${msg}</div>`;
+    }
+
+    function _renderChannelItems(items, tab) {
+      const grid = document.getElementById('channelGrid');
+      grid.style.display = 'grid';
+      if (!items.length) {
+        grid.innerHTML = `<div class="ch-empty">No ${tab} found for this channel.</div>`;
+        return;
+      }
+
+      if (tab === 'videos' || tab === 'shorts') {
+        grid.innerHTML = items.map((v, i) => `
+          <div class="ch-card" onclick="_playChannelVideo(${i}, '${tab}')">
+            <div class="ch-card-thumb-wrap">
+              <img src="${v.thumb}" onerror="this.style.opacity=0">
+              ${v.lengthText ? `<div class="ch-card-duration">${v.lengthText}</div>` : ''}
+            </div>
+            <div class="ch-card-body">
+              <div class="ch-card-title">${v.title}</div>
+              <div class="ch-card-sub">${v.viewCountText || ''}</div>
+            </div>
+          </div>`).join('');
+        // Stash the raw items for the click handler
+        grid.dataset.items = JSON.stringify(items);
+        return;
+      }
+
+      if (tab === 'playlists') {
+        grid.innerHTML = items.map(p => `
+          <div class="ch-card" onclick="openPlaylistFromChannel('${p.playlistId}')">
+            <div class="ch-card-thumb-wrap">
+              <img src="${p.thumb}" onerror="this.style.opacity=0">
+              <div class="ch-card-playlist-badge"><svg viewBox="0 0 24 24"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg></div>
+            </div>
+            <div class="ch-card-body">
+              <div class="ch-card-title">${p.title}</div>
+              <div class="ch-card-sub">${p.videoCountText || ''}</div>
+            </div>
+          </div>`).join('');
+        return;
+      }
+
+      if (tab === 'posts') {
+        grid.innerHTML = items.map(p => `
+          <div class="ch-post-card">
+            ${p.text ? `<div class="ch-post-text">${p.text}</div>` : ''}
+            ${p.thumb ? `<img class="ch-post-img" src="${p.thumb}" onerror="this.style.display='none'">` : ''}
+            <div class="ch-post-meta">
+              ${p.publishedTime ? `<span>${p.publishedTime}</span>` : ''}
+              ${p.voteCount ? `<span>${p.voteCount}</span>` : ''}
+            </div>
+            ${p.sharedVideoId ? `<button class="ch-post-play-btn" onclick="enqueue('${p.sharedVideoId}',{title:'Shared video',author:'${(_channelCurrent?.name||'').replace(/'/g,"\\'")}'});switchTab('music')">▶ Play shared video</button>` : ''}
+          </div>`).join('');
+        grid.classList.remove('shorts-grid');
+        return;
+      }
+    }
+
+    function _playChannelVideo(idx, tab) {
+      const grid = document.getElementById('channelGrid');
+      let items = [];
+      try { items = JSON.parse(grid.dataset.items || '[]'); } catch(e) {}
+      const v = items[idx];
+      if (!v) return;
+      enqueue(v.videoId, { title: v.title, author: v.author || _channelCurrent?.name || '', thumb: v.thumb });
+      switchTab('music');
+    }
+
+    // Playlists don't have a dedicated player here — hand off to a search
+    // for the playlist title so at least the top result is reachable; the
+    // main win is browsing, and full playlist playback isn't part of the
+    // existing queue model.
+    function openPlaylistFromChannel(playlistId) {
+      window.open(`https://www.youtube.com/playlist?list=${playlistId}`, '_blank', 'noopener');
+    }
+
     function enqueue(videoId,meta){
       queue.push({id:videoId,title:meta.title||videoId,author:meta.author||'',thumb:meta.thumb||`https://i.ytimg.com/vi/${videoId}/default.jpg`});
       prefetch(videoId);renderQueue();
@@ -3574,22 +4232,27 @@
     //  TAB SWITCHING
     // ══════════════════════════════════════════════
     function switchTab(tab) {
-      const music  = document.getElementById('musicPanel');
-      const movies = document.getElementById('moviesPanel');
-      const niggle = document.getElementById('nigglePanel');
-      const ver    = document.getElementById('versionText');
-      const isMusic  = tab === 'music';
-      const isNiggle = tab === 'niggle';
+      const music   = document.getElementById('musicPanel');
+      const movies  = document.getElementById('moviesPanel');
+      const niggle  = document.getElementById('nigglePanel');
+      const channel = document.getElementById('channelPanel');
+      const ver     = document.getElementById('versionText');
+      const isMusic   = tab === 'music';
+      const isNiggle  = tab === 'niggle';
+      const isChannel = tab === 'channel';
+      const isMovies  = !isMusic && !isNiggle && !isChannel;
 
       music.style.display  = isMusic  ? 'flex' : 'none';
-      movies.style.display = (!isMusic && !isNiggle) ? 'flex' : 'none';
+      movies.style.display = isMovies ? 'flex' : 'none';
       niggle.classList.toggle('visible', isNiggle);
+      channel.classList.toggle('visible', isChannel);
       ver.style.display    = isMusic ? '' : 'none';
 
       // Nav rail active states
       document.getElementById('navMusic').classList.toggle('active', isMusic);
-      document.getElementById('navMovies').classList.toggle('active', !isMusic && !isNiggle && _currentMediaType === 'movie');
-      document.getElementById('navTv').classList.toggle('active', !isMusic && !isNiggle && _currentMediaType === 'tv');
+      document.getElementById('navChannel').classList.toggle('active', isChannel);
+      document.getElementById('navMovies').classList.toggle('active', isMovies && _currentMediaType === 'movie');
+      document.getElementById('navTv').classList.toggle('active', isMovies && _currentMediaType === 'tv');
       document.getElementById('navNiggle').classList.toggle('active', isNiggle);
 
       // Hide the niggle nav tab when switching away from it
@@ -3598,10 +4261,11 @@
 
       // Swap search inputs
       document.getElementById('urlInput').style.display          = isMusic ? '' : 'none';
-      document.getElementById('moviesSearchInput').style.display = (!isMusic && !isNiggle) ? '' : 'none';
+      document.getElementById('moviesSearchInput').style.display = isMovies ? '' : 'none';
       document.getElementById('unifiedMusicBtns').style.display  = isMusic ? 'flex' : 'none';
 
-      if (!isMusic && !isNiggle && !_moviesTrendingLoaded) loadTrending();
+      if (isMovies && !_moviesTrendingLoaded) loadTrending();
+      if (isChannel) _renderChannelQuickAccess();
     }
 
     // ══════════════════════════════════════════════
