@@ -51295,6 +51295,9 @@ style="width:100%;margin-top:4px;margin-bottom:14px;background:color-mix(in srgb
 <label style="font-size:12px;opacity:0.6;font-weight:600;letter-spacing:0.3px;">EXCLUDE FROM FEAT. (comma separated aliases)</label>
 <input id="_fmtExclude" placeholder="e.g. Ye"
 style="width:100%;margin-top:4px;margin-bottom:18px;background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);border:none;border-bottom:2px solid var(--md-sys-color-primary);outline:none;font:inherit;color:inherit;padding:6px 8px;border-radius:4px 4px 0 0;box-sizing:border-box;">
+<label style="font-size:12px;opacity:0.6;font-weight:600;letter-spacing:0.3px;">REMOVE FROM TITLES (comma separated)</label>
+<input id="_fmtRemoveText" placeholder="e.g. (Album Version), (Explicit Version)" value="(Album Version), (Explicit Version), (Explicit), (Clean Version), (Clean), (Original Version)"
+style="width:100%;margin-top:4px;margin-bottom:18px;background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);border:none;border-bottom:2px solid var(--md-sys-color-primary);outline:none;font:inherit;color:inherit;padding:6px 8px;border-radius:4px 4px 0 0;box-sizing:border-box;">
 <div id="_fmtStatus" style="font-size:12px;opacity:0.6;margin-bottom:12px;min-height:1.2em;"></div>
 <div style="display:flex;gap:10px;justify-content:flex-end;">
 <button id="_fmtCancelBtn" style="font-size:13px;padding:8px 14px;border-radius:8px;background:color-mix(in srgb,var(--md-sys-color-surface-variant) 70%,transparent);color:inherit;border:none;cursor:pointer;">Cancel</button>
@@ -51308,15 +51311,44 @@ document.getElementById('_fmtApplyBtn').onclick = _applyFormatTitles;
 document.getElementById('_fmtMainArtist').focus();
 }
 
+// Escapes a string for safe use inside a RegExp.
+function _escapeRegex(str) {
+return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Strips each phrase in `phrases` (case-insensitive, literal match) out of
+// `title`, then cleans up any resulting empty parens/brackets and stray
+// whitespace/punctuation left behind.
+function _stripTitleText(title, phrases) {
+let cleaned = title;
+for (const phrase of phrases) {
+if (!phrase) continue;
+const re = new RegExp(_escapeRegex(phrase), 'gi');
+cleaned = cleaned.replace(re, '');
+}
+cleaned = cleaned
+.replace(/\(\s*\)/g, '')
+.replace(/\[\s*\]/g, '')
+.replace(/\{\s*\}/g, '')
+.replace(/\s+([.,;:!?])/g, '$1')
+.replace(/\s{2,}/g, ' ')
+.trim();
+return cleaned;
+}
+
 async function _applyFormatTitles() {
 const mainArtist = document.getElementById('_fmtMainArtist').value.trim();
 const excludeRaw = document.getElementById('_fmtExclude').value.trim();
+const removeRaw = document.getElementById('_fmtRemoveText').value.trim();
 const statusEl = document.getElementById('_fmtStatus');
 const applyBtn = document.getElementById('_fmtApplyBtn');
-if (!mainArtist) { statusEl.textContent = 'Enter a main artist first.'; statusEl.style.color = '#ef4444'; return; }
+
+const removeList = removeRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+if (!mainArtist && !removeList.length) { statusEl.textContent = 'Enter a main artist or something to remove.'; statusEl.style.color = '#ef4444'; return; }
 
 const exclude = new Set(_splitArtists(excludeRaw).map(s => s.toLowerCase()));
-exclude.add(mainArtist.toLowerCase());
+if (mainArtist) exclude.add(mainArtist.toLowerCase());
 
 const tracks = currentAlbumView?.tracks || [];
 if (!tracks.length) { statusEl.textContent = 'No tracks found in this folder.'; statusEl.style.color = '#ef4444'; return; }
@@ -51331,22 +51363,34 @@ const id = t.id;
 if (!id) continue;
 const meta = trackMetadata[id] || {};
 const curArtist = meta.artist || t.artist || '';
-const curTitle = meta.title || t.title || t.name || '';
-if (!curArtist) continue;
+let curTitle = meta.title || t.title || t.name || '';
 
+const fields = {};
+
+// Strip unwanted text (e.g. "(Album Version)", "(Explicit Version)") first,
+// so downstream feat.-tagging logic works off the cleaned-up title.
+if (removeList.length) {
+const cleaned = _stripTitleText(curTitle, removeList);
+if (cleaned && cleaned !== curTitle) {
+curTitle = cleaned;
+fields.title = cleaned;
+}
+}
+
+if (mainArtist && curArtist) {
 // Skip titles that already have a (feat. ...) tag -- don't recompute.
 const alreadyHasFeat = /\(feat\.[^)]*\)\s*$/i.test(curTitle.trim());
 
 const names = _splitArtists(curArtist);
 const featured = names.filter(n => !exclude.has(n.toLowerCase()));
 
-const fields = {};
 if (curArtist !== mainArtist) fields.artist = mainArtist;
 
 if (!alreadyHasFeat && featured.length) {
 fields.title = `${curTitle.trim()} (feat. ${featured.join(', ')})`;
 } else if (alreadyHasFeat && featured.length) {
 skipped++;
+}
 }
 
 if (Object.keys(fields).length === 0) continue;
