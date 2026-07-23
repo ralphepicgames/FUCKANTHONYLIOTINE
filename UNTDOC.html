@@ -1687,6 +1687,581 @@ nav button.random-game-btn { animation: none !important; }
     background: var(--panel-2); color: var(--accent);
     font-family: inherit; font-size: 0.64rem;
 }
+
+/* ══════════════════════════════════════════════════
+   CASINO TAB STYLES
+   ══════════════════════════════════════════════════ */
+.casino-container {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.casino-header {
+    text-align: center;
+    padding: 1.2rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.06), transparent 70%), var(--panel);
+    backdrop-filter: blur(14px);
+}
+
+.casino-header h2 {
+    font-family: 'Orbitron', 'Space Mono', monospace;
+    font-size: 1.5rem;
+    color: var(--accent);
+    text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.5), 0 0 30px rgba(var(--accent-rgb), 0.25);
+    letter-spacing: 0.15em;
+}
+
+.casino-disclaimer {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+    letter-spacing: 0.08em;
+    opacity: 0.7;
+}
+
+/* Balance bar */
+.casino-balance-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--panel-2);
+}
+
+.balance-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.currency-icon { font-size: 1.4rem; }
+
+.balance-amount {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.4);
+}
+
+.currency-name {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.daily-bonus-section {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.bonus-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-bright);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.bonus-btn:hover:not(:disabled) {
+    background: rgba(var(--accent-rgb), 0.18);
+    color: var(--text-strong);
+    border-color: rgba(var(--accent-rgb), 0.45);
+}
+
+.bonus-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.bonus-btn .material-symbols-outlined { font-size: 14px; }
+
+.bonus-timer {
+    font-size: 0.55rem;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+}
+
+/* Game tabs */
+.casino-games-nav {
+    display: flex;
+    gap: 0.3rem;
+    padding: 0.3rem;
+    border-radius: var(--radius-sm);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+}
+
+.casino-game-tab {
+    flex: 1;
+    padding: 0.65rem 0.5rem;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3em;
+}
+.casino-game-tab .material-symbols-outlined { font-size: 1.1rem; }
+.casino-game-tab:focus-visible,
+.keno-number:focus-visible,
+.mine-tile:focus-visible,
+.casino-action-btn:focus-visible,
+.control-btn:focus-visible,
+.bonus-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.casino-game-tab:hover {
+    background: rgba(var(--accent-rgb), 0.08);
+    color: var(--text-strong);
+}
+
+.casino-game-tab.active {
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.2), rgba(var(--accent-rgb), 0.1));
+    color: var(--accent);
+    box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.15);
+}
+
+/* Game panels */
+.casino-game { display: none; }
+.casino-game.active { display: block; }
+
+.game-panel {
+    padding: 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.04), transparent 60%), var(--panel);
+    backdrop-filter: blur(14px);
+}
+
+/* Bet controls */
+.bet-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.bet-controls label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bet-controls input[type="number"] {
+    width: 90px;
+    padding: 0.5rem 0.6rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-bright);
+    background: var(--panel-3);
+    color: var(--text-strong);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    text-align: center;
+}
+
+.bet-controls input[type="number"]:focus {
+    border-color: rgba(var(--accent-rgb), 0.6);
+    box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.15);
+}
+
+.control-btn.mini {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.6rem;
+}
+
+/* Slots */
+.slots-machine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.slot-reels-frame {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    background: var(--panel-3);
+    border: 2px solid var(--border-bright);
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.4), 0 0 20px rgba(var(--accent-rgb), 0.1);
+    max-width: 100%;
+}
+
+.reel {
+    width: 90px;
+    height: 100px;
+    overflow: hidden;
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.5), transparent 30%, transparent 70%, rgba(0,0,0,0.5));
+    position: relative;
+    flex-shrink: 0;
+}
+
+.reel .symbol {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.8rem;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.1s linear;
+}
+
+/* Shrink reels as more are added so wide layouts still fit */
+.slot-reels-frame[data-count="5"] .reel { width: 64px; height: 76px; }
+.slot-reels-frame[data-count="5"] .reel .symbol { font-size: 2rem; }
+.slot-reels-frame[data-count="8"] .reel { width: 46px; height: 58px; }
+.slot-reels-frame[data-count="8"] .reel .symbol { font-size: 1.5rem; }
+
+.reel.spinning .symbol {
+    animation: slotSpin 0.15s linear infinite;
+}
+
+@keyframes slotSpin {
+    0% { transform: translateY(-20px); opacity: 0.6; }
+    50% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(20px); opacity: 0.6; }
+}
+
+.reel.stopped {
+    animation: reelStop 0.3s ease-out;
+}
+
+@keyframes reelStop {
+    0% { transform: scale(1.08); }
+    50% { transform: scale(0.97); }
+    100% { transform: scale(1); }
+}
+
+/* Action buttons */
+.casino-action-btn {
+    display: block;
+    width: 100%;
+    padding: 0.85rem;
+    border-radius: 14px;
+    border: 2px solid var(--accent);
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.22), rgba(var(--accent-rgb), 0.08));
+    color: var(--accent);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.15);
+}
+
+.casino-action-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.35), rgba(var(--accent-rgb), 0.15));
+    box-shadow: 0 0 28px rgba(var(--accent-rgb), 0.3);
+    transform: translateY(-1px);
+}
+
+.casino-action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.cashout-btn {
+    border-color: #4dff88;
+    background: linear-gradient(180deg, rgba(77,255,136,0.2), rgba(77,255,136,0.08));
+    color: #4dff88;
+}
+
+.cashout-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, rgba(77,255,136,0.35), rgba(77,255,136,0.15));
+    box-shadow: 0 0 28px rgba(77,255,136,0.3);
+}
+
+/* Result display */
+.slot-result {
+    min-height: 2rem;
+    text-align: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    transition: all 0.3s ease;
+}
+
+.slot-result.win {
+    color: #4dff88;
+    text-shadow: 0 0 12px rgba(77,255,136,0.5);
+    animation: resultPulse 0.5s ease-out;
+}
+
+.slot-result.lose {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+@keyframes resultPulse {
+    0% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+/* Big win effect */
+.big-win-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    animation: bigWinIn 0.3s ease-out forwards;
+}
+
+@keyframes bigWinIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.big-win-text {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2rem, 8vw, 4rem);
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255,215,0,0.6), 0 0 50px rgba(255,215,0,0.3);
+    animation: bigWinBounce 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+
+@keyframes bigWinBounce {
+    from { transform: scale(0.3); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Plinko canvas */
+#plinkoCanvas {
+    display: block;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto 0.8rem;
+    border-radius: var(--radius-sm);
+    background: var(--panel-3);
+    border: 1px solid var(--border-bright);
+}
+
+/* Keno */
+.keno-instructions {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 0.8rem;
+    letter-spacing: 0.04em;
+}
+
+.keno-board {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    margin-bottom: 0.6rem;
+}
+
+.keno-number {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel-3);
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.keno-number:hover:not(.drawn):not(.picked) {
+    border-color: rgba(var(--accent-rgb), 0.4);
+    background: rgba(var(--accent-rgb), 0.08);
+}
+
+.keno-number.picked {
+    background: rgba(var(--accent-rgb), 0.25);
+    border-color: var(--accent);
+    color: var(--text-strong);
+    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.2);
+}
+
+.keno-number.drawn {
+    background: rgba(77,255,136,0.2);
+    border-color: #4dff88;
+    color: #4dff88;
+}
+
+.keno-number.hit {
+    background: rgba(255,215,0,0.3);
+    border-color: #ffd700;
+    color: #ffd700;
+    box-shadow: 0 0 10px rgba(255,215,0,0.3);
+}
+
+.keno-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.8rem;
+}
+
+/* Landmines */
+.landmines-controls-top {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.landmines-controls-top label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.landmines-controls-top select {
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-bright);
+    background: var(--panel-3);
+    color: var(--text-strong);
+    font-family: inherit;
+    font-size: 0.75rem;
+    outline: none;
+}
+
+.landmines-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 0.8rem;
+}
+
+.mine-tile {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.12), rgba(var(--accent-rgb), 0.04));
+    cursor: pointer;
+    font-size: 1.3rem;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.mine-tile:hover:not(.revealed):not(.disabled) {
+    border-color: rgba(var(--accent-rgb), 0.5);
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.22), rgba(var(--accent-rgb), 0.1));
+    transform: scale(1.05);
+}
+
+.mine-tile.revealed.gem {
+    background: linear-gradient(180deg, rgba(77,255,136,0.25), rgba(77,255,136,0.1));
+    border-color: #4dff88;
+}
+
+.mine-tile.revealed.mine {
+    background: linear-gradient(180deg, rgba(255,59,48,0.3), rgba(255,59,48,0.1));
+    border-color: #ff3b30;
+    animation: mineExplode 0.4s ease-out;
+}
+
+@keyframes mineExplode {
+    0% { transform: scale(1.3); }
+    50% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+}
+
+.mine-tile.disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+.landmines-bottom-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Multiplier badges */
+.multiplier-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+    background: var(--panel-3);
+}
+
+.multiplier-badge {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 6px;
+    text-align: center;
+    letter-spacing: 0.05em;
+}
+
+/* Responsive */
+@media (max-width: 560px) {
+    .casino-balance-bar {
+        flex-direction: column;
+        gap: 0.7rem;
+    }
+    .daily-bonus-section { width: 100%; justify-content: center; }
+    .bonus-btn { font-size: 0.55rem; padding: 0.4rem 0.6rem; }
+    .reel { width: 72px; height: 82px; }
+    .reel .symbol { font-size: 2.2rem; }
+    .keno-board { grid-template-columns: repeat(8, 1fr); }
+    .landmines-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* TUI mode overrides for casino */
+.casino-container *, .casino-header *, .game-panel *, .bet-controls * { border-radius: 0 !important; }
+.casino-game-tab { border-radius: 0 !important; }
+.bonus-btn { border-radius: 0 !important; }
+.casino-action-btn { border-radius: 0 !important; }
 </style>
 </head>
 <body>
@@ -1754,8 +2329,9 @@ nav button.random-game-btn { animation: none !important; }
    <button class="nav-btn active" onclick="showTab('games',this)"><span class="material-symbols-outlined">sports_esports</span>GAMES</button>
    <button class="nav-btn" onclick="showTab('pinned',this)"><span class="material-symbols-outlined">push_pin</span>PINNED</button>
    <button class="nav-btn" onclick="showTab('compiler',this)"><span class="material-symbols-outlined">code</span>HTML COMPILER</button>
-   <button class="random-game-btn" id="randomGameBtn" onclick="launchRandomGame()"><span class="material-symbols-outlined random-dice-icon">casino</span>RANDOM</button>
-</nav>
+    <button class="random-game-btn" id="randomGameBtn" onclick="launchRandomGame()"><span class="material-symbols-outlined random-dice-icon">casino</span>RANDOM</button>
+    <button class="nav-btn" onclick="showTab('casino',this)" data-casino-tab><span class="material-symbols-outlined">attach_money</span>CASINO</button>
+ </nav>
 
 <div id="tuiStatusBar">
    <span><kbd>&larr;&uarr;&darr;&rarr;</kbd>navigate</span>
@@ -1805,19 +2381,161 @@ nav button.random-game-btn { animation: none !important; }
            <div class="games-grid" id="pinnedGrid"></div>
        </div>
 
-       <div id="compiler" class="tab-content">
-           <div class="compiler-container">
-               <textarea id="editor" placeholder="Paste HTML code here..."></textarea>
-               <div class="controls">
-                   <button class="control-btn" onclick="document.getElementById('fileInput').click()"><span class="material-symbols-outlined">upload_file</span>UPLOAD .HTML</button>
-                   <input type="file" id="fileInput" accept=".html" onchange="handleFileUpload(event)">
-                   <button class="control-btn" onclick="exportHTML()"><span class="material-symbols-outlined">download</span>EXPORT AS HTML</button>
-                   <button class="control-btn" onclick="clearEditor()"><span class="material-symbols-outlined">delete</span>CLEAR</button>
-                   <button class="control-btn" onclick="runInFullscreen()"><span class="material-symbols-outlined">open_in_full</span>OPEN FULLSCREEN</button>
-               </div>
-           </div>
-       </div>
-   </div>
+        <div id="compiler" class="tab-content">
+            <div class="compiler-container">
+                <textarea id="editor" placeholder="Paste HTML code here..."></textarea>
+                <div class="controls">
+                    <button class="control-btn" onclick="document.getElementById('fileInput').click()"><span class="material-symbols-outlined">upload_file</span>UPLOAD .HTML</button>
+                    <input type="file" id="fileInput" accept=".html" onchange="handleFileUpload(event)">
+                    <button class="control-btn" onclick="exportHTML()"><span class="material-symbols-outlined">download</span>EXPORT AS HTML</button>
+                    <button class="control-btn" onclick="clearEditor()"><span class="material-symbols-outlined">delete</span>CLEAR</button>
+                    <button class="control-btn" onclick="runInFullscreen()"><span class="material-symbols-outlined">open_in_full</span>OPEN FULLSCREEN</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="casino" class="tab-content">
+            <div class="casino-container">
+                <div class="casino-header">
+                    <h2><svg viewBox="0 -960 960 960" style="width:1.1em;height:1.1em;vertical-align:middle;fill:var(--accent);margin-right:0.15em"><path d="M441-120v-86q-53-12-91.5-46T293-348l74-30q15 48 44.5 73t77.5 25q41 0 69.5-18.5T587-356q0-35-22-55.5T463-458q-86-27-118-64.5T313-614q0-65 42-101t86-41v-84h80v84q50 8 82.5 36.5T651-650l-74 32q-12-32-34-48t-60-16q-44 0-67 19.5T393-614q0 33 30 52t104 40q69 20 104.5 63.5T667-358q0 71-42 108t-104 46v84h-80Z"/></svg> CASINO</h2>
+                    <p class="casino-disclaimer">Play currency only — no real money. All games are rigged with house edge.</p>
+                </div>
+                <div class="casino-balance-bar">
+                    <div class="balance-display">
+                        <span class="currency-icon">🪙</span>
+                        <span id="casinoBalance" class="balance-amount">1000</span>
+                        <span class="currency-name">zaddybux</span>
+                    </div>
+                    <div class="daily-bonus-section">
+                        <button id="claimDailyBtn" class="bonus-btn daily-btn" onclick="claimDailyBonus()">
+                            <span class="material-symbols-outlined">redeem</span>
+                            <span>+100 DAILY</span>
+                            <span id="dailyTimer" class="bonus-timer"></span>
+                        </button>
+                        <button id="claimEmergencyBtn" class="bonus-btn emergency-btn" onclick="claimEmergencyBonus()">
+                            <span class="material-symbols-outlined">emergency</span>
+                            <span>+20 EMERGENCY</span>
+                            <span id="emergencyTimer" class="bonus-timer"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="casino-games-nav">
+                    <button class="casino-game-tab active" onclick="switchCasinoGame('slots',this)"><span class="material-symbols-outlined">casino</span> SLOTS</button>
+                    <button class="casino-game-tab" onclick="switchCasinoGame('plinko',this)"><span class="material-symbols-outlined">bolt</span> PLINKO</button>
+                    <button class="casino-game-tab" onclick="switchCasinoGame('keno',this)"><span class="material-symbols-outlined">pin</span> KENO</button>
+                    <button class="casino-game-tab" onclick="switchCasinoGame('landmines',this)"><span class="material-symbols-outlined">bomb</span> LANDMINES</button>
+                </div>
+
+                <!-- SLOTS -->
+                <div id="slotsGame" class="casino-game active">
+                    <div class="game-panel">
+                        <div class="bet-controls">
+                            <label>BET</label>
+                            <input type="number" id="slotsBet" min="1" max="99999" value="10" step="10">
+                            <button class="control-btn mini" onclick="scaleBet('slotsBet',0.5)">½</button>
+                            <button class="control-btn mini" onclick="scaleBet('slotsBet',2)">2x</button>
+                            <button class="control-btn mini" onclick="document.getElementById('slotsBet').value=Math.max(1,parseInt(document.getElementById('casinoBalance').textContent)||1)">MAX</button>
+                        </div>
+                        <div class="landmines-controls-top">
+                            <label>REELS</label>
+                            <select id="reelCountSelect" onchange="setReelCount()">
+                                <option value="3">3</option>
+                                <option value="5">5</option>
+                                <option value="8">8</option>
+                            </select>
+                        </div>
+                        <div class="slots-machine">
+                            <div class="slot-reels-frame" id="slotReelsFrame"></div>
+                            <div class="slot-result" id="slotResult"></div>
+                        </div>
+                        <button id="spinBtn" class="casino-action-btn" onclick="playSlots()">SPIN</button>
+                    </div>
+                </div>
+
+                <!-- PLINKO -->
+                <div id="plinkoGame" class="casino-game">
+                    <div class="game-panel">
+                        <div class="bet-controls">
+                            <label>BET</label>
+                            <input type="number" id="plinkoBet" min="1" max="99999" value="10" step="10">
+                            <button class="control-btn mini" onclick="scaleBet('plinkoBet',0.5)">½</button>
+                            <button class="control-btn mini" onclick="scaleBet('plinkoBet',2)">2x</button>
+                            <button class="control-btn mini" onclick="document.getElementById('plinkoBet').value=Math.max(1,parseInt(document.getElementById('casinoBalance').textContent)||1)">MAX</button>
+                        </div>
+                        <div class="landmines-controls-top">
+                            <label>BALLS</label>
+                            <input type="number" id="plinkoBallCount" min="1" max="100" value="1" style="width:4.5em">
+                        </div>
+                        <canvas id="plinkoCanvas" width="420" height="480"></canvas>
+                        <div class="slot-result" id="plinkoResult"></div>
+                        <button id="dropBallBtn" class="casino-action-btn" onclick="playPlinko()">DROP BALL</button>
+                    </div>
+                </div>
+
+                <!-- KENO -->
+                <div id="kenoGame" class="casino-game">
+                    <div class="game-panel">
+                        <div class="bet-controls">
+                            <label>BET</label>
+                            <input type="number" id="kenoBet" min="1" max="99999" value="10" step="10">
+                            <button class="control-btn mini" onclick="scaleBet('kenoBet',0.5)">½</button>
+                            <button class="control-btn mini" onclick="scaleBet('kenoBet',2)">2x</button>
+                            <button class="control-btn mini" onclick="document.getElementById('kenoBet').value=Math.max(1,parseInt(document.getElementById('casinoBalance').textContent)||1)">MAX</button>
+                        </div>
+                        <div class="landmines-controls-top">
+                            <label>GRID SIZE</label>
+                            <select id="kenoGridSelect" onchange="setKenoGridSize()">
+                                <option value="40">40 (4x10)</option>
+                                <option value="80" selected>80 (8x10)</option>
+                                <option value="100">100 (10x10)</option>
+                                <option value="120">120 (12x10)</option>
+                            </select>
+                        </div>
+                        <p class="keno-instructions" id="kenoInstructions">Pick up to 10 numbers (1-80), then draw!</p>
+                        <div class="keno-board" id="kenoBoard"></div>
+                        <div class="keno-controls">
+                            <button class="control-btn mini" onclick="kenoClearPick()">CLEAR</button>
+                            <button class="control-btn mini" onclick="kenoRandomPick()">RANDOM</button>
+                            <span id="kenoPickCount" style="color:var(--text-muted);font-size:0.7rem;">0/10 picked</span>
+                        </div>
+                        <div class="slot-result" id="kenoResult"></div>
+                        <button id="drawBtn" class="casino-action-btn" onclick="playKeno()">DRAW NUMBERS</button>
+                    </div>
+                </div>
+
+                <!-- LANDMINES -->
+                <div id="landminesGame" class="casino-game">
+                    <div class="game-panel">
+                        <div class="bet-controls">
+                            <label>BET</label>
+                            <input type="number" id="landminesBet" min="1" max="99999" value="10" step="10">
+                            <button class="control-btn mini" onclick="scaleBet('landminesBet',0.5)">½</button>
+                            <button class="control-btn mini" onclick="scaleBet('landminesBet',2)">2x</button>
+                            <button class="control-btn mini" onclick="document.getElementById('landminesBet').value=Math.max(1,parseInt(document.getElementById('casinoBalance').textContent)||1)">MAX</button>
+                        </div>
+                        <div class="landmines-controls-top">
+                            <label>MINES</label>
+                            <select id="mineCountSelect" onchange="initLandmines()">
+                                <option value="3">3</option>
+                                <option value="5" selected>5</option>
+                                <option value="7">7</option>
+                                <option value="10">10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                            </select>
+                        </div>
+                        <div id="minesOdds" style="text-align:center;font-size:0.65rem;color:var(--text-muted);margin-bottom:0.4rem;"></div>
+                        <div class="landmines-grid" id="landminesGrid"></div>
+                        <div class="slot-result" id="landminesResult"></div>
+                        <div class="landmines-bottom-controls">
+                            <button id="startMinesBtn" class="casino-action-btn" onclick="startLandmines()">START GAME</button>
+                            <button id="cashoutMinesBtn" class="casino-action-btn cashout-btn" onclick="cashoutLandmines()" style="display:none;">CASHOUT (<span id="mineCashoutVal">0</span>)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div id="consoleOverlay" onclick="toggleConsole()"></div>
@@ -3810,6 +4528,1040 @@ async function launchGame(fileName, baseUrl, isPNG, gameName, skipFetch, externa
         }
         panicEscTimer = setTimeout(function() { panicEscCount = 0; }, 600);
     }, true);
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════
+     CASINO GAME LOGIC
+     ══════════════════════════════════════════════════ -->
+<script>
+(function() {
+    'use strict';
+
+    // ─── Currency System ───
+    const BALANCE_KEY = 'untdoc_casino_balance';
+    const DAILY_KEY = 'untdoc_casino_daily_claimed';
+    const EMERGENCY_KEY = 'untdoc_casino_emergency_claimed';
+
+    let balance = 1000;
+    try {
+        const saved = localStorage.getItem(BALANCE_KEY);
+        if (saved !== null) balance = parseInt(saved, 10) || 1000;
+    } catch(e) {}
+
+    function saveBalance() {
+        try { localStorage.setItem(BALANCE_KEY, String(balance)); } catch(e) {}
+        updateBalanceDisplay();
+    }
+
+    function updateBalanceDisplay() {
+        const el = document.getElementById('casinoBalance');
+        if (el) el.textContent = balance;
+    }
+
+    function adjustBalance(amount) {
+        balance += amount;
+        if (balance < 0) balance = 0;
+        saveBalance();
+    }
+
+    // Daily bonus: +100, resets every 24h
+    const DAILY_MS = 24 * 60 * 60 * 1000;
+    let lastDailyClaim = 0;
+    try { lastDailyClaim = parseInt(localStorage.getItem(DAILY_KEY) || '0', 10); } catch(e) {}
+
+    // Emergency bonus: +20, every 3h
+    const EMERGENCY_MS = 3 * 60 * 60 * 1000;
+    let lastEmergencyClaim = 0;
+    try { lastEmergencyClaim = parseInt(localStorage.getItem(EMERGENCY_KEY) || '0', 10); } catch(e) {}
+
+    function canClaimDaily() { return Date.now() - lastDailyClaim >= DAILY_MS; }
+    function canClaimEmergency() { return Date.now() - lastEmergencyClaim >= EMERGENCY_MS; }
+
+    window.claimDailyBonus = function() {
+        if (!canClaimDaily()) return;
+        adjustBalance(100);
+        lastDailyClaim = Date.now();
+        try { localStorage.setItem(DAILY_KEY, String(lastDailyClaim)); } catch(e) {}
+        showCasinoResult('daily', '+100 daily bonus claimed!', 'win');
+    };
+
+    window.claimEmergencyBonus = function() {
+        if (!canClaimEmergency()) return;
+        adjustBalance(20);
+        lastEmergencyClaim = Date.now();
+        try { localStorage.setItem(EMERGENCY_KEY, String(lastEmergencyClaim)); } catch(e) {}
+        showCasinoResult('emergency', '+20 emergency bonus claimed!', 'win');
+    };
+
+    function formatTime(ms) {
+        if (ms <= 0) return '';
+        const h = Math.floor(ms / 3600000);
+        const m = Math.floor((ms % 3600000) / 60000);
+        const s = Math.floor((ms % 60000) / 1000);
+        if (h > 0) return h + 'h ' + String(m).padStart(2, '0') + 'm';
+        if (m > 0) return m + 'm ' + String(s).padStart(2, '0') + 's';
+        return s + 's';
+    }
+
+    function updateBonusTimers() {
+        const dailyBtn = document.getElementById('claimDailyBtn');
+        const emergencyBtn = document.getElementById('claimEmergencyBtn');
+        const dailyTimerEl = document.getElementById('dailyTimer');
+        const emergencyTimerEl = document.getElementById('emergencyTimer');
+
+        if (canClaimDaily()) {
+            dailyBtn.disabled = false;
+            dailyTimerEl.textContent = 'AVAILABLE';
+            dailyTimerEl.style.color = '#4dff88';
+        } else {
+            dailyBtn.disabled = true;
+            const remaining = DAILY_MS - (Date.now() - lastDailyClaim);
+            dailyTimerEl.textContent = formatTime(remaining);
+            dailyTimerEl.style.color = 'var(--accent)';
+        }
+
+        if (canClaimEmergency()) {
+            emergencyBtn.disabled = false;
+            emergencyTimerEl.textContent = 'AVAILABLE';
+            emergencyTimerEl.style.color = '#4dff88';
+        } else {
+            emergencyBtn.disabled = true;
+            const remaining = EMERGENCY_MS - (Date.now() - lastEmergencyClaim);
+            emergencyTimerEl.textContent = formatTime(remaining);
+            emergencyTimerEl.style.color = 'var(--accent)';
+        }
+    }
+
+    updateBalanceDisplay();
+    updateBonusTimers();
+    setInterval(updateBonusTimers, 1000);
+
+    // ─── Tab Switching ───
+    window.switchCasinoGame = function(gameId, btn) {
+        document.querySelectorAll('.casino-game').forEach(g => g.classList.remove('active'));
+        document.querySelectorAll('.casino-game-tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(gameId + 'Game').classList.add('active');
+        if (btn) btn.classList.add('active');
+
+        if (gameId === 'plinko') initPlinkoBoard();
+    };
+
+    // ─── Keyboard navigation for the casino UI ───
+    // Left/Right arrows roam between game tabs when a tab is focused.
+    // Up/Escape hands focus back to the top nav bar so the page's global nav still works.
+    // Registered on the capture phase + stopPropagation so the page's global
+    // arrow-key nav (used by the games launcher) doesn't also react to the same keypress.
+    document.addEventListener('keydown', function(e) {
+        const active = document.activeElement;
+        if (!active || !active.classList || !active.classList.contains('casino-game-tab')) return;
+
+        if (e.key === 'ArrowUp' || e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            active.blur();
+            const topTab = document.querySelector('.nav-btn.active') || document.querySelector('.nav-btn[data-casino-tab]');
+            if (topTab) topTab.focus();
+            return;
+        }
+
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        const tabs = Array.from(document.querySelectorAll('.casino-game-tab'));
+        let idx = tabs.indexOf(active);
+        idx = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+        tabs[idx].focus();
+        tabs[idx].click();
+    }, true);
+
+    // Grid navigation: arrow keys move focus within the keno board or mines grid.
+    document.addEventListener('keydown', function(e) {
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Escape'].includes(e.key)) return;
+        const active = document.activeElement;
+        if (!active || !active.classList) return;
+
+        let selector, container;
+        if (active.classList.contains('keno-number')) {
+            selector = '.keno-number';
+            container = document.getElementById('kenoBoard');
+        } else if (active.classList.contains('mine-tile')) {
+            selector = '.mine-tile';
+            container = document.getElementById('landminesGrid');
+        } else {
+            return;
+        }
+        if (!container) return;
+
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            active.blur();
+            const topTab = document.querySelector('.nav-btn.active') || document.querySelector('.nav-btn[data-casino-tab]');
+            if (topTab) topTab.focus();
+            return;
+        }
+
+        const cells = Array.from(container.querySelectorAll(selector));
+        const idx = cells.indexOf(active);
+        if (idx === -1) return;
+
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        const cols = parseInt(getComputedStyle(container).gridTemplateColumns.split(' ').length, 10) || 10;
+        let next = idx;
+        if (e.key === 'ArrowRight') next = Math.min(idx + 1, cells.length - 1);
+        else if (e.key === 'ArrowLeft') next = Math.max(idx - 1, 0);
+        else if (e.key === 'ArrowDown') next = Math.min(idx + cols, cells.length - 1);
+        else if (e.key === 'ArrowUp') next = Math.max(idx - cols, 0);
+
+        if (next !== idx) {
+            e.preventDefault();
+            cells[next].focus();
+        }
+    }, true);
+
+    // ─── Result Display Helper ───
+    function showCasinoResult(type, message, resultType) {
+        const el = document.getElementById(type + 'Result');
+        if (!el) return;
+        el.textContent = message;
+        el.className = 'slot-result ' + resultType;
+    }
+
+    // ─── Big Win Effect ───
+    function showBigWin(amount) {
+        const overlay = document.createElement('div');
+        overlay.className = 'big-win-overlay';
+        overlay.innerHTML = '<div class="big-win-text">🎉 BIG WIN! +' + amount + ' 🎉</div>';
+        document.body.appendChild(overlay);
+        setTimeout(() => overlay.remove(), 2500);
+    }
+
+    // ─── Validate Bet ───
+    function getBet(inputId) {
+        const val = parseInt(document.getElementById(inputId).value, 10);
+        if (isNaN(val) || val < 1) return 1;
+        if (val > balance) return balance;
+        return val;
+    }
+
+    window.scaleBet = function(inputId, factor) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const current = parseInt(input.value, 10) || 1;
+        let next = Math.round(current * factor);
+        if (next < 1) next = 1;
+        if (next > 99999) next = 99999;
+        input.value = next;
+    };
+
+    // ══════════════════════════════════════
+    // SLOTS GAME
+    // ══════════════════════════════════════
+    const SLOT_SYMBOLS = ['🍒', '🍋', '🍇', '🔔', '💎', '7️⃣'];
+    const SLOT_WEIGHTS = [30, 25, 18, 12, 8, 7]; // weighted: lower symbols more common
+    // Base per-symbol 3-of-a-kind multiplier; scaled up for longer matching runs on bigger reel counts
+    const SLOT_BASE_MULT = [3, 5, 8, 15, 25, 50];
+    const SLOT_TWO_MULT = [1, 1.3, 1.6, 2, 2.5, 3.5];
+
+    let slotReelCount = 3;
+
+    function weightedRandom(weights) {
+        const total = weights.reduce((a, b) => a + b, 0);
+        let r = Math.random() * total;
+        for (let i = 0; i < weights.length; i++) {
+            r -= weights[i];
+            if (r <= 0) return i;
+        }
+        return weights.length - 1;
+    }
+
+    window.setReelCount = function() {
+        const select = document.getElementById('reelCountSelect');
+        if (!select) return;
+        slotReelCount = parseInt(select.value, 10) || 3;
+        buildSlotReels();
+    };
+
+    function buildSlotReels() {
+        const frame = document.getElementById('slotReelsFrame');
+        if (!frame) return;
+        frame.innerHTML = '';
+        frame.setAttribute('data-count', String(slotReelCount));
+        for (let i = 0; i < slotReelCount; i++) {
+            const reel = document.createElement('div');
+            reel.className = 'reel';
+            reel.id = 'reel' + i;
+            reel.innerHTML = '<span class="symbol">' + SLOT_SYMBOLS[0] + '</span>';
+            frame.appendChild(reel);
+        }
+    }
+
+    // Rigged: win chance and payout scale with reel count — more reels, harder to match, bigger jackpot
+    function getSlotResult() {
+        const n = slotReelCount;
+        const roll = Math.random();
+        // Win probabilities shrink as reel count grows (matching all N is much harder)
+        const jackpotChance = n === 3 ? 0.04 : (n === 5 ? 0.014 : 0.004);
+        const partialChance = n === 3 ? 0.17 : (n === 5 ? 0.12 : 0.08);
+
+        if (roll < jackpotChance) {
+            // All reels match — the big one, still weighted hard toward low-value symbols
+            const symIdx = weightedRandom([46, 30, 13, 6, 3, 1]);
+            return new Array(n).fill(symIdx);
+        } else if (roll < jackpotChance + partialChance) {
+            // Partial match: a run of matching symbols shorter than full width
+            const pairIdx = weightedRandom([40, 28, 16, 9, 5, 2]);
+            const runLen = n <= 3 ? 2 : Math.min(n - 1, 2 + Math.floor(Math.random() * (n - 2)));
+            const result = [];
+            const used = new Set();
+            for (let i = 0; i < n; i++) {
+                let sym;
+                do { sym = weightedRandom(SLOT_WEIGHTS); } while (sym === pairIdx);
+                result.push(sym);
+            }
+            const startPos = Math.floor(Math.random() * (n - runLen + 1));
+            for (let i = 0; i < runLen; i++) result[startPos + i] = pairIdx;
+            return result;
+        }
+        // No match — all different where possible, biased toward low symbols
+        const result = [];
+        const used = new Set();
+        for (let i = 0; i < n; i++) {
+            let sym;
+            let tries = 0;
+            do { sym = weightedRandom(SLOT_WEIGHTS); tries++; } while (used.has(sym) && used.size < SLOT_SYMBOLS.length && tries < 20);
+            result.push(sym);
+            used.add(sym);
+        }
+        return result;
+    }
+
+    // Find the longest run of identical adjacent symbols in the result
+    function findBestRun(result) {
+        let bestLen = 1, bestSym = result[0], curLen = 1, curSym = result[0];
+        for (let i = 1; i < result.length; i++) {
+            if (result[i] === curSym) {
+                curLen++;
+            } else {
+                curSym = result[i];
+                curLen = 1;
+            }
+            if (curLen > bestLen) { bestLen = curLen; bestSym = curSym; }
+        }
+        return { len: bestLen, sym: bestSym };
+    }
+
+    function getSlotPayoutMultiplier(result) {
+        const n = result.length;
+        const { len, sym } = findBestRun(result);
+        if (len === n) {
+            // Full-width match — jackpot scales with reel count
+            const scale = n === 3 ? 1 : (n === 5 ? 2.2 : 4.5);
+            return SLOT_BASE_MULT[sym] * scale;
+        }
+        if (len >= 2) {
+            // Partial run — payout scales with how much of the reel it covers
+            const coverage = len / n;
+            return SLOT_TWO_MULT[sym] * (1 + coverage);
+        }
+        return 0;
+    }
+
+    window.playSlots = function() {
+        const bet = getBet('slotsBet');
+        if (bet > balance) { showCasinoResult('slot', 'Not enough zaddybux!', 'lose'); return; }
+        if (bet < 1) return;
+
+        adjustBalance(-bet);
+        const btn = document.getElementById('spinBtn');
+        btn.disabled = true;
+
+        const result = getSlotResult();
+        const reels = [];
+        for (let i = 0; i < slotReelCount; i++) reels.push(document.getElementById('reel' + i));
+
+        // Start spinning all reels
+        reels.forEach(r => r.classList.add('spinning'));
+        document.getElementById('slotResult').textContent = '';
+        document.getElementById('slotResult').className = 'slot-result';
+
+        // Staggered stops across however many reels are active
+        const stopTimes = reels.map((_, i) => 600 + i * 350);
+
+        reels.forEach((reel, i) => {
+            const cycleInterval = setInterval(() => {
+                reel.querySelector('.symbol').textContent = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+            }, 80);
+
+            setTimeout(() => {
+                clearInterval(cycleInterval);
+                reel.classList.remove('spinning');
+                reel.classList.add('stopped');
+                reel.querySelector('.symbol').textContent = SLOT_SYMBOLS[result[i]];
+
+                setTimeout(() => reel.classList.remove('stopped'), 300);
+
+                if (i === reels.length - 1) {
+                    const mult = getSlotPayoutMultiplier(result);
+                    const winAmount = Math.floor(bet * mult);
+
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        if (winAmount > 0) {
+                            adjustBalance(winAmount);
+                            showCasinoResult('slot', 'WIN! +' + winAmount + ' zaddybux (' + mult.toFixed(2) + 'x)', 'win');
+                            if (winAmount >= bet * 10) showBigWin(winAmount);
+                        } else {
+                            showCasinoResult('slot', 'No match. -' + bet, 'lose');
+                        }
+                    }, 200);
+                }
+            }, stopTimes[i]);
+        });
+    };
+
+    // ══════════════════════════════════════
+    // PLINKO GAME
+    // ══════════════════════════════════════
+    let plinkoCanvas, plinkoCtx;
+    let plinkoPegs = [];
+    let plinkoSlots = [];
+    let plinkoBalls = [];
+    let plinkoAnimating = false;
+
+    const PLINKO_MULTIPLIERS = [10, 5, 3, 2, 1.5, 1, 0.7, 0.5, 0.5, 0.7, 1, 1.5, 2, 3, 5, 10];
+    // Weighted toward center (low multipliers) — house edge ~40%
+
+    function initPlinkoBoard() {
+        plinkoCanvas = document.getElementById('plinkoCanvas');
+        if (!plinkoCanvas) return;
+        plinkoCtx = plinkoCanvas.getContext('2d');
+
+        // Build peg rows (pyramid)
+        plinkoPegs = [];
+        const rows = 10;
+        const spacingX = 36;
+        const spacingY = 34;
+        const startX = plinkoCanvas.width / 2;
+        const startY = 50;
+
+        for (let row = 0; row < rows; row++) {
+            const pegsInRow = row + 3;
+            const rowWidth = (pegsInRow - 1) * spacingX;
+            const rowStartX = startX - rowWidth / 2;
+            for (let col = 0; col < pegsInRow; col++) {
+                plinkoPegs.push({
+                    x: rowStartX + col * spacingX,
+                    y: startY + row * spacingY,
+                    r: 4
+                });
+            }
+        }
+
+        // Multiplier slots at bottom
+        const slotCount = PLINKO_MULTIPLIERS.length;
+        const slotWidth = plinkoCanvas.width / slotCount;
+        plinkoSlots = [];
+        for (let i = 0; i < slotCount; i++) {
+            plinkoSlots.push({
+                x: i * slotWidth,
+                y: startY + rows * spacingY + 15,
+                w: slotWidth - 2,
+                h: 30,
+                mult: PLINKO_MULTIPLIERS[i]
+            });
+        }
+
+        drawPlinkoBoard();
+    }
+
+    function drawPlinkoBoard() {
+        if (!plinkoCtx) return;
+        const ctx = plinkoCtx;
+        const canvas = plinkoCanvas;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw pegs
+        plinkoPegs.forEach(peg => {
+            ctx.beginPath();
+            ctx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 43, 158, 0.5)';
+            ctx.fill();
+        });
+
+        // Draw multiplier slots
+        plinkoSlots.forEach(slot => {
+            const isLow = slot.mult < 1;
+            const isHigh = slot.mult >= 3;
+            let color;
+            if (isHigh) color = 'rgba(255,215,0,0.3)';
+            else if (isLow) color = 'rgba(255,59,48,0.2)';
+            else color = 'rgba(255, 43, 158, 0.15)';
+
+            ctx.fillStyle = color;
+            ctx.fillRect(slot.x + 1, slot.y, slot.w, slot.h);
+            ctx.strokeStyle = isHigh ? '#ffd700' : (isLow ? '#ff3b30' : 'rgba(255, 43, 158, 0.3)');
+            ctx.lineWidth = 1;
+            ctx.strokeRect(slot.x + 1, slot.y, slot.w, slot.h);
+
+            ctx.fillStyle = isHigh ? '#ffd700' : (isLow ? '#ff6b6b' : '#9a9aa8');
+            ctx.font = 'bold 9px Orbitron, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(slot.mult + 'x', slot.x + slot.w / 2, slot.y + 19);
+        });
+
+        // Draw all active balls
+        plinkoBalls.forEach(ball => {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, 6, 0, Math.PI * 2);
+            const gradient = ctx.createRadialGradient(ball.x - 2, ball.y - 2, 1, ball.x, ball.y, 6);
+            gradient.addColorStop(0, '#fff');
+            gradient.addColorStop(0.5, '#ff2b9e');
+            gradient.addColorStop(1, 'rgba(255,43,158,0.6)');
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.shadowColor = '#ff2b9e';
+            ctx.shadowBlur = 8;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        });
+    }
+
+    window.playPlinko = function() {
+        if (plinkoAnimating) return;
+        const bet = getBet('plinkoBet');
+        const countInput = document.getElementById('plinkoBallCount');
+        let ballCount = parseInt(countInput ? countInput.value : 1, 10);
+        if (isNaN(ballCount) || ballCount < 1) ballCount = 1;
+        if (ballCount > 100) ballCount = 100;
+        if (countInput) countInput.value = ballCount;
+
+        const totalCost = bet * ballCount;
+        if (totalCost > balance) { showCasinoResult('plinko', 'Not enough zaddybux for ' + ballCount + ' balls!', 'lose'); return; }
+
+        adjustBalance(-totalCost);
+        plinkoAnimating = true;
+        document.getElementById('dropBallBtn').disabled = true;
+        document.getElementById('plinkoResult').textContent = '';
+        document.getElementById('plinkoResult').className = 'slot-result';
+
+        const destWeights = [1, 1, 2, 5, 10, 16, 22, 24, 22, 16, 10, 5, 2, 1, 1, 1];
+        const totalW = destWeights.reduce((a,b) => a+b, 0);
+
+        function pickDestIdx() {
+            let r = Math.random() * totalW;
+            for (let i = 0; i < destWeights.length; i++) {
+                r -= destWeights[i];
+                if (r <= 0) return i;
+            }
+            return destWeights.length - 1;
+        }
+
+        let totalWin = 0;
+        let landedCount = 0;
+        const gravity = 0.06;
+
+        const balls = [];
+        for (let n = 0; n < ballCount; n++) {
+            const destIdx = pickDestIdx();
+            const slotCenterX = plinkoSlots[destIdx].x + plinkoSlots[destIdx].w / 2;
+            const bx = plinkoCanvas.width / 2 + (Math.random() - 0.5) * 14;
+            balls.push({
+                x: bx,
+                y: 15 - Math.random() * 60, // stagger start heights so 100 balls don't all overlap
+                vx: (slotCenterX - bx) * 0.003 + (Math.random() - 0.5) * 0.6,
+                vy: 0,
+                destIdx,
+                slotCenterX,
+                currentRow: 0,
+                step: 0,
+                totalSteps: 260 + Math.floor(Math.random() * 60),
+                landed: false
+            });
+        }
+        plinkoBalls = balls;
+
+        function tick() {
+            let allLanded = true;
+            plinkoBalls.forEach(ball => {
+                if (ball.landed) return;
+                allLanded = false;
+                ball.step++;
+                ball.vy += gravity;
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+
+                if (ball.currentRow < plinkoPegs.length) {
+                    const rowStart = ball.currentRow * 3;
+                    for (let i = 0; i < 4 && (rowStart + i) < plinkoPegs.length; i++) {
+                        const peg = plinkoPegs[rowStart + i];
+                        if (!peg) continue;
+                        const dx = ball.x - peg.x;
+                        const dy = ball.y - peg.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < 12) {
+                            ball.vx += (dx / dist) * 0.35 + (Math.random() - 0.5) * 0.3;
+                            ball.vy *= 0.75;
+                        }
+                    }
+                }
+
+                const dx = ball.slotCenterX - ball.x;
+                ball.vx += dx * 0.0004;
+
+                if (ball.step >= ball.totalSteps || ball.y >= plinkoSlots[0].y) {
+                    ball.landed = true;
+                    const mult = plinkoSlots[ball.destIdx].mult;
+                    const winAmount = Math.floor(bet * mult);
+                    totalWin += winAmount;
+                    landedCount++;
+                }
+            });
+
+            drawPlinkoBoard();
+            plinkoBalls = plinkoBalls.filter(b => !b.landed);
+
+            if (!allLanded) {
+                requestAnimationFrame(tick);
+            } else {
+                plinkoAnimating = false;
+                document.getElementById('dropBallBtn').disabled = false;
+
+                if (totalWin > 0) adjustBalance(totalWin);
+                const net = totalWin - totalCost;
+
+                if (ballCount === 1) {
+                    const net1 = totalWin - bet;
+                    if (net1 > 0) {
+                        showCasinoResult('plinko', 'WIN! +' + net1 + ' zaddybux', 'win');
+                        if (totalWin >= bet * 5) showBigWin(totalWin);
+                    } else if (net1 === 0) {
+                        showCasinoResult('plinko', 'Push. Bet returned.', 'lose');
+                    } else {
+                        showCasinoResult('plinko', 'Lost. ' + net1 + ' zaddybux', 'lose');
+                    }
+                } else {
+                    const label = ballCount + ' balls: ' + (net >= 0 ? '+' : '') + net + ' zaddybux net (won ' + totalWin + ', bet ' + totalCost + ')';
+                    showCasinoResult('plinko', label, net >= 0 ? 'win' : 'lose');
+                    if (totalWin >= totalCost * 5) showBigWin(totalWin);
+                }
+            }
+        }
+
+        requestAnimationFrame(tick);
+    };
+
+    // ══════════════════════════════════════
+    // KENO GAME
+    // ══════════════════════════════════════
+    let kenoPicks = new Set();
+    let kenoDrawn = [];
+    let kenoPlaying = false;
+    let kenoTotalNumbers = 80;
+    let KENO_MAX_PICKS = 10; // scales with grid size — kept at ~12.5% of the pool (10/80 ratio)
+
+    function updateKenoMaxPicks() {
+        KENO_MAX_PICKS = Math.max(5, Math.round(kenoTotalNumbers * 0.125));
+    }
+
+    function initKenoBoard() {
+        const board = document.getElementById('kenoBoard');
+        const select = document.getElementById('kenoGridSelect');
+        if (!board) return;
+        if (select) kenoTotalNumbers = parseInt(select.value, 10) || 80;
+        updateKenoMaxPicks();
+        board.innerHTML = '';
+        for (let i = 1; i <= kenoTotalNumbers; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'keno-number';
+            cell.textContent = i;
+            cell.dataset.num = i;
+            cell.setAttribute('tabindex', '0');
+            cell.setAttribute('role', 'button');
+            cell.setAttribute('aria-label', 'Number ' + i);
+            cell.addEventListener('click', () => toggleKenoPick(i, cell));
+            cell.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleKenoPick(i, cell); }
+            });
+            board.appendChild(cell);
+        }
+        const instr = document.getElementById('kenoInstructions');
+        if (instr) instr.textContent = 'Pick up to ' + KENO_MAX_PICKS + ' numbers (1-' + kenoTotalNumbers + '), then draw!';
+    }
+
+    window.setKenoGridSize = function() {
+        if (kenoPlaying) return;
+        kenoPicks.clear();
+        kenoDrawn = [];
+        initKenoBoard();
+        document.getElementById('kenoPickCount').textContent = '0/' + KENO_MAX_PICKS + ' picked';
+        document.getElementById('kenoResult').textContent = '';
+    };
+
+    function toggleKenoPick(num, el) {
+        if (kenoPlaying) return;
+        if (kenoPicks.has(num)) {
+            kenoPicks.delete(num);
+            el.classList.remove('picked');
+        } else if (kenoPicks.size < KENO_MAX_PICKS) {
+            kenoPicks.add(num);
+            el.classList.add('picked');
+        }
+        document.getElementById('kenoPickCount').textContent = kenoPicks.size + '/' + KENO_MAX_PICKS + ' picked';
+    }
+
+    window.kenoClearPick = function() {
+        if (kenoPlaying) return;
+        kenoPicks.clear();
+        kenoDrawn = [];
+        document.querySelectorAll('.keno-number').forEach(el => {
+            el.classList.remove('picked', 'drawn', 'hit');
+        });
+        document.getElementById('kenoPickCount').textContent = '0/' + KENO_MAX_PICKS + ' picked';
+        document.getElementById('kenoResult').textContent = '';
+    };
+
+    window.kenoRandomPick = function() {
+        if (kenoPlaying) return;
+        kenoPicks.clear();
+        while (kenoPicks.size < KENO_MAX_PICKS) {
+            kenoPicks.add(Math.floor(Math.random() * kenoTotalNumbers) + 1);
+        }
+        document.querySelectorAll('.keno-number').forEach(el => {
+            const num = parseInt(el.dataset.num);
+            el.classList.toggle('picked', kenoPicks.has(num));
+            el.classList.remove('drawn', 'hit');
+        });
+        document.getElementById('kenoPickCount').textContent = kenoPicks.size + '/' + KENO_MAX_PICKS + ' picked';
+    };
+
+    // Keno payout multipliers based on hits vs picks (heavily weighted toward low hits)
+    // Payout scales with true hypergeometric hit probability for the current pool size,
+    // so odds stay sensible whether the board is 40 or 120 numbers, while keeping a built-in house edge.
+    function hyperProb(pool, draws, picks, hits) {
+        function choose(n, k) {
+            if (k < 0 || k > n) return 0;
+            k = Math.min(k, n - k);
+            let r = 1;
+            for (let i = 0; i < k; i++) r = r * (n - i) / (i + 1);
+            return r;
+        }
+        const num = choose(draws, hits) * choose(pool - draws, picks - hits);
+        const den = choose(pool, picks);
+        return den > 0 ? num / den : 0;
+    }
+
+    function getKenoPayout(picks, hits, bet) {
+        if (hits === 0) return 0;
+        const pool = kenoTotalNumbers;
+        const draws = Math.min(pool, Math.max(15, Math.round(pool * 0.25)));
+        const p = hyperProb(pool, draws, picks, hits);
+        if (p <= 0) return 0;
+        // Fair multiplier would be 1/p; apply house edge so the game stays profitable long-run
+        const HOUSE_EDGE = 0.52; // pays out ~34% of "fair" odds
+        // Require at least half the picks to hit before any real payout kicks in, like classic keno curves
+        if (hits < Math.ceil(picks / 2) && picks > 2) return 0;
+        const mult = (1 / p) * HOUSE_EDGE * (hits / picks);
+        return Math.floor(bet * Math.min(mult, 1000));
+    }
+
+    window.playKeno = function() {
+        if (kenoPlaying) return;
+        if (kenoPicks.size === 0) { showCasinoResult('keno', 'Pick at least 1 number!', 'lose'); return; }
+
+        const bet = getBet('kenoBet');
+        if (bet > balance) { showCasinoResult('keno', 'Not enough zaddybux!', 'lose'); return; }
+
+        adjustBalance(-bet);
+        kenoPlaying = true;
+        document.getElementById('drawBtn').disabled = true;
+        document.getElementById('kenoResult').textContent = '';
+        document.getElementById('kenoResult').className = 'slot-result';
+
+        // Clear previous drawn state (keep picks)
+        document.querySelectorAll('.keno-number').forEach(el => {
+            el.classList.remove('drawn', 'hit');
+        });
+        kenoDrawn = [];
+
+        // Rigged: bias toward fewer hits (~30% chance of any hit)
+        const pickCount = kenoPicks.size;
+        const hasHit = Math.random() < 0.30;
+        let targetHits = 0;
+        if (hasHit) {
+            // Weighted heavily toward minimum hits
+            const hitWeights = [60, 25, 10, 4, 0.8, 0.15]; // 0-5 hits max for fairness feeling
+            const totalW = hitWeights.reduce((a,b) => a+b, 0);
+            let r = Math.random() * totalW;
+            for (let i = 0; i < hitWeights.length; i++) {
+                r -= hitWeights[i];
+                if (r <= 0) { targetHits = i; break; }
+            }
+            // Cap hits at picks and reasonable number
+            targetHits = Math.min(targetHits, pickCount);
+        }
+
+        // Generate drawn numbers
+        const allNums = Array.from({length: kenoTotalNumbers}, (_, i) => i + 1);
+        // Shuffle (Fisher-Yates)
+        for (let i = allNums.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allNums[i], allNums[j]] = [allNums[j], allNums[i]];
+        }
+
+        // Draw ~25% of the board (min 15, capped at board size)
+        const drawCount = Math.min(allNums.length, Math.max(15, Math.round(kenoTotalNumbers * 0.25)));
+        // Ensure target hits are in the drawn set if needed
+        let drawnSet = new Set(allNums.slice(0, drawCount));
+        const pickedArr = Array.from(kenoPicks);
+
+        if (targetHits > 0) {
+            // Make sure exactly targetHits of our picks are in the drawn set
+            const currentHits = pickedArr.filter(n => drawnSet.has(n)).length;
+            let extraNeeded = targetHits - currentHits;
+            for (const pick of pickedArr) {
+                if (extraNeeded <= 0) break;
+                if (!drawnSet.has(pick)) {
+                    // Remove a non-pick number and add this one
+                    const nonPickInDrawn = allNums.filter(n => drawnSet.has(n) && !kenoPicks.has(n));
+                    if (nonPickInDrawn.length > 0) {
+                        const remove = nonPickInDrawn[0];
+                        drawnSet.delete(remove);
+                    }
+                    drawnSet.add(pick);
+                    extraNeeded--;
+                }
+            }
+        } else {
+            // Remove any accidental hits
+            pickedArr.forEach(n => drawnSet.delete(n));
+        }
+
+        const finalDrawn = Array.from(drawnSet).slice(0, drawCount);
+
+        // Animate draws one at a time
+        let drawIndex = 0;
+        function drawNext() {
+            if (drawIndex >= finalDrawn.length) {
+                // All drawn — calculate result
+                const hits = pickedArr.filter(n => drawnSet.has(n)).length;
+                const winAmount = getKenoPayout(pickCount, hits, bet);
+
+                kenoPlaying = false;
+                document.getElementById('drawBtn').disabled = false;
+
+                if (winAmount > 0) {
+                    adjustBalance(winAmount);
+                    showCasinoResult('keno', hits + '/' + pickCount + ' hits! WIN! +' + winAmount + ' zaddybux', 'win');
+                    if (winAmount >= bet * 10) showBigWin(winAmount);
+                } else {
+                    showCasinoResult('keno', hits + '/' + pickCount + ' hits. No payout.', 'lose');
+                }
+                return;
+            }
+
+            const num = finalDrawn[drawIndex];
+            drawIndex++;
+            kenoDrawn.push(num);
+
+            const cell = document.querySelector('.keno-number[data-num="' + num + '"]');
+            if (cell) {
+                if (kenoPicks.has(num)) {
+                    cell.classList.add('hit');
+                } else {
+                    cell.classList.add('drawn');
+                }
+            }
+
+            setTimeout(drawNext, 90 + Math.random() * 60); // 90-150ms delay
+        }
+
+        setTimeout(drawNext, 150);
+    };
+
+    // ══════════════════════════════════════
+    // LANDMINES GAME
+    // ══════════════════════════════════════
+    let minesGrid = []; // true = mine, false = gem
+    let minesRevealed = 0;
+    let minesActive = false;
+    let minesBetAmount = 0;
+    let mineCount = 5;
+
+    function getMineMultiplier(revealed, totalMines, totalTiles) {
+        // Theoretical fair multiplier based on probability
+        let mult = 1;
+        for (let i = 0; i < revealed; i++) {
+            mult *= (totalTiles - i) / (totalTiles - totalMines - i);
+        }
+        return Math.floor(mult * 0.68 * 100) / 100; // ~32% house edge built in
+    }
+
+    window.initLandmines = function() {
+        if (minesActive) return; // don't reset mid-round
+        const grid = document.getElementById('landminesGrid');
+        const select = document.getElementById('mineCountSelect');
+        if (!grid || !select) return;
+        mineCount = parseInt(select.value, 10) || 5;
+
+        grid.innerHTML = '';
+        for (let i = 0; i < 35; i++) {
+            const tile = document.createElement('div');
+            tile.className = 'mine-tile disabled';
+            tile.dataset.index = i;
+            tile.setAttribute('tabindex', '-1');
+            tile.setAttribute('role', 'button');
+            tile.setAttribute('aria-label', 'Tile ' + (i + 1));
+            grid.appendChild(tile);
+        }
+
+        minesGrid = [];
+        minesRevealed = 0;
+        minesActive = false;
+
+        const oddsEl = document.getElementById('minesOdds');
+        if (oddsEl) oddsEl.textContent = mineCount + ' mines on the board — first pick multiplier ' + getMineMultiplier(1, mineCount, 35).toFixed(2) + 'x';
+    };
+
+    window.startLandmines = function() {
+        if (minesActive) return;
+        const bet = getBet('landminesBet');
+        if (bet > balance) { showCasinoResult('landmines', 'Not enough zaddybux!', 'lose'); return; }
+
+        adjustBalance(-bet);
+        minesBetAmount = bet;
+        mineCount = parseInt(document.getElementById('mineCountSelect').value, 10);
+        minesActive = true;
+        minesRevealed = 0;
+
+        // Place mines — rigged: bias toward more mines in later reveals
+        const totalTiles = 35;
+        minesGrid = new Array(totalTiles).fill(false);
+        let minePositions = [];
+        while (minePositions.length < mineCount) {
+            const pos = Math.floor(Math.random() * totalTiles);
+            if (!minesGrid[pos]) {
+                minesGrid[pos] = true;
+                minePositions.push(pos);
+            }
+        }
+
+        // Bias: if player has revealed many gems, increase chance next reveal hits a mine
+        // (already handled by the multiplier being reduced — the game feels fair but loses over time)
+
+        const tiles = document.querySelectorAll('.mine-tile');
+        tiles.forEach(t => {
+            t.className = 'mine-tile';
+            t.textContent = '';
+            t.setAttribute('tabindex', '0');
+        });
+
+        document.getElementById('startMinesBtn').style.display = 'none';
+        document.getElementById('cashoutMinesBtn').style.display = 'block';
+        updateMineCashout();
+    };
+
+    function updateMineCashout() {
+        const mult = getMineMultiplier(minesRevealed, mineCount, 35);
+        const val = Math.floor(minesBetAmount * mult);
+        document.getElementById('mineCashoutVal').textContent = val;
+    }
+
+    window.cashoutLandmines = function() {
+        if (!minesActive || minesRevealed === 0) return;
+        const mult = getMineMultiplier(minesRevealed, mineCount, 35);
+        const winAmount = Math.floor(minesBetAmount * mult);
+
+        adjustBalance(winAmount);
+        minesActive = false;
+
+        // Reveal all mines
+        revealAllMines();
+
+        document.getElementById('startMinesBtn').style.display = 'block';
+        document.getElementById('cashoutMinesBtn').style.display = 'none';
+
+        showCasinoResult('landmines', 'Cashed out! +' + winAmount + ' zaddybux (' + mult.toFixed(2) + 'x)', 'win');
+        if (winAmount >= minesBetAmount * 5) showBigWin(winAmount);
+    };
+
+    function revealAllMines() {
+        const tiles = document.querySelectorAll('.mine-tile');
+        tiles.forEach((tile, i) => {
+            tile.classList.add('revealed', 'disabled');
+            if (minesGrid[i]) {
+                tile.textContent = '💣';
+                tile.classList.add('mine');
+            } else {
+                tile.textContent = '💎';
+                tile.classList.add('gem');
+            }
+        });
+    }
+
+    // Handle mine tile clicks via delegation
+    document.addEventListener('click', function(e) {
+        if (!minesActive) return;
+        const tile = e.target.closest('.mine-tile:not(.revealed):not(.disabled)');
+        if (!tile) return;
+        activateMineTile(tile);
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (!minesActive) return;
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const tile = e.target.closest && e.target.closest('.mine-tile:not(.revealed):not(.disabled)');
+        if (!tile) return;
+        e.preventDefault();
+        activateMineTile(tile);
+    });
+
+    function activateMineTile(tile) {
+
+        const idx = parseInt(tile.dataset.index, 10);
+
+        if (minesGrid[idx]) {
+            // Hit a mine!
+            tile.textContent = '💣';
+            tile.classList.add('revealed', 'mine');
+            minesActive = false;
+
+            revealAllMines();
+
+            document.getElementById('startMinesBtn').style.display = 'block';
+            document.getElementById('cashoutMinesBtn').style.display = 'none';
+
+            showCasinoResult('landmines', 'BOOM! Hit a mine! -' + minesBetAmount, 'lose');
+        } else {
+            // Safe — gem
+            tile.textContent = '💎';
+            tile.classList.add('revealed', 'gem');
+            minesRevealed++;
+
+            const mult = getMineMultiplier(minesRevealed, mineCount, 35);
+            updateMineCashout();
+
+            // Check if all gems revealed (max cashout)
+            const totalGems = 35 - mineCount;
+            if (minesRevealed >= totalGems) {
+                window.cashoutLandmines();
+            }
+        }
+    }
+
+    // ─── Initialize everything on load ───
+    buildSlotReels();
+    initKenoBoard();
+    initLandmines();
+    initPlinkoBoard();
+
 })();
 </script>
 
