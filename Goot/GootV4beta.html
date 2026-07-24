@@ -15166,8 +15166,19 @@ oninput="blockPanelSearch(this.value)">
 </div>
 <div id="album-redirect-form" style="display:none;flex-direction:column;gap:10px;">
 <div id="album-redirect-upload-zone" style="border:2px dashed color-mix(in srgb,var(--md-sys-color-primary) 40%,transparent);border-radius:10px;padding:18px 14px;text-align:center;cursor:pointer;transition:all 0.15s;font-size:13px;opacity:0.75;" onclick="document.getElementById('album-redirect-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--md-sys-color-primary)';this.style.opacity='1'" ondragleave="this.style.borderColor='';this.style.opacity='0.75'" ondrop="_albumRedirectHandleDrop(event)">
-<i class="fa-solid fa-upload" style="margin-right:6px;"></i>Drop files or click to upload — auto-fills IDs in filename order
+<i class="fa-solid fa-upload" style="margin-right:6px;"></i>Drop files or click to add — you'll confirm the order before anything uploads
 <div id="album-redirect-upload-status" style="margin-top:6px;font-size:12px;display:none;"></div>
+</div>
+<div id="album-redirect-staging" style="display:none;flex-direction:column;gap:8px;background:color-mix(in srgb,var(--md-sys-color-surface-variant) 40%,transparent);border-radius:10px;padding:12px;">
+<div style="font-size:11px;opacity:0.6;display:flex;justify-content:space-between;align-items:center;">
+<span><i class="fa-solid fa-arrows-up-down" style="margin-right:4px;"></i>Drag rows to match track order, then confirm</span>
+<span id="album-redirect-staging-count" style="opacity:0.8;"></span>
+</div>
+<div id="album-redirect-staging-list" style="display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto;"></div>
+<div style="display:flex;gap:8px;">
+<button class="m3-btn m3-btn-filled" id="album-redirect-confirm-upload-btn" style="flex:1;justify-content:center;" onclick="_albumRedirectConfirmUpload()"><i class="fa-solid fa-upload"></i> <span id="album-redirect-confirm-upload-label">Upload</span></button>
+<button class="m3-btn m3-btn-tonal" onclick="_albumRedirectClearStaging()" title="Discard these files"><i class="fa-solid fa-xmark"></i></button>
+</div>
 </div>
 <input type="file" id="album-redirect-file-input" style="display:none;" accept="audio/*,video/*" multiple onchange="_albumRedirectHandleFiles(this.files)">
 <textarea id="album-redirect-ids-input" placeholder="Local file IDs — one per line, in track order (auto-filled by upload)" autocomplete="off" rows="6" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;resize:vertical;" oninput="albumRedirectValidateCount()"></textarea>
@@ -15194,8 +15205,19 @@ oninput="blockPanelSearch(this.value)">
 </div>
 <div id="lossless-form" style="display:none;flex-direction:column;gap:10px;">
 <div id="lossless-upload-zone" style="border:2px dashed color-mix(in srgb,var(--md-sys-color-primary) 40%,transparent);border-radius:10px;padding:18px 14px;text-align:center;cursor:pointer;transition:all 0.15s;font-size:13px;opacity:0.75;" onclick="document.getElementById('lossless-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--md-sys-color-primary)';this.style.opacity='1'" ondragleave="this.style.borderColor='';this.style.opacity='0.75'" ondrop="_losslessHandleDrop(event)">
-<i class="fa-solid fa-gem" style="margin-right:6px;"></i>Drop lossless files (FLAC/WAV/ALAC) or click to upload
+<i class="fa-solid fa-gem" style="margin-right:6px;"></i>Drop lossless files (FLAC/WAV/ALAC) or click to add — you'll confirm the order before anything uploads
 <div id="lossless-upload-status" style="margin-top:6px;font-size:12px;display:none;"></div>
+</div>
+<div id="lossless-staging" style="display:none;flex-direction:column;gap:8px;background:color-mix(in srgb,var(--md-sys-color-surface-variant) 40%,transparent);border-radius:10px;padding:12px;">
+<div style="font-size:11px;opacity:0.6;display:flex;justify-content:space-between;align-items:center;">
+<span><i class="fa-solid fa-arrows-up-down" style="margin-right:4px;"></i>Drag rows to match track order, then confirm</span>
+<span id="lossless-staging-count" style="opacity:0.8;"></span>
+</div>
+<div id="lossless-staging-list" style="display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto;"></div>
+<div style="display:flex;gap:8px;">
+<button class="m3-btn m3-btn-filled" id="lossless-confirm-upload-btn" style="flex:1;justify-content:center;" onclick="_losslessConfirmUpload()"><i class="fa-solid fa-upload"></i> <span id="lossless-confirm-upload-label">Upload</span></button>
+<button class="m3-btn m3-btn-tonal" onclick="_losslessClearStaging()" title="Discard these files"><i class="fa-solid fa-xmark"></i></button>
+</div>
 </div>
 <input type="file" id="lossless-file-input" style="display:none;" accept="audio/*,.flac,.wav,.m4a,.aiff,.aif,.ape,.wv" multiple onchange="_losslessHandleFiles(this.files)">
 <textarea id="lossless-ids-input" placeholder="Lossless file IDs — one per line, in track order (auto-filled by upload)" autocomplete="off" rows="6" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;resize:vertical;" oninput="losslessValidateCount()"></textarea>
@@ -32351,12 +32373,13 @@ async function _uploadLocalFile(file, statusEl) {
 }
 async function _uploadLocalFiles(files, statusEl) {
     await _ensureStagingFolder();
-    // Sort by filename so order matches track order regardless of drop order
-    const sorted = Array.from(files).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    // Order is whatever the caller passes in — for the batch panels that means the
+    // user-confirmed (and possibly manually reordered) staging list, not a re-sort here.
+    const ordered = Array.from(files);
     const ids = [];
-    for (let i = 0; i < sorted.length; i++) {
-        const f = sorted[i];
-        if (statusEl) { statusEl.textContent = `Uploading ${i + 1}/${sorted.length}: ${f.name}`; statusEl.style.display = ''; }
+    for (let i = 0; i < ordered.length; i++) {
+        const f = ordered[i];
+        if (statusEl) { statusEl.textContent = `Uploading ${i + 1}/${ordered.length}: ${f.name}`; statusEl.style.display = ''; }
         const fd = new FormData();
         fd.append('file', f);
         const res = await fetch(`${_LOCAL_UPLOAD_BASE}/upload?folder=${encodeURIComponent(_STAGING_FOLDER)}`, {
@@ -32397,60 +32420,122 @@ function _redirectHandleDrop(e) {
     const file = e.dataTransfer?.files?.[0];
     if (file) _redirectHandleFile(file);
 }
+// Batch upload staging: files are added to a review list (sorted by filename to start),
+// can be dragged into a different order, and are only actually uploaded once the user
+// clicks the Upload button. Shared logic factored out since album-redirect and lossless
+// panels work identically.
+function _makeBatchUploadStaging(prefix, { validateFn, accept } = {}) {
+    const state = { files: [], dragIndex: null };
+    const el = (id) => document.getElementById(id);
+    const ids = {
+        zone: `${prefix}-upload-zone`, status: `${prefix}-upload-status`, textarea: `${prefix}-ids-input`,
+        staging: `${prefix}-staging`, list: `${prefix}-staging-list`, count: `${prefix}-staging-count`,
+        confirmBtn: `${prefix}-confirm-upload-btn`, confirmLabel: `${prefix}-confirm-upload-label`
+    };
+
+    function render() {
+        const staging = el(ids.staging), list = el(ids.list), count = el(ids.count), label = el(ids.confirmLabel);
+        if (state.files.length === 0) { staging.style.display = 'none'; list.innerHTML = ''; return; }
+        staging.style.display = 'flex';
+        count.textContent = `${state.files.length} file${state.files.length === 1 ? '' : 's'}`;
+        label.textContent = `Upload ${state.files.length} file${state.files.length === 1 ? '' : 's'}`;
+        list.innerHTML = state.files.map((f, i) => `
+<div class="${prefix}-staging-row" draggable="true" data-index="${i}"
+style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;border-radius:8px;background:color-mix(in srgb,var(--md-sys-color-surface) 60%,transparent);cursor:grab;">
+<i class="fa-solid fa-grip-lines" style="opacity:0.35;"></i>
+<div style="opacity:0.45;width:22px;flex-shrink:0;">${i + 1}.</div>
+<div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
+<button type="button" data-remove="${i}" title="Remove" style="background:none;border:none;color:#ef4444;opacity:0.6;cursor:pointer;flex-shrink:0;padding:2px 4px;"><i class="fa-solid fa-xmark"></i></button>
+</div>`).join('');
+        list.querySelectorAll(`.${prefix}-staging-row`).forEach((row) => {
+            row.addEventListener('dragstart', (e) => {
+                state.dragIndex = Number(row.dataset.index);
+                row.style.opacity = '0.4';
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            row.addEventListener('dragend', () => { row.style.opacity = ''; state.dragIndex = null; });
+            row.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const targetIndex = Number(row.dataset.index);
+                if (state.dragIndex === null || state.dragIndex === targetIndex) return;
+                const [moved] = state.files.splice(state.dragIndex, 1);
+                state.files.splice(targetIndex, 0, moved);
+                render();
+            });
+        });
+        list.querySelectorAll('[data-remove]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                state.files.splice(Number(btn.dataset.remove), 1);
+                render();
+            });
+        });
+    }
+
+    function handleFiles(files) {
+        if (!files || files.length === 0) return;
+        const incoming = Array.from(files).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+        // Appending (rather than replacing) lets someone drop files in a couple of batches
+        // and still reorder/remove everything together before confirming.
+        state.files = state.files.concat(incoming);
+        const statusEl = el(ids.status);
+        statusEl.style.display = 'none';
+        render();
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        const zone = el(ids.zone);
+        zone.style.borderColor = ''; zone.style.opacity = '0.75';
+        if (e.dataTransfer?.files?.length) handleFiles(e.dataTransfer.files);
+    }
+
+    function clearStaging() {
+        state.files = [];
+        render();
+        const statusEl = el(ids.status);
+        statusEl.style.display = 'none';
+    }
+
+    async function confirmUpload() {
+        if (state.files.length === 0) return;
+        const zone = el(ids.zone), statusEl = el(ids.status), textarea = el(ids.textarea), btn = el(ids.confirmBtn);
+        btn.disabled = true;
+        zone.style.opacity = '0.5'; zone.style.pointerEvents = 'none';
+        try {
+            const uploadedIds = await _uploadLocalFiles(state.files, statusEl);
+            textarea.value = uploadedIds.join('\n');
+            if (typeof validateFn === 'function') validateFn();
+            statusEl.textContent = `✓ Uploaded ${uploadedIds.length} file${uploadedIds.length === 1 ? '' : 's'} — IDs filled below`;
+            statusEl.style.color = '#22c55e';
+            state.files = [];
+            render();
+        } catch (e) {
+            statusEl.textContent = '✗ ' + e.message;
+            statusEl.style.color = '#ef4444';
+            statusEl.style.display = '';
+        } finally {
+            btn.disabled = false;
+            zone.style.opacity = ''; zone.style.pointerEvents = '';
+        }
+    }
+
+    return { handleFiles, handleDrop, confirmUpload, clearStaging };
+}
+
 // Album batch redirect upload
-async function _albumRedirectHandleFiles(files) {
-    if (!files || files.length === 0) return;
-    const zone = document.getElementById('album-redirect-upload-zone');
-    const statusEl = document.getElementById('album-redirect-upload-status');
-    const textarea = document.getElementById('album-redirect-ids-input');
-    zone.style.opacity = '0.5'; zone.style.pointerEvents = 'none';
-    try {
-        const ids = await _uploadLocalFiles(files, statusEl);
-        textarea.value = ids.join('\n');
-        albumRedirectValidateCount();
-        statusEl.textContent = `✓ Uploaded ${ids.length} file${ids.length === 1 ? '' : 's'} — IDs filled below`;
-        statusEl.style.color = '#22c55e';
-    } catch(e) {
-        statusEl.textContent = '✗ ' + e.message;
-        statusEl.style.color = '#ef4444';
-        statusEl.style.display = '';
-    } finally {
-        zone.style.opacity = ''; zone.style.pointerEvents = '';
-    }
-}
-function _albumRedirectHandleDrop(e) {
-    e.preventDefault();
-    const zone = document.getElementById('album-redirect-upload-zone');
-    zone.style.borderColor = ''; zone.style.opacity = '0.75';
-    if (e.dataTransfer?.files?.length) _albumRedirectHandleFiles(e.dataTransfer.files);
-}
+const _albumRedirectStaging = _makeBatchUploadStaging('album-redirect', { validateFn: albumRedirectValidateCount });
+function _albumRedirectHandleFiles(files) { _albumRedirectStaging.handleFiles(files); }
+function _albumRedirectHandleDrop(e) { _albumRedirectStaging.handleDrop(e); }
+function _albumRedirectConfirmUpload() { _albumRedirectStaging.confirmUpload(); }
+function _albumRedirectClearStaging() { _albumRedirectStaging.clearStaging(); }
+
 // Lossless upload
-async function _losslessHandleFiles(files) {
-    if (!files || files.length === 0) return;
-    const zone = document.getElementById('lossless-upload-zone');
-    const statusEl = document.getElementById('lossless-upload-status');
-    const textarea = document.getElementById('lossless-ids-input');
-    zone.style.opacity = '0.5'; zone.style.pointerEvents = 'none';
-    try {
-        const ids = await _uploadLocalFiles(files, statusEl);
-        textarea.value = ids.join('\n');
-        losslessValidateCount();
-        statusEl.textContent = `✓ Uploaded ${ids.length} file${ids.length === 1 ? '' : 's'} — IDs filled below`;
-        statusEl.style.color = '#22c55e';
-    } catch(e) {
-        statusEl.textContent = '✗ ' + e.message;
-        statusEl.style.color = '#ef4444';
-        statusEl.style.display = '';
-    } finally {
-        zone.style.opacity = ''; zone.style.pointerEvents = '';
-    }
-}
-function _losslessHandleDrop(e) {
-    e.preventDefault();
-    const zone = document.getElementById('lossless-upload-zone');
-    zone.style.borderColor = ''; zone.style.opacity = '0.75';
-    if (e.dataTransfer?.files?.length) _losslessHandleFiles(e.dataTransfer.files);
-}
+const _losslessStaging = _makeBatchUploadStaging('lossless', { validateFn: losslessValidateCount });
+function _losslessHandleFiles(files) { _losslessStaging.handleFiles(files); }
+function _losslessHandleDrop(e) { _losslessStaging.handleDrop(e); }
+function _losslessConfirmUpload() { _losslessStaging.confirmUpload(); }
+function _losslessClearStaging() { _losslessStaging.clearStaging(); }
 // ─────────────────────────────────────────────────────────────────────────────
 async function submitTrackRedirect() {
 const raw = document.getElementById('redirect-new-id-input').value.trim();
@@ -32836,6 +32921,7 @@ async function removeTrackLossless(from) {
 let _albumRedirectSearchTimeout = null;
 const _albumRedirectSearchResults = new Map(); // album+artist key -> {album, artist}
 let _albumRedirectTracks = []; // sorted track list for the selected album: [{id, title, artist, track_number}]
+let _albumRedirectSelectToken = 0; // guards against a slower/stale request clobbering a newer, already-rendered selection
 function albumRedirectPanelSearch(query) {
 clearTimeout(_albumRedirectSearchTimeout);
 const results = document.getElementById('album-redirect-search-results');
@@ -32899,12 +32985,16 @@ const trackListEl = document.getElementById('album-redirect-track-list');
 trackListEl.innerHTML = '<div style="font-size:12px;opacity:0.4;padding:4px;">Loading tracks…</div>';
 document.getElementById('album-redirect-selected').style.display = '';
 document.getElementById('album-redirect-form').style.display = 'none';
+const myToken = ++_albumRedirectSelectToken;
 try {
 // Dedicated, uncapped lookup — bypasses /metadata/search/ai entirely (that endpoint caps
 // its flat track list at 30, which silently dropped tracks on larger albums).
 const params = new URLSearchParams({ album, artist: artist || '' });
 const res = await fetch(`${SEARCH_API_URL}/metadata/album-tracks?${params}`);
+if (myToken !== _albumRedirectSelectToken) return; // a newer selection has superseded this one
+if (!res.ok) throw new Error(`Worker returned ${res.status}`);
 const data = await res.json();
+if (myToken !== _albumRedirectSelectToken) return;
 const allTracks = data.tracks || [];
 _albumRedirectTracks = allTracks.map(t => ({ id: t.id, title: t.title || 'Unknown Track', track_number: t.track_number }));
 if (_albumRedirectTracks.length === 0) {
@@ -32914,11 +33004,16 @@ return;
 renderAlbumRedirectTrackList();
 document.getElementById('album-redirect-form').style.display = 'flex';
 document.getElementById('album-redirect-ids-input').value = '';
-document.getElementById('album-redirect-folder-input').value = '';
-document.getElementById('album-redirect-folder-status').style.display = 'none';
+const arFolderInput = document.getElementById('album-redirect-folder-input');
+if (arFolderInput) arFolderInput.value = '';
+const arFolderStatus = document.getElementById('album-redirect-folder-status');
+if (arFolderStatus) arFolderStatus.style.display = 'none';
 albumRedirectValidateCount();
 } catch(e) {
-trackListEl.innerHTML = '<div style="font-size:12px;opacity:0.5;padding:4px;color:#ef4444;">Failed to load tracks.</div>';
+if (myToken !== _albumRedirectSelectToken) return; // stale request errored after a newer one already rendered successfully
+console.error('[albumRedirectSelectAlbum] failed to load tracks:', e);
+const msg = (e?.message || e || 'unknown error').toString().replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+trackListEl.innerHTML = `<div style="font-size:12px;opacity:0.5;padding:4px;color:#ef4444;">Failed to load tracks: ${msg}</div>`;
 }
 }
 function renderAlbumRedirectTrackList() {
@@ -32927,7 +33022,7 @@ trackListEl.innerHTML = _albumRedirectTracks.map((t, i) => `
 <div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 2px;">
 <div style="opacity:0.4;width:22px;flex-shrink:0;">${t.track_number != null ? t.track_number : (i + 1)}.</div>
 <div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cleanDisplayName(t.title)}</div>
-<div style="opacity:0.3;font-family:monospace;flex-shrink:0;">${t.id.slice(0,6)}…</div>
+<div style="opacity:0.3;font-family:monospace;flex-shrink:0;">${(t.id || '??????').toString().slice(0,6)}…</div>
 <button onclick="removeAlbumRedirectTrack(${i})" title="Remove from this batch" style="background:none;border:none;color:#ef4444;opacity:0.6;cursor:pointer;flex-shrink:0;padding:2px 4px;"><i class="fa-solid fa-trash"></i></button>
 </div>`).join('');
 }
@@ -32963,6 +33058,7 @@ albumRedirectValidateCount();
 }
 function clearAlbumRedirectSelection() {
 _albumRedirectTracks = [];
+_albumRedirectStaging.clearStaging();
 document.getElementById('album-redirect-selected').style.display = 'none';
 document.getElementById('album-redirect-form').style.display = 'none';
 document.getElementById('album-redirect-ids-input').value = '';
@@ -33085,6 +33181,7 @@ status.style.display = '';
 let _losslessSearchTimeout = null;
 const _losslessSearchResults = new Map(); // album+artist key -> {album, artist}
 let _losslessTracks = []; // sorted track list for the selected album: [{id, title, track_number}]
+let _losslessSelectToken = 0; // guards against a slower/stale request clobbering a newer, already-rendered selection
 function losslessPanelSearch(query) {
 clearTimeout(_losslessSearchTimeout);
 const results = document.getElementById('lossless-search-results');
@@ -33147,10 +33244,14 @@ const trackListEl = document.getElementById('lossless-track-list');
 trackListEl.innerHTML = '<div style="font-size:12px;opacity:0.4;padding:4px;">Loading tracks…</div>';
 document.getElementById('lossless-selected').style.display = '';
 document.getElementById('lossless-form').style.display = 'none';
+const myToken = ++_losslessSelectToken;
 try {
 const params = new URLSearchParams({ album, artist: artist || '' });
 const res = await fetch(`${SEARCH_API_URL}/metadata/album-tracks?${params}`);
+if (myToken !== _losslessSelectToken) return; // a newer selection has superseded this one
+if (!res.ok) throw new Error(`Worker returned ${res.status}`);
 const data = await res.json();
+if (myToken !== _losslessSelectToken) return;
 const allTracks = data.tracks || [];
 _losslessTracks = allTracks.map(t => ({ id: t.id, title: t.title || 'Unknown Track', track_number: t.track_number }));
 if (_losslessTracks.length === 0) {
@@ -33160,11 +33261,16 @@ return;
 renderLosslessTrackList();
 document.getElementById('lossless-form').style.display = 'flex';
 document.getElementById('lossless-ids-input').value = '';
-document.getElementById('lossless-folder-input').value = '';
-document.getElementById('lossless-folder-status').style.display = 'none';
+const lFolderInput = document.getElementById('lossless-folder-input');
+if (lFolderInput) lFolderInput.value = '';
+const lFolderStatus = document.getElementById('lossless-folder-status');
+if (lFolderStatus) lFolderStatus.style.display = 'none';
 losslessValidateCount();
 } catch(e) {
-trackListEl.innerHTML = '<div style="font-size:12px;opacity:0.5;padding:4px;color:#ef4444;">Failed to load tracks.</div>';
+if (myToken !== _losslessSelectToken) return; // stale request errored after a newer one already rendered successfully
+console.error('[losslessSelectAlbum] failed to load tracks:', e);
+const msg = (e?.message || e || 'unknown error').toString().replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+trackListEl.innerHTML = `<div style="font-size:12px;opacity:0.5;padding:4px;color:#ef4444;">Failed to load tracks: ${msg}</div>`;
 }
 }
 function renderLosslessTrackList() {
@@ -33173,11 +33279,35 @@ trackListEl.innerHTML = _losslessTracks.map((t, i) => `
 <div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 2px;">
 <div style="opacity:0.4;width:22px;flex-shrink:0;">${t.track_number != null ? t.track_number : (i + 1)}.</div>
 <div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cleanDisplayName(t.title)}</div>
-<div style="opacity:0.3;font-family:monospace;flex-shrink:0;">${t.id.slice(0,6)}…</div>
+<div style="opacity:0.3;font-family:monospace;flex-shrink:0;">${(t.id || '??????').toString().slice(0,6)}…</div>
+<button onclick="removeLosslessTrack(${i})" title="No lossless version for this track — exclude it from this batch" style="background:none;border:none;color:#ef4444;opacity:0.6;cursor:pointer;flex-shrink:0;padding:2px 4px;"><i class="fa-solid fa-xmark"></i></button>
 </div>`).join('');
+}
+function removeLosslessTrack(index) {
+// Unlike removeAlbumRedirectTrack, this does NOT delete anything from the database —
+// it only drops the track from this local batch list, for tracks that simply have no
+// lossless version to pair up. The regular track stays exactly as-is.
+const t = _losslessTracks[index];
+if (!t) return;
+_losslessTracks.splice(index, 1);
+if (_losslessTracks.length === 0) {
+document.getElementById('lossless-track-list').innerHTML = '<div style="font-size:12px;opacity:0.5;padding:4px;color:#ef4444;">No tracks left in this batch.</div>';
+document.getElementById('lossless-form').style.display = 'none';
+return;
+}
+renderLosslessTrackList();
+// Remove only the line that corresponded to the excluded track, keep the rest of the pasted IDs intact.
+const idsInput = document.getElementById('lossless-ids-input');
+const lines = idsInput.value.split('\n');
+if (lines.length > index) {
+lines.splice(index, 1);
+idsInput.value = lines.join('\n');
+}
+losslessValidateCount();
 }
 function clearLosslessSelection() {
 _losslessTracks = [];
+_losslessStaging.clearStaging();
 document.getElementById('lossless-selected').style.display = 'none';
 document.getElementById('lossless-form').style.display = 'none';
 document.getElementById('lossless-ids-input').value = '';
