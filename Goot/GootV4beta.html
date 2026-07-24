@@ -14748,6 +14748,14 @@ onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0'">
 </div>
 <i class="fa-solid fa-chevron-right settings-nav-arrow"></i>
 </button>
+<button class="settings-nav-row" id="settings-nav-cache-purge" onclick="openSettingsSection('cache-purge')" style="display:none;">
+<div class="settings-nav-icon"><i class="fa-solid fa-rotate"></i></div>
+<div class="settings-nav-text">
+<div class="settings-nav-title">Purge Track Cache</div>
+<div class="settings-nav-sub">Force every edge node to drop stale cached audio for a track</div>
+</div>
+<i class="fa-solid fa-chevron-right settings-nav-arrow"></i>
+</button>
 </div>
 </div><!-- /settings-menu-view -->
 <div id="settings-detail-view" style="display:none;">
@@ -15262,6 +15270,48 @@ oninput="blockPanelSearch(this.value)">
 <button class="m3-btn m3-btn-tonal" style="padding:4px 10px;font-size:12px;" onclick="loadTrackLosslessList()"><i class="fa-solid fa-rotate"></i></button>
 </div>
 <div id="track-lossless-active-list" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;"></div>
+</div>
+</div>
+<div class="m3-card" id="settings-panel-cache-purge" style="display:none;padding:20px 16px;">
+<div style="font-size:13px;opacity:0.6;margin-bottom:12px;">Search for an album or song below, pick regular or lossless, and purge the edge cache for every matching track in one go — no need to know the IDs.</div>
+<input id="cache-purge-search-input" type="text" placeholder="Search albums or songs..." autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:14px;outline:none;" oninput="cachePurgeSearch(this.value)">
+<div id="cache-purge-search-results" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;margin-top:8px;"></div>
+<div id="cache-purge-selected" style="display:none;background:color-mix(in srgb,var(--md-sys-color-primary) 10%,transparent);border-radius:10px;padding:12px 14px;margin-top:12px;">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+<div style="min-width:0;">
+<div id="cache-purge-selected-title" style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+<div id="cache-purge-selected-sub" style="font-size:12px;opacity:0.6;margin-top:2px;"></div>
+</div>
+<button class="m3-btn m3-btn-tonal" style="padding:5px 10px;font-size:12px;flex-shrink:0;" onclick="clearCachePurgeSelection()"><i class="fa-solid fa-xmark"></i></button>
+</div>
+<div style="display:flex;gap:8px;margin-top:12px;">
+<button class="m3-btn m3-btn-filled" id="cache-purge-version-regular-btn" style="flex:1;justify-content:center;" onclick="setCachePurgeVersion('regular')"><i class="fa-solid fa-file-audio"></i> Regular</button>
+<button class="m3-btn m3-btn-tonal" id="cache-purge-version-lossless-btn" style="flex:1;justify-content:center;" onclick="setCachePurgeVersion('lossless')"><i class="fa-solid fa-gem"></i> Lossless</button>
+</div>
+<div id="cache-purge-track-list" style="display:flex;flex-direction:column;gap:4px;margin-top:12px;max-height:280px;overflow-y:auto;"></div>
+<button class="m3-btn m3-btn-filled" id="cache-purge-batch-submit-btn" style="width:100%;justify-content:center;margin-top:12px;" onclick="submitCachePurgeBatch()"><i class="fa-solid fa-rotate"></i> Purge Cache</button>
+<div id="cache-purge-batch-status" style="display:none;font-size:13px;padding:8px 12px;border-radius:8px;margin-top:8px;"></div>
+<div id="cache-purge-batch-results" style="display:flex;flex-direction:column;gap:6px;margin-top:12px;"></div>
+</div>
+<div style="margin-top:24px;border-top:1px solid color-mix(in srgb,var(--md-sys-color-primary) 15%,transparent);padding-top:16px;">
+<div style="font-size:13px;font-weight:600;opacity:0.75;margin-bottom:6px;">Or Paste IDs Manually</div>
+<div style="font-size:12px;opacity:0.55;margin-bottom:12px;">If a track's underlying file was replaced in place (e.g. an ALAC lossless master re-encoded to FLAC while keeping the same file ID), edge nodes across Cloudflare may still be serving the old cached bytes. Paste the affected track/file IDs below — one per line — and bump their version to invalidate every edge node's cache.</div>
+<textarea id="cache-purge-ids-input" placeholder="Track/file IDs — one per line" autocomplete="off" rows="6" style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;resize:vertical;"></textarea>
+<div id="cache-purge-count-hint" style="font-size:12px;opacity:0.55;margin-top:6px;"></div>
+<div style="display:flex;gap:8px;margin-top:10px;">
+<button class="m3-btn m3-btn-filled" id="cache-purge-submit-btn" style="flex:1;justify-content:center;" onclick="submitCachePurge()"><i class="fa-solid fa-rotate"></i> Bump Version &amp; Purge Cache</button>
+<button class="m3-btn m3-btn-tonal" onclick="document.getElementById('cache-purge-ids-input').value='';document.getElementById('cache-purge-count-hint').textContent='';document.getElementById('cache-purge-status').style.display='none';"><i class="fa-solid fa-xmark"></i></button>
+</div>
+<div id="cache-purge-status" style="display:none;font-size:13px;padding:8px 12px;border-radius:8px;margin-top:8px;"></div>
+<div id="cache-purge-results" style="display:flex;flex-direction:column;gap:6px;margin-top:12px;"></div>
+</div>
+<div style="margin-top:24px;border-top:1px solid color-mix(in srgb,var(--md-sys-color-primary) 15%,transparent);padding-top:16px;">
+<div style="font-size:13px;font-weight:600;opacity:0.75;margin-bottom:10px;">Check a Track's Current Version</div>
+<div style="display:flex;gap:8px;">
+<input id="cache-purge-check-id-input" type="text" placeholder="Track/file ID" autocomplete="off" style="flex:1;box-sizing:border-box;padding:8px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 30%,transparent);background:color-mix(in srgb,var(--md-sys-color-surface-variant) 60%,transparent);color:inherit;font-size:13px;font-family:monospace;outline:none;">
+<button class="m3-btn m3-btn-tonal" onclick="checkCacheVersion()"><i class="fa-solid fa-magnifying-glass"></i></button>
+</div>
+<div id="cache-purge-check-result" style="font-size:12px;opacity:0.6;margin-top:8px;font-family:monospace;"></div>
 </div>
 </div>
 <div class="m3-card" id="settings-panel-art-redirect" style="display:none;padding:20px 16px;margin-bottom:16px;">
@@ -17543,9 +17593,17 @@ if (await cache.match(key)) return;
 let buf, contentType = 'audio/mpeg';
 if (completedTrackBuffers.has(trackId)) {
 buf = completedTrackBuffers.get(trackId);
-} else if (pendingWorkerFetches.has(trackId)) {
+} else if (pendingWorkerFetches.has(trackId) && !_partialWorkerFetchIds.has(trackId)) {
 buf = await pendingWorkerFetches.get(trackId);
-} else {
+// Re-check after the await: this promise may be shared with the 512KB
+// tag/loudness probe in fetchTrackBytes(), which only flags itself as
+// partial right before it resolves. Trusting a stale pre-await check
+// here was exactly how a few-hundred-KB Range slice of a WAV got written
+// into the persistent cache as if it were the whole file, so replays
+// played back only that ~10 second slice.
+if (_partialWorkerFetchIds.has(trackId)) buf = null;
+}
+if (!buf) {
 const res = await fetch(streamUrl(trackId), { priority: 'low' });
 if (!res.ok) return;
 contentType = res.headers.get('Content-Type') || contentType;
@@ -19540,6 +19598,12 @@ try { localStorage.removeItem('goot_album_accent_cache'); } catch(e) {}
 } // Tracks currently being processed
 const pendingMetadataLoads = new Set(); // Already declared but ensuring it exists
 const pendingWorkerFetches = new Map();    // trackId → Promise<ArrayBuffer|null>
+// trackIds whose CURRENT pendingWorkerFetches entry resolves to only a
+// Range-limited slice (e.g. the 512KB tag/loudness probe below), not the
+// full file. saveTrackToClientCache() must never persist one of these into
+// the Cache API as if it were the complete track -- that's exactly how a
+// partial WAV slice used to get cached and played back as a ~10 second clip.
+const _partialWorkerFetchIds = new Set();
 const pendingLoudnessAnalysis = new Map(); // trackId → Promise<number|null>  — prevents double loudness fetch
 const pendingMetadataDbFetches = new Set(); // trackId — prevents duplicate /metadata/folder POSTs
 async function fetchTrackBytes(trackId) {
@@ -19559,6 +19623,7 @@ if (buf && buf.byteLength > 0) {
 completedTrackBuffers.set(trackId, buf);
 if (completedTrackBuffers.size > 30)
 completedTrackBuffers.delete(completedTrackBuffers.keys().next().value);
+_partialWorkerFetchIds.delete(trackId); // whatever's in the persistent cache is, by definition, complete
 return buf;
 }
 }
@@ -19572,6 +19637,7 @@ if (buf && buf.byteLength > 0) {
 completedTrackBuffers.set(trackId, buf);
 if (completedTrackBuffers.size > 30)
 completedTrackBuffers.delete(completedTrackBuffers.keys().next().value);
+_partialWorkerFetchIds.delete(trackId); // blob URL is only ever created from a full buffer
 return buf;
 }
 }
@@ -19601,6 +19667,13 @@ if (buf && !isPartial) {
 completedTrackBuffers.set(trackId, buf);
 if (completedTrackBuffers.size > 30)
 completedTrackBuffers.delete(completedTrackBuffers.keys().next().value);
+_partialWorkerFetchIds.delete(trackId);
+} else if (isPartial) {
+// The server actually honored the Range header, so `buf` is just the
+// first slice (this is the common case for larger files like WAV/FLAC).
+// Flag it so saveTrackToClientCache() knows not to trust this buffer as
+// "the whole track" if it piggybacks off this same pending promise.
+_partialWorkerFetchIds.add(trackId);
 }
 return buf;
 } catch (_) {
@@ -19608,7 +19681,10 @@ try {
 const res = await fetch(streamUrl(trackId), {
 mode: 'cors', credentials: 'omit', cache: 'default', priority: 'low'
 });
-return res.ok ? res.arrayBuffer() : null;
+if (!res.ok) return null;
+const buf = await res.arrayBuffer();
+_partialWorkerFetchIds.delete(trackId); // no Range header sent -- this is the full file
+return buf;
 } catch (_) { return null; }
 }
 })();
@@ -32237,6 +32313,8 @@ const metaEditRow = document.getElementById('settings-nav-metadata-edit');
 if (metaEditRow) metaEditRow.style.display = '';
 const fileManagerBtn = document.getElementById('settings-nav-file-manager');
 if (fileManagerBtn) fileManagerBtn.style.display = '';
+const cachePurgeBtn = document.getElementById('settings-nav-cache-purge');
+if (cachePurgeBtn) cachePurgeBtn.style.display = '';
 showNotification('🔓 Admin tools unlocked');
 }
 } else {
@@ -32916,6 +32994,294 @@ async function removeTrackLossless(from) {
     } catch (e) {
         alert('Failed to remove lossless version: ' + e.message);
     }
+}
+// ---------------- Cache Purge (versioned edge-cache invalidation) ----------------
+async function submitCachePurge() {
+    const raw = document.getElementById('cache-purge-ids-input').value;
+    const ids = raw.split('\n').map(s => s.trim()).filter(Boolean);
+    const status = document.getElementById('cache-purge-status');
+    const resultsEl = document.getElementById('cache-purge-results');
+    const btn = document.getElementById('cache-purge-submit-btn');
+    if (!ids.length) {
+        status.textContent = 'Paste at least one track/file ID.';
+        status.style.background = 'color-mix(in srgb,#ef4444 15%,transparent)';
+        status.style.display = '';
+        return;
+    }
+    btn.disabled = true;
+    const originalLabel = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Purging…';
+    status.style.display = 'none';
+    resultsEl.innerHTML = '';
+    try {
+        const res = await fetch(PLAYER_WORKER_URL + '/cache/purge-track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': 'penis' },
+            body: JSON.stringify({ ids })
+        });
+        if (!res.ok) throw new Error('Worker returned ' + res.status);
+        const data = await res.json();
+        const results = data.results || [];
+        status.textContent = '✓ Bumped version for ' + results.length + ' track' + (results.length === 1 ? '' : 's') + '. Every edge node will fetch fresh bytes on next request.';
+        status.style.background = 'color-mix(in srgb,#22c55e 15%,transparent)';
+        status.style.display = '';
+        resultsEl.innerHTML = results.map(r => `
+<div style="background:color-mix(in srgb,var(--md-sys-color-surface-variant) 45%,transparent);border-radius:8px;padding:8px 10px;font-size:12px;font-family:monospace;display:flex;justify-content:space-between;gap:8px;">
+<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.id}</span>
+<span style="opacity:0.6;white-space:nowrap;">v${r.version}${r.kvOk === false ? ' ⚠ KV write failed' : ''}</span>
+</div>`).join('');
+    } catch (e) {
+        status.textContent = '✗ Failed: ' + e.message;
+        status.style.background = 'color-mix(in srgb,#ef4444 15%,transparent)';
+        status.style.display = '';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalLabel;
+    }
+}
+async function checkCacheVersion() {
+    const id = document.getElementById('cache-purge-check-id-input').value.trim();
+    const resultEl = document.getElementById('cache-purge-check-result');
+    if (!id) { resultEl.textContent = ''; return; }
+    resultEl.textContent = 'Checking…';
+    try {
+        const res = await fetch(PLAYER_WORKER_URL + '/track/version?id=' + encodeURIComponent(id), { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        resultEl.textContent = data.id + ' → version ' + data.version;
+    } catch (e) {
+        resultEl.textContent = 'Failed to check: ' + e.message;
+    }
+}
+document.getElementById('cache-purge-ids-input')?.addEventListener('input', function() {
+    const n = this.value.split('\n').map(s => s.trim()).filter(Boolean).length;
+    document.getElementById('cache-purge-count-hint').textContent = n ? (n + ' ID' + (n === 1 ? '' : 's') + ' entered') : '';
+});
+
+// ---------------- Cache Purge: Search-based Batch (album or song, regular or lossless) ----------------
+let _cachePurgeSearchTimeout = null;
+const _cachePurgeSearchResults = new Map(); // 'album:key' or 'track:id' -> info
+let _cachePurgeTracks = []; // [{id, title, track_number}] — regular track ids for the current selection
+let _cachePurgeMode = 'regular'; // 'regular' | 'lossless'
+let _cachePurgeResolved = []; // [{trackId, title, purgeId, skipped}] — the ids actually sent to /cache/purge-track
+let _cachePurgeSelectToken = 0; // guards against a slower/stale request clobbering a newer, already-rendered selection
+function cachePurgeSearch(query) {
+clearTimeout(_cachePurgeSearchTimeout);
+const results = document.getElementById('cache-purge-search-results');
+if (!query.trim()) { results.innerHTML = ''; return; }
+results.innerHTML = '<div style="font-size:13px;opacity:0.4;padding:8px 4px;">Searching…</div>';
+_cachePurgeSearchTimeout = setTimeout(async () => {
+try {
+const res = await fetch(`${SEARCH_API_URL}/metadata/search/ai`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ query })
+});
+if (!res.ok) throw new Error(res.status);
+const data = await res.json();
+const tracks = data.tracks || [];
+// Group into albums (for whole-album batches) same as the redirect/lossless panels,
+// but also keep a flat song list so a single track can be picked directly.
+const albumMap = new Map();
+tracks.forEach(t => {
+const album = t.album || '';
+if (!album) return;
+const artist = t.album_artist || t.artist || '';
+const key = album.toLowerCase() + '|' + artist.toLowerCase();
+if (!albumMap.has(key)) albumMap.set(key, { album, artist, count: 0 });
+albumMap.get(key).count++;
+});
+const albums = Array.from(albumMap.entries()).slice(0, 8);
+const songs = tracks.slice(0, 10);
+if (albums.length === 0 && songs.length === 0) {
+results.innerHTML = '<div style="font-size:13px;opacity:0.4;padding:8px 4px;">No results</div>';
+return;
+}
+_cachePurgeSearchResults.clear();
+let html = '';
+if (albums.length) {
+albums.forEach(([key, info]) => _cachePurgeSearchResults.set('album:' + key, info));
+html += '<div style="font-size:11px;font-weight:600;opacity:0.5;text-transform:uppercase;letter-spacing:0.04em;margin:4px 4px 2px;">Albums</div>';
+html += albums.map(([key, info]) => `
+<div data-cp-key="album:${key}"
+style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;background:color-mix(in srgb,var(--md-sys-color-surface-variant) 40%,transparent);transition:background 0.15s;">
+<div style="flex:1;min-width:0;">
+<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cleanDisplayName(info.album)}</div>
+<div style="font-size:11px;opacity:0.55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${info.artist}</div>
+</div>
+<div style="font-size:11px;opacity:0.4;">${info.count} track${info.count === 1 ? '' : 's'}</div>
+</div>`).join('');
+}
+if (songs.length) {
+songs.forEach(t => _cachePurgeSearchResults.set('track:' + t.id, t));
+html += '<div style="font-size:11px;font-weight:600;opacity:0.5;text-transform:uppercase;letter-spacing:0.04em;margin:10px 4px 2px;">Songs</div>';
+html += songs.map(t => `
+<div data-cp-key="track:${t.id}"
+style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;background:color-mix(in srgb,var(--md-sys-color-surface-variant) 40%,transparent);transition:background 0.15s;">
+<div style="flex:1;min-width:0;">
+<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cleanDisplayName(t.title || '')}</div>
+<div style="font-size:11px;opacity:0.55;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.artist || ''}</div>
+</div>
+<div style="font-size:10px;opacity:0.3;font-family:monospace;">${(t.id || '').slice(0,8)}…</div>
+</div>`).join('');
+}
+results.innerHTML = html;
+results.querySelectorAll('[data-cp-key]').forEach(el => {
+el.addEventListener('click', () => {
+const info = _cachePurgeSearchResults.get(el.dataset.cpKey);
+if (!info) return;
+if (el.dataset.cpKey.startsWith('album:')) {
+cachePurgeSelectAlbum(info.album, info.artist);
+} else {
+cachePurgeSelectTrack(info.id, info.title || '', info.artist || '');
+}
+});
+});
+} catch(e) {
+results.innerHTML = '<div style="font-size:13px;opacity:0.4;padding:8px 4px;">Search failed</div>';
+}
+}, 350);
+}
+async function cachePurgeSelectAlbum(album, artist) {
+document.getElementById('cache-purge-search-results').innerHTML = '';
+document.getElementById('cache-purge-search-input').value = '';
+document.getElementById('cache-purge-selected-title').textContent = cleanDisplayName(album);
+document.getElementById('cache-purge-selected-sub').textContent = artist ? `Album — ${artist}` : 'Album';
+document.getElementById('cache-purge-selected').style.display = '';
+document.getElementById('cache-purge-track-list').innerHTML = '<div style="font-size:12px;opacity:0.4;padding:4px;">Loading tracks…</div>';
+document.getElementById('cache-purge-batch-status').style.display = 'none';
+document.getElementById('cache-purge-batch-results').innerHTML = '';
+const myToken = ++_cachePurgeSelectToken;
+try {
+// Dedicated, uncapped lookup — same one the album redirect/lossless panels use — bypasses
+// /metadata/search/ai's 30-track cap on larger albums.
+const params = new URLSearchParams({ album, artist: artist || '' });
+const res = await fetch(`${SEARCH_API_URL}/metadata/album-tracks?${params}`);
+if (myToken !== _cachePurgeSelectToken) return; // a newer selection has superseded this one
+if (!res.ok) throw new Error(`Worker returned ${res.status}`);
+const data = await res.json();
+if (myToken !== _cachePurgeSelectToken) return;
+const allTracks = data.tracks || [];
+_cachePurgeTracks = allTracks.map(t => ({ id: t.id, title: t.title || 'Unknown Track', track_number: t.track_number }));
+if (_cachePurgeTracks.length === 0) {
+document.getElementById('cache-purge-track-list').innerHTML = '<div style="font-size:12px;opacity:0.5;padding:4px;color:#ef4444;">No tracks found for this album.</div>';
+return;
+}
+await renderCachePurgeTrackList();
+} catch(e) {
+if (myToken !== _cachePurgeSelectToken) return; // stale request errored after a newer one already rendered successfully
+console.error('[cachePurgeSelectAlbum] failed to load tracks:', e);
+const msg = (e?.message || e || 'unknown error').toString().replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+document.getElementById('cache-purge-track-list').innerHTML = `<div style="font-size:12px;opacity:0.5;padding:4px;color:#ef4444;">Failed to load tracks: ${msg}</div>`;
+}
+}
+async function cachePurgeSelectTrack(id, title, artist) {
+document.getElementById('cache-purge-search-results').innerHTML = '';
+document.getElementById('cache-purge-search-input').value = '';
+document.getElementById('cache-purge-selected-title').textContent = cleanDisplayName(title);
+document.getElementById('cache-purge-selected-sub').textContent = artist ? `Song — ${artist}` : 'Song';
+document.getElementById('cache-purge-selected').style.display = '';
+document.getElementById('cache-purge-batch-status').style.display = 'none';
+document.getElementById('cache-purge-batch-results').innerHTML = '';
+++_cachePurgeSelectToken;
+_cachePurgeTracks = [{ id, title: title || 'Unknown Track', track_number: null }];
+await renderCachePurgeTrackList();
+}
+function setCachePurgeVersion(mode) {
+_cachePurgeMode = mode;
+const regBtn = document.getElementById('cache-purge-version-regular-btn');
+const losBtn = document.getElementById('cache-purge-version-lossless-btn');
+if (regBtn) regBtn.className = 'm3-btn ' + (mode === 'regular' ? 'm3-btn-filled' : 'm3-btn-tonal');
+if (losBtn) losBtn.className = 'm3-btn ' + (mode === 'lossless' ? 'm3-btn-filled' : 'm3-btn-tonal');
+renderCachePurgeTrackList();
+}
+async function renderCachePurgeTrackList() {
+const listEl = document.getElementById('cache-purge-track-list');
+const submitBtn = document.getElementById('cache-purge-batch-submit-btn');
+if (!listEl || !submitBtn) return;
+if (!_cachePurgeTracks.length) { listEl.innerHTML = ''; submitBtn.disabled = true; return; }
+const myToken = ++_cachePurgeSelectToken;
+if (_cachePurgeMode === 'lossless') {
+listEl.innerHTML = '<div style="font-size:12px;opacity:0.4;padding:4px;">Checking lossless versions…</div>';
+// One lookup per track against the existing per-track lossless mapping — a track with no
+// lossless version registered is excluded from the batch rather than purging its regular id twice.
+const resolved = await Promise.all(_cachePurgeTracks.map(async (t) => {
+try {
+const res = await fetch(PLAYER_WORKER_URL + '/lossless?from=' + encodeURIComponent(t.id));
+const data = await res.json();
+if (data && data.to) return { trackId: t.id, title: t.title, purgeId: data.to, skipped: false };
+} catch(e) {}
+return { trackId: t.id, title: t.title, purgeId: null, skipped: true };
+}));
+if (myToken !== _cachePurgeSelectToken) return; // a newer selection/toggle has superseded this one
+_cachePurgeResolved = resolved;
+} else {
+_cachePurgeResolved = _cachePurgeTracks.map(t => ({ trackId: t.id, title: t.title, purgeId: t.id, skipped: false }));
+}
+if (myToken !== _cachePurgeSelectToken) return;
+listEl.innerHTML = _cachePurgeResolved.map(r => `
+<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 2px;${r.skipped ? 'opacity:0.5;' : ''}">
+<div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${r.skipped ? 'color:#ef4444;' : ''}">${cleanDisplayName(r.title)}</div>
+<div style="opacity:0.4;font-family:monospace;flex-shrink:0;white-space:nowrap;">${r.skipped ? 'no lossless version — skipped' : (r.purgeId || '??????').toString().slice(0,10) + '…'}</div>
+</div>`).join('');
+const purgeCount = _cachePurgeResolved.filter(r => !r.skipped).length;
+submitBtn.disabled = purgeCount === 0;
+submitBtn.innerHTML = `<i class="fa-solid fa-rotate"></i> Purge Cache${purgeCount ? ` (${purgeCount} track${purgeCount === 1 ? '' : 's'})` : ''}`;
+}
+function clearCachePurgeSelection() {
+_cachePurgeTracks = [];
+_cachePurgeResolved = [];
+++_cachePurgeSelectToken;
+document.getElementById('cache-purge-search-input').value = '';
+document.getElementById('cache-purge-search-results').innerHTML = '';
+document.getElementById('cache-purge-selected').style.display = 'none';
+document.getElementById('cache-purge-track-list').innerHTML = '';
+document.getElementById('cache-purge-batch-status').style.display = 'none';
+document.getElementById('cache-purge-batch-results').innerHTML = '';
+}
+async function submitCachePurgeBatch() {
+const status = document.getElementById('cache-purge-batch-status');
+const resultsEl = document.getElementById('cache-purge-batch-results');
+const btn = document.getElementById('cache-purge-batch-submit-btn');
+const ids = _cachePurgeResolved.filter(r => !r.skipped).map(r => r.purgeId);
+if (!ids.length) {
+status.textContent = 'Nothing to purge — select an album or song first.';
+status.style.background = 'color-mix(in srgb,#ef4444 15%,transparent)';
+status.style.display = '';
+return;
+}
+btn.disabled = true;
+const originalLabel = btn.innerHTML;
+btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Purging…';
+status.style.display = 'none';
+resultsEl.innerHTML = '';
+try {
+// Single batched call — /cache/purge-track already accepts an array of ids in one request.
+const res = await fetch(PLAYER_WORKER_URL + '/cache/purge-track', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'X-Admin-Key': 'penis' },
+body: JSON.stringify({ ids })
+});
+if (!res.ok) throw new Error('Worker returned ' + res.status);
+const data = await res.json();
+const results = data.results || [];
+const titleById = new Map(_cachePurgeResolved.map(r => [r.purgeId, r.title]));
+status.textContent = '✓ Bumped version for ' + results.length + ' track' + (results.length === 1 ? '' : 's') + '. Every edge node will fetch fresh bytes on next request.';
+status.style.background = 'color-mix(in srgb,#22c55e 15%,transparent)';
+status.style.display = '';
+resultsEl.innerHTML = results.map(r => `
+<div style="background:color-mix(in srgb,var(--md-sys-color-surface-variant) 45%,transparent);border-radius:8px;padding:8px 10px;font-size:12px;display:flex;justify-content:space-between;gap:8px;">
+<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cleanDisplayName(titleById.get(r.id) || r.id)}</span>
+<span style="opacity:0.6;white-space:nowrap;font-family:monospace;">v${r.version}${r.kvOk === false ? ' ⚠ KV write failed' : ''}</span>
+</div>`).join('');
+} catch (e) {
+status.textContent = '✗ Failed: ' + e.message;
+status.style.background = 'color-mix(in srgb,#ef4444 15%,transparent)';
+status.style.display = '';
+} finally {
+btn.disabled = _cachePurgeResolved.filter(r => !r.skipped).length === 0;
+btn.innerHTML = originalLabel;
+}
 }
 
 let _albumRedirectSearchTimeout = null;
@@ -49376,6 +49742,13 @@ icon: '<i class="fa-solid fa-gem"></i>',
 panel: 'settings-panel-track-lossless',
 secret: true
 },
+'cache-purge': {
+title: 'Purge Track Cache',
+sub: 'Force every edge node to drop stale cached audio for a track',
+icon: '<i class="fa-solid fa-rotate"></i>',
+panel: 'settings-panel-cache-purge',
+secret: true
+},
 'folder-map': {
 title: 'Folder Maps',
 sub: 'Pin artists, albums, or songs to a folder',
@@ -49434,6 +49807,9 @@ loadTrackRedirectsList();
 }
 if (key === 'track-lossless') {
 loadTrackLosslessList();
+}
+if (key === 'cache-purge' && typeof clearCachePurgeSelection === 'function') {
+clearCachePurgeSelection();
 }
 }
 function closeSettingsSection() {
