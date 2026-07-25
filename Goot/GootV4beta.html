@@ -13618,7 +13618,7 @@ background: transparent !important; border: none !important; box-shadow: none !i
 <button class="selection-action-btn danger" data-tooltip="Delete" onclick="deleteSelected()">
 <i class="fas fa-trash"></i>
 </button>
-<button class="selection-action-btn primary" data-tooltip="More" onclick="openSelectionMenu()">
+<button class="selection-action-btn primary" data-tooltip="More" onclick="openSelectionMenu(event)">
 <i class="fas fa-ellipsis-vertical"></i>
 </button>
 </div>
@@ -15495,6 +15495,10 @@ style="display:flex;gap:8px;margin-bottom:24px;align-items:center;flex-wrap:wrap
 <div class="yt-player-wrap" id="ytPlayerWrap" style="display:none">
 <div class="yt-video-container">
 <video id="ytVideo" class="yt-video" playsinline crossorigin="anonymous"></video>
+<!-- Hidden preload/handoff buffer for gapless YT-to-YT transitions. Always
+     stays off-screen and silent (Web Audio graph gain at 0) until a handoff
+     swaps its id with #ytVideo -- see _ytTryInstantHandoff in the script. -->
+<video id="ytVideo2" class="yt-video" playsinline crossorigin="anonymous" style="position:fixed;left:-9999px;top:-9999px;width:2px;height:2px;opacity:0;pointer-events:none;"></video>
 <div class="yt-video-overlay" id="ytVideoOverlay">
 <div class="yt-spinner" id="ytSpinner" style="display:none">
 <i class="fa-solid fa-circle-notch fa-spin"></i></div>
@@ -20508,6 +20512,169 @@ currentPlayer = nextPlayer;
 nextPlayer = temp;
 }
 let isCrossfading = false;
+// --- Gapless handoff (non-crossfade path) ---------------------------------
+// The old approach called nextPlayer.play() reactively, inside the outgoing
+// track's 'ended' handler. Even with the next track fully preloaded, that
+// still incurs the browser's async play-start latency (event-loop + audio
+// pipeline warm-up, commonly tens of ms and sometimes 100ms+) AFTER the
+// track boundary -- which is exactly the audible gap this is meant to fix.
+//
+// Fix: start the next player playing *before* the boundary, muted via its
+// dedicated per-player GainNode (see initAudioContext), while the outgoing
+// track is still audibly finishing its own tail. By the time 'ended' fires,
+// the next player has already been producing audio for up to
+// GAPLESS_ARM_LEAD seconds -- the handoff becomes a same-audio-clock-tick
+// gain swap (old->0, new->1) via AudioParam.setValueAtTime, not a fresh
+// .play() call. setValueAtTime targets the exact sample-accurate time on
+// audioCtx's own clock, so the swap isn't subject to JS timer/event jitter
+// the way writing .volume from a setTimeout/rAF callback would be.
+// NOTE: earlier this was kept deliberately tiny (0.25s) because any drift
+// during the muted pre-roll used to show up as skipped content at the start
+// of the next track. It no longer does -- see the continuous position-pin
+// in the poll below and the final snap-to-0 in _tryInstantGaplessHandoff --
+// so this can be generous instead of a tightrope walk. A bigger window just
+// means arming is more likely to succeed (buffer ready, poll not missed),
+// with no correctness downside.
+const GAPLESS_ARM_LEAD = 1.5; // seconds before track end to start the next player muted
+let _gaplessArmedForPlayer = null; // which player instance is currently armed (prevents re-arming every poll tick)
+/**
+* Starts `nextPlayer` playing, muted at the gain-node level, a short window
+* before the current track ends -- so it's already running by the time the
+* actual handoff happens. Safe to call repeatedly; only acts once per track
+* boundary (tracked via _gaplessArmedForPlayer) and only within the lead
+* window so long tracks don't get double-played early.
+*/
+function _armGaplessNextPlayer(nextPlayerEl, timeLeft) {
+if (isCrossfading) return;
+if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
+if (timeLeft > GAPLESS_ARM_LEAD || timeLeft <= 0) return;
+if (_gaplessArmedForPlayer === nextPlayerEl) return; // already armed for this boundary
+if (!nextPlayerEl.paused) return; // already playing somehow (e.g. user interaction) -- don't touch it
+if (nextPlayerEl.readyState < 2) return; // not enough data buffered yet, try again next poll tick
+const gainNode = (nextPlayerEl === player) ? player1GainNode : player2GainNode;
+if (!audioCtx || !gainNode) return; // Web Audio graph not initialized yet -- nothing to mute with, skip arming
+_gaplessArmedForPlayer = nextPlayerEl;
+try {
+nextPlayerEl.currentTime = 0;
+} catch (e) {}
+// Mute at the audio-graph level (not nextPlayerEl.volume, which we leave
+// alone so the existing volume/crossfade logic keeps working normally).
+gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+nextPlayerEl.play().catch(() => {
+// Autoplay-policy or transient failure -- unarm so the reactive
+// onended fallback path (still present) can retry normally.
+_gaplessArmedForPlayer = null;
+});
+}
+/**
+* Performs the actual audible handoff: instantly swaps which player's gain
+* node is open. Called from the outgoing player's 'ended' handler. If the
+* incoming player was successfully pre-armed (already playing, muted), this
+* is just a same-tick gain flip with no play() call and no async wait --
+* that's what makes the transition gapless. If it wasn't armed in time
+* (e.g. track was too short for the lead window, or Web Audio wasn't ready),
+* returns false so the caller falls back to the old reactive play() path.
+*/
+/**
+* Mirrors the icon/visualizer/media-session portion of player.onplay /
+* player2.onplay. Needed because the instant-handoff path never calls
+* .play() on the newly-current player (it was already playing, muted, from
+* the pre-arm) -- so its 'onplay' handler never fires for this transition,
+* and without this the play/pause icon + visualizer + media session state
+* are left stuck showing whatever they displayed before the boundary, even
+* though audio is actively playing. Deliberately scoped to just the visual
+* state that's broken here, not a full duplicate of onplay's other side
+* effects (lastfm/normalization/etc are already handled by the callers in
+* the onended handlers).
+*/
+function _syncGaplessPlayingUI() {
+if (typeof clearTrackLoading === 'function') clearTrackLoading();
+const playIcon = document.getElementById("playIcon");
+if (playIcon) playIcon.className = "fa-solid fa-pause";
+const fsPlayIcon = document.getElementById("fsPlayIcon");
+if (fsPlayIcon) fsPlayIcon.className = "fa-solid fa-pause";
+const dePlay = document.getElementById("dePlayIcon");
+if (dePlay) dePlay.className = "fa-solid fa-pause";
+document.body.classList.add('playing');
+if (typeof startAudioVisualizer === 'function') startAudioVisualizer();
+if (typeof updateMediaSessionPlaybackState === 'function') updateMediaSessionPlaybackState();
+if (typeof updateMediaSessionPositionState === 'function') updateMediaSessionPositionState();
+}
+function _tryInstantGaplessHandoff(outgoingPlayerEl, incomingPlayerEl) {
+if (_gaplessArmedForPlayer !== incomingPlayerEl) return false;
+if (incomingPlayerEl.paused) { _gaplessArmedForPlayer = null; return false; }
+const outgoingGain = (outgoingPlayerEl === player) ? player1GainNode : player2GainNode;
+const incomingGain = (incomingPlayerEl === player) ? player1GainNode : player2GainNode;
+if (!audioCtx || !outgoingGain || !incomingGain) return false;
+// However long the muted pre-roll actually ran (poll jitter, a slow tick, a
+// GC pause, arming happening earlier than intended -- any of it), it must
+// never show up as skipped content. Snap back to the true start right
+// before unmuting instead of trusting the earlier timing to have been
+// exact. The continuous pinning in the poll above keeps this a cheap,
+// already-buffered, sub-frame correction rather than a real seek.
+if (incomingPlayerEl.currentTime > 0.03) {
+try { incomingPlayerEl.currentTime = 0; } catch (e) {}
+}
+const now = audioCtx.currentTime;
+incomingGain.gain.cancelScheduledValues(now);
+incomingGain.gain.setValueAtTime(1, now);
+outgoingGain.gain.cancelScheduledValues(now);
+outgoingGain.gain.setValueAtTime(0, now);
+// Restore the outgoing player's gain back to 1 once it's paused/reset, so
+// it's ready to be reused as a "next player" for a future track without
+// silently staying muted.
+setTimeout(() => { try { outgoingGain.gain.setValueAtTime(1, audioCtx.currentTime); } catch (e) {} }, 50);
+_gaplessArmedForPlayer = null;
+// incomingPlayerEl was started (muted) by _armGaplessNextPlayer, not by a
+// .play() call happening now -- its 'onplay' already fired earlier while it
+// was still nextPlayer (and bailed since currentPlayer didn't match yet).
+// Sync the icon/visualizer/media-session state explicitly here instead.
+_syncGaplessPlayingUI();
+return true;
+}
+// Dedicated fast poll for gapless arming, independent of the existing
+// _doLogic/_doLogic2 blocks in player.ontimeupdate/player2.ontimeupdate
+// (those are throttled to run at most every 500ms, which can't reliably
+// land inside the much shorter GAPLESS_ARM_LEAD (250ms) window -- a check
+// could land at timeLeft=0.6s, too early to arm, then not run again until
+// timeLeft=0.1s, already past the window, or even after 'ended' has fired.
+// This runs on its own tight interval so the arm reliably happens within
+// the lead window every time, regardless of what the UI-update poll is doing.
+// A queue item can be a YouTube (or Drive-video) entry rather than a regular
+// audio track -- those are never loaded into player/nextPlayer via the
+// gootapimask worker, and never will be (YouTube goes through ytLoad() and
+// its own dual-<video> gapless path instead). Every place below that reads
+// queue[qIndex+1]/queue[next] to preload/arm/crossfade nextPlayer MUST skip
+// out here first, or it ends up pointing an <audio> element's .src at
+// `.../?id=__yt__<videoId>`, which 404s against the worker and can leave
+// nextPlayer.src holding a garbage value that later checks compare against.
+function _isYTOrDriveTrack(t) {
+return !!(t && (t._isYT || t._isDriveVideo || (t.id && (t.id.startsWith('__yt__') || t.id.startsWith('__drv__')))));
+}
+setInterval(() => {
+if (crossfadeEnabled || isCrossfading) return;
+if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
+// If a player is already armed and playing muted, keep pinning it back to
+// the true start rather than letting it drift forward while it waits for
+// the real boundary -- this is what actually guarantees zero content loss,
+// independent of how early/late arming happened or how long the wait is.
+if (_gaplessArmedForPlayer && !_gaplessArmedForPlayer.paused && _gaplessArmedForPlayer.currentTime > 0.15) {
+try { _gaplessArmedForPlayer.currentTime = 0; } catch (e) {}
+}
+const activePlayer = currentPlayer;
+if (!activePlayer || activePlayer.paused || !activePlayer.duration) return;
+const timeLeft = activePlayer.duration - activePlayer.currentTime;
+if (timeLeft > GAPLESS_ARM_LEAD || timeLeft <= 0) return;
+const nextTrack = queue[qIndex + 1];
+if (!nextTrack || _isYTOrDriveTrack(nextTrack)) return;
+const expectedUrl = `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}`;
+const _preloadCached = _clientAudioBlobUrls[_audioCacheKey(nextTrack.id)] || null;
+const _preloadSrc = _preloadCached || expectedUrl;
+const hasCorrectNextTrack = nextPlayer.src === _preloadSrc || nextPlayer.src === expectedUrl;
+if (!hasCorrectNextTrack) return;
+_armGaplessNextPlayer(nextPlayer, timeLeft);
+}, 50);
 let fadeInterval = null;
 let crossfadeState = null;
 /**
@@ -20537,12 +20704,22 @@ if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
 if (isCrossfading && fadeInterval) return;
 const nextIndex = qIndex + 1;
 const track = queue[nextIndex];
-if (!track) return;
+if (!track || _isYTOrDriveTrack(track)) return;
 if (!crossfadeState) {
 isCrossfading = true;
 const oldPlayer = currentPlayer;
 const newPlayer = nextPlayer;
 const userVolume = oldPlayer.volume;
+// If the gapless-arm path already started newPlayer playing muted (at the
+// gain-node level) before crossfade kicked in on a later poll tick, clear
+// that here -- crossfade owns its own fade via .volume from this point on,
+// and a leftover gain-node mute would silently cancel out crossfade's
+// volume ramp (audible as "crossfade fading in total silence").
+_gaplessArmedForPlayer = null;
+if (audioCtx) {
+const _newGain = (newPlayer === player) ? player1GainNode : player2GainNode;
+if (_newGain) { _newGain.gain.cancelScheduledValues(audioCtx.currentTime); _newGain.gain.setValueAtTime(1, audioCtx.currentTime); }
+}
 const expectedSrc = `https://gootapimask.goot-api.workers.dev/?id=${track.id}`;
 if (newPlayer.src !== expectedSrc) {
 newPlayer.src = expectedSrc;
@@ -21266,6 +21443,8 @@ return saveAlbumArtAsBlob(albumName, artData);
 }
 let audioCtx;
 let sourceNode;
+let player1GainNode; // per-player gain, sits before bassNode -- used for sample-accurate gapless handoff
+let player2GainNode;
 let bassNode;
 let trebleNode;
 let balanceNode = null;
@@ -21275,7 +21454,58 @@ let reverbNode = null;
 let reverbGainNode = null;
 let dryGainNode = null;
 let audioInputNode = null; // entry-point node for the EQ chain (bassNode)
-let _ytSourceNode = null; // Web Audio source for ytVideo
+/**
+* Browsers reliably allow autoplay of a *muted* <video> regardless of
+* gesture/engagement context, but can block an *unmuted* video's play() when
+* it's triggered by something other than a direct user gesture -- e.g. a
+* background 'ended' event firing when a regular song finishes and
+* auto-advances into a queued YouTube track. Native mute doesn't affect the
+* actual audible output here anyway (a MediaElementSource-connected element's
+* output is entirely gated by its Web Audio gain node, not its own
+* volume/muted state) so playing muted-then-unmuting costs nothing and
+* removes that whole class of "works when I click it, not when it auto-plays"
+* failure.
+*/
+function _ytSafePlay(el) {
+if (!el) return;
+const wasMuted = el.muted;
+el.muted = true;
+const p = el.play();
+if (p && typeof p.then === 'function') {
+p.then(() => { el.muted = wasMuted; })
+.catch((err) => { el.muted = wasMuted; console.warn('[YT] play() blocked even muted-first:', err); });
+} else {
+el.muted = wasMuted;
+}
+}
+/**
+* Ensures `el` (a <video> element -- #ytVideo or #ytVideo2) has its own
+* MediaElementSource -> GainNode -> audioInputNode chain, creating it once
+* per element (browsers throw if you call createMediaElementSource twice on
+* the same element, hence the _ytAudioConnected guard). Returns the gain
+* node so callers can open/mute it. This is what makes gapless YT-to-YT
+* handoff possible: the preload buffer plays fully muted at the graph level
+* (native .volume/.muted don't matter once a MediaElementSource has hijacked
+* the element's output) until the instant swap at the real boundary.
+*/
+function _ytEnsureGain(el) {
+if (!el || typeof audioCtx === 'undefined' || !audioCtx || typeof audioInputNode === 'undefined' || !audioInputNode) return null;
+if (el._ytGainNode) return el._ytGainNode;
+if (!el._ytAudioConnected) {
+try {
+el._ytSourceNode = audioCtx.createMediaElementSource(el);
+el._ytAudioConnected = true;
+} catch (e) { console.warn('[YT] source connect failed', e); return null; }
+}
+try {
+const gain = audioCtx.createGain();
+gain.gain.value = 1;
+el._ytSourceNode.connect(gain);
+gain.connect(audioInputNode);
+el._ytGainNode = gain;
+return gain;
+} catch (e) { console.warn('[YT] gain connect failed', e); return null; }
+}
 let delayNode = null, delayFeedback = null, delayWetGain = null, delayDryGain2 = null;
 let flangerDelay = null, flangerLFO = null, flangerLFOGain = null, flangerWetGain = null, flangerDryGain = null;
 let distortionNode = null, distortionWetGain = null, distortionDryGain = null;
@@ -21535,6 +21765,18 @@ audioCtx.resume();
 }
 sourceNode = audioCtx.createMediaElementSource(player);
 const sourceNode2 = audioCtx.createMediaElementSource(player2);
+// Per-player gain nodes, inserted right at the source (before the shared
+// effects graph). These exist purely so the gapless track-handoff can flip
+// which player is audible using sample-accurate AudioParam scheduling
+// (gain.setValueAtTime against audioCtx.currentTime) instead of the old
+// approach of calling play()/pause() and writing .volume from a JS timer --
+// those main-thread calls are subject to event-loop + audio-pipeline startup
+// jitter (tens of ms, sometimes 100ms+), which is exactly what made the old
+// "gapless" handoff audibly not gapless. See _armGaplessHandoff().
+player1GainNode = audioCtx.createGain(); player1GainNode.gain.value = 1;
+player2GainNode = audioCtx.createGain(); player2GainNode.gain.value = 1;
+sourceNode.connect(player1GainNode);
+sourceNode2.connect(player2GainNode);
 bassNode = audioCtx.createBiquadFilter();
 audioInputNode = bassNode; // expose so new sources (ytVideo) can connect here
 bassNode.type = 'lowshelf';
@@ -21544,8 +21786,8 @@ trebleNode = audioCtx.createBiquadFilter();
 trebleNode.type = 'highshelf';
 trebleNode.frequency.value = 10000;
 trebleNode.gain.value = ((eqState.treble / 100) * 24) - 12;
-sourceNode.connect(bassNode);
-sourceNode2.connect(bassNode);
+player1GainNode.connect(bassNode);
+player2GainNode.connect(bassNode);
 bassNode.connect(trebleNode);
 let prevNode = trebleNode;
 eqBands = [];
@@ -25311,21 +25553,32 @@ if ((tracks[i]._isVideo || trackMetadata[tracks[i].id]?._isVideo) && typeof driv
 driveVideoLoad(tracks[i].id);
 return;
 }
-if (!prebuiltQueue) {
-prebuiltQueue = tracks.map(track => ({
+// Build the queue this click will use fresh, off the *full* (unfiltered)
+// `tracks` list -- never off the possibly video-filtered `prebuiltQueue`
+// (whose length/order can disagree with `tracks` by however many video
+// tracks precede the clicked row) and never by directly assigning
+// `queue = prebuiltQueue`, which made `queue` and `prebuiltQueue` the
+// *same array object* -- any later queue.splice()/removeFromQueue() call
+// was silently corrupting this cached "full album" list too, so a later
+// click on a previously-removed track rebuilt from an already-damaged
+// list instead of the real album contents.
+const freshQueue = tracks.map(track => ({
 id: track.id,
 title: trackMetadata[track.id]?.title || track.name || 'Unknown Track',
 artist: trackMetadata[track.id]?.artist || 'Unknown Artist',
 album: trackMetadata[track.id]?.album || '',
-albumArt: trackMetadata[track.id]?.albumArt
+albumArt: trackMetadata[track.id]?.albumArt,
 }));
-}
 cancelQueuePrefetch();
-queue = prebuiltQueue;
-qIndex = i;
+queue = freshQueue;
+// Resolve qIndex by matching the clicked track's id in the queue we
+// just built, rather than trusting the loop's own closure-captured `i`
+// against a queue that may have been filtered/reordered differently.
+const resolvedIndex = queue.findIndex(qt => qt.id === t.id);
+qIndex = resolvedIndex !== -1 ? resolvedIndex : i;
 currentQueueSource = isPlaylist ? `playlist:${pName}` : null;
 renderQueue(); // Update queue UI
-play(i);
+play(qIndex);
 }
 };
 });
@@ -27852,13 +28105,440 @@ return audioArrayBuffer;
 }
 }
 /**
+* Parses a FLAC file's metadata block chain.
+* Returns { blocks: [{type, isLast, data}], audioStart } or null if the
+* buffer doesn't start with a valid 'fLaC' signature / STREAMINFO block.
+* `audioStart` is the byte offset where the raw FLAC audio frames begin.
+*/
+function _parseFlacBlocks(buf) {
+const src = new Uint8Array(buf);
+if (src.length < 4 || src[0] !== 0x66 || src[1] !== 0x4C || src[2] !== 0x61 || src[3] !== 0x43) return null; // 'fLaC'
+const blocks = [];
+let pos = 4;
+while (pos + 4 <= src.length) {
+const header = src[pos];
+const isLast = !!(header & 0x80);
+const type = header & 0x7f;
+const len = (src[pos + 1] << 16) | (src[pos + 2] << 8) | src[pos + 3];
+const dataStart = pos + 4;
+if (dataStart + len > src.length) return null; // corrupt / truncated — bail out
+blocks.push({ type, isLast, data: src.slice(dataStart, dataStart + len) });
+pos = dataStart + len;
+if (isLast) break;
+}
+if (!blocks.length || blocks[0].type !== 0) return null; // STREAMINFO must be first
+return { blocks, audioStart: pos };
+}
+/**
+* Reads existing Vorbis comments (type 4 block) into a plain Map of
+* UPPERCASE key -> value (first occurrence wins per key, matching how most
+* players surface a single value for repeated fields like ARTIST).
+*/
+function _readVorbisComments(block) {
+const map = new Map();
+if (!block) return map;
+try {
+const dv = new DataView(block.data.buffer, block.data.byteOffset, block.data.byteLength);
+let p = 0;
+const vendorLen = dv.getUint32(p, true); p += 4 + vendorLen;
+const count = dv.getUint32(p, true); p += 4;
+const dec = new TextDecoder('utf-8', { fatal: false });
+for (let i = 0; i < count && p + 4 <= block.data.byteLength; i++) {
+const len = dv.getUint32(p, true); p += 4;
+const raw = dec.decode(block.data.slice(p, p + len)); p += len;
+const eq = raw.indexOf('=');
+if (eq > 0) {
+const key = raw.slice(0, eq).toUpperCase();
+if (!map.has(key)) map.set(key, raw.slice(eq + 1));
+}
+}
+} catch (e) { /* ignore malformed comment block */ }
+return map;
+}
+function _buildVorbisCommentBlock(comments, isLast) {
+const enc = new TextEncoder();
+const vendor = enc.encode('goot');
+const entries = comments.map(([k, v]) => enc.encode(`${k}=${v}`));
+let payloadLen = 4 + vendor.length + 4;
+for (const e of entries) payloadLen += 4 + e.length;
+const out = new Uint8Array(4 + payloadLen); // 4-byte block header + payload
+out[0] = (isLast ? 0x80 : 0) | 4;
+out[1] = (payloadLen >> 16) & 0xff; out[2] = (payloadLen >> 8) & 0xff; out[3] = payloadLen & 0xff;
+const dv = new DataView(out.buffer);
+let p = 4;
+dv.setUint32(p, vendor.length, true); p += 4;
+out.set(vendor, p); p += vendor.length;
+dv.setUint32(p, entries.length, true); p += 4;
+for (const e of entries) { dv.setUint32(p, e.length, true); p += 4; out.set(e, p); p += e.length; }
+return out;
+}
+function _buildPictureBlock(art, isLast) {
+const enc = new TextEncoder();
+const mime = enc.encode(art.type || 'image/jpeg');
+const pic = new Uint8Array(art.buffer);
+const payloadLen = 4 + 4 + mime.length + 4 + 4 + 4 + 4 + 4 + 4 + pic.length;
+const out = new Uint8Array(4 + payloadLen);
+out[0] = (isLast ? 0x80 : 0) | 6;
+out[1] = (payloadLen >> 16) & 0xff; out[2] = (payloadLen >> 8) & 0xff; out[3] = payloadLen & 0xff;
+const dv = new DataView(out.buffer);
+let p = 4;
+dv.setUint32(p, 3); p += 4; // picture type: 3 = front cover
+dv.setUint32(p, mime.length); p += 4;
+out.set(mime, p); p += mime.length;
+dv.setUint32(p, 0); p += 4; // description length (none)
+dv.setUint32(p, 0); p += 4; // width (0 = unspecified)
+dv.setUint32(p, 0); p += 4; // height
+dv.setUint32(p, 0); p += 4; // color depth
+dv.setUint32(p, 0); p += 4; // indexed colors
+dv.setUint32(p, pic.length); p += 4;
+out.set(pic, p);
+return out;
+}
+/**
+* Embeds the current D1/R2-backed metadata into a FLAC file's Vorbis comment
+* block (the FLAC equivalent of embedId3Metadata for MP3s), preserving
+* STREAMINFO/SEEKTABLE/CUESHEET/APPLICATION blocks and any existing comment
+* fields that aren't being overwritten (COMMENT, GENRE, COMPOSER, DISCNUMBER,
+* LYRICS, etc). Falls back to the original buffer if the file isn't valid
+* FLAC or anything goes wrong.
+*/
+/**
+* Lazily loads libflac.js (WASM build, via jsDelivr) the first time a WAV->FLAC
+* encode is actually needed, so pages that never touch a WAV master never pay
+* for it. Returns the ready `Flac` module object.
+*/
+let _flacEncoderLibPromise = null;
+function _loadFlacEncoderLib() {
+if (_flacEncoderLibPromise) return _flacEncoderLibPromise;
+_flacEncoderLibPromise = new Promise((resolve, reject) => {
+if (window.Flac && window.Flac.isReady && window.Flac.isReady()) { resolve(window.Flac); return; }
+const CDN_BASE = 'https://cdn.jsdelivr.net/npm/libflacjs@5.6.0/dist/';
+window.FLAC_SCRIPT_LOCATION = CDN_BASE;
+const script = document.createElement('script');
+script.src = CDN_BASE + 'libflac.wasm.js';
+script.onerror = () => reject(new Error('Failed to load libflac.js encoder from CDN'));
+script.onload = () => {
+const Flac = window.Flac;
+if (!Flac) { reject(new Error('libflac.js loaded but window.Flac is missing')); return; }
+if (Flac.isReady && Flac.isReady()) { resolve(Flac); return; }
+Flac.onready = () => resolve(Flac);
+};
+document.head.appendChild(script);
+});
+return _flacEncoderLibPromise;
+}
+/**
+* Parses a WAV (RIFF/WAVE) ArrayBuffer just enough to hand its PCM samples to
+* a FLAC encoder: sampleRate, channel count, bits-per-sample, and a view over
+* the raw sample data. Only PCM (format 1) and IEEE float (format 3, converted
+* to 16-bit PCM) are supported -- covers every WAV a music library will have.
+* Returns null if the buffer isn't a well-formed WAV.
+*/
+function _parseWavPcm(buffer) {
+const dv = new DataView(buffer);
+if (dv.byteLength < 44) return null;
+if (dv.getUint32(0, false) !== 0x52494646) return null; // 'RIFF'
+if (dv.getUint32(8, false) !== 0x57415645) return null; // 'WAVE'
+let offset = 12, fmt = null, dataOffset = -1, dataLength = 0;
+while (offset + 8 <= dv.byteLength) {
+const id = dv.getUint32(offset, false);
+const size = dv.getUint32(offset + 4, true);
+const body = offset + 8;
+if (id === 0x666d7420) { // 'fmt '
+fmt = {
+audioFormat: dv.getUint16(body, true),
+channels: dv.getUint16(body + 2, true),
+sampleRate: dv.getUint32(body + 4, true),
+bitsPerSample: dv.getUint16(body + 14, true)
+};
+} else if (id === 0x64617461) { // 'data'
+dataOffset = body;
+dataLength = Math.min(size, dv.byteLength - body);
+}
+offset = body + size + (size % 2); // chunks are word-aligned
+}
+if (!fmt || dataOffset < 0) return null;
+return { ...fmt, dataOffset, dataLength };
+}
+/**
+* Core FLAC encoding step, shared by both the WAV->FLAC path and the
+* compressed-audio (MP3/AAC/OGG/etc)->FLAC path: takes already-decoded
+* interleaved PCM samples and produces a real FLAC bitstream via libflac.js,
+* with the STREAMINFO block's total_samples/md5/framesize fields correctly
+* patched in from the encoder's final metadata callback (see the comment
+* inside this function for why that patch is necessary -- skipping it is
+* what produces files with broken seeking/duration).
+* @param {Int32Array} interleaved - interleaved PCM samples, one int32 per sample slot
+* @param {number} totalSamples - samples per channel
+* @param {number} sampleRate
+* @param {number} channels
+* @param {number} bitsPerSample
+* @returns {Promise<ArrayBuffer|null>} null on failure
+*/
+async function _encodeInterleavedPcmToFlac(interleaved, totalSamples, sampleRate, channels, bitsPerSample) {
+const Flac = await _loadFlacEncoderLib();
+const encoder = Flac.create_libflac_encoder(sampleRate, channels, bitsPerSample, 5, 0, true, 0);
+if (!encoder) { console.warn('[->FLAC] failed to create encoder'); return null; }
+const chunks = [];
+let finalMeta = null;
+const initStatus = Flac.init_encoder_stream(encoder, (data) => { chunks.push(data.slice()); }, (meta) => { finalMeta = meta; });
+if (initStatus !== 0) { Flac.FLAC__stream_encoder_delete(encoder); console.warn('[->FLAC] encoder init failed'); return null; }
+const ok = Flac.FLAC__stream_encoder_process_interleaved(encoder, interleaved, totalSamples);
+const finished = Flac.FLAC__stream_encoder_finish(encoder);
+Flac.FLAC__stream_encoder_delete(encoder);
+if (!ok || !finished || !chunks.length) { console.warn('[->FLAC] encode failed'); return null; }
+let total = 0; for (const c of chunks) total += c.byteLength;
+const out = new Uint8Array(total);
+let off = 0; for (const c of chunks) { out.set(c, off); off += c.byteLength; }
+// The streaming encoder writes a PLACEHOLDER STREAMINFO block up front
+// (total_samples=0, md5=all-zero, min/max framesize=0) because it doesn't
+// know these values until encoding finishes. The chunks pushed via the
+// write callback were emitted BEFORE that final patch happens internally --
+// so without this step, every conversion produces a file with a permanently
+// zeroed STREAMINFO. That's exactly what breaks seeking and duration
+// display: players read total_samples=0 and can't compute length or seek
+// targets. Patch the real values into our own output buffer here.
+if (finalMeta && out.length >= 4 + 4 + 34) {
+const dv = new DataView(out.buffer, out.byteOffset, out.byteLength);
+const streaminfoBody = 4 + 4; // 'fLaC' + 4-byte block header
+// min_framesize/max_framesize are 24-bit fields packed at byte offsets 4 and 7
+const setUint24 = (byteOffset, value) => {
+dv.setUint8(byteOffset, (value >> 16) & 0xff);
+dv.setUint8(byteOffset + 1, (value >> 8) & 0xff);
+dv.setUint8(byteOffset + 2, value & 0xff);
+};
+setUint24(streaminfoBody + 4, finalMeta.min_framesize || 0);
+setUint24(streaminfoBody + 7, finalMeta.max_framesize || 0);
+// bytes 10-17: 20 bits sampleRate, 3 bits channels-1, 5 bits bps-1, 36 bits total_samples (packed big-endian)
+const sr = finalMeta.sampleRate || sampleRate;
+const ch = finalMeta.channels || channels;
+const bps = finalMeta.bitsPerSample || bitsPerSample;
+const ts = BigInt(finalMeta.total_samples || totalSamples || 0);
+let packed = (BigInt(sr) << 44n) | (BigInt(ch - 1) << 41n) | (BigInt(bps - 1) << 36n) | (ts & 0xFFFFFFFFFn);
+for (let i = 0; i < 8; i++) {
+dv.setUint8(streaminfoBody + 10 + i, Number((packed >> BigInt((7 - i) * 8)) & 0xFFn));
+}
+// bytes 18-33: 16-byte MD5 of the unencoded audio data
+if (finalMeta.md5sum && typeof finalMeta.md5sum === 'string' && finalMeta.md5sum.length === 32) {
+for (let i = 0; i < 16; i++) {
+dv.setUint8(streaminfoBody + 18 + i, parseInt(finalMeta.md5sum.substr(i * 2, 2), 16));
+}
+}
+} else if (!finalMeta) {
+console.warn('[->FLAC] no metadata from encoder -- output STREAMINFO may have total_samples=0 (broken seeking/duration)');
+}
+return out.buffer;
+}
+/**
+* Encodes a WAV ArrayBuffer into a real FLAC bitstream using libflac.js
+* (WASM). This is genuine lossless transcoding -- the PCM samples are
+* re-encoded into FLAC frames, not just relabeled -- so multi-album masters
+* stored as raw WAV can be downloaded as actual, playable .flac files instead
+* of crashing players that choke on a WAV file wearing an .mp3/.flac name.
+* Returns the original buffer unchanged (with a console warning) if parsing
+* or encoding fails, so callers always get *something* playable back.
+*/
+async function encodeWavToFlac(wavArrayBuffer) {
+try {
+const wav = _parseWavPcm(wavArrayBuffer);
+if (!wav) { console.warn('[WAV->FLAC] not a parseable WAV, leaving as-is'); return wavArrayBuffer; }
+if (wav.audioFormat !== 1 && wav.audioFormat !== 3) {
+console.warn('[WAV->FLAC] unsupported WAV codec (format ' + wav.audioFormat + '), leaving as-is');
+return wavArrayBuffer;
+}
+const { channels, sampleRate, dataOffset, dataLength } = wav;
+let bitsPerSample = wav.bitsPerSample;
+const bytesPerSample = bitsPerSample / 8;
+const totalSamples = Math.floor(dataLength / bytesPerSample / channels);
+// Interleaved samples as Int32Array -- FLAC__stream_encoder_process_interleaved
+// wants one int32 per sample slot regardless of source bit depth.
+const interleaved = new Int32Array(totalSamples * channels);
+const src = new DataView(wavArrayBuffer, dataOffset, dataLength);
+if (wav.audioFormat === 3) {
+// IEEE float -> 16-bit PCM (float WAVs are always 32-bit float in practice)
+for (let i = 0; i < interleaved.length; i++) {
+const f = src.getFloat32(i * 4, true);
+interleaved[i] = Math.max(-32768, Math.min(32767, Math.round(f * 32767)));
+}
+bitsPerSample = 16;
+} else if (bitsPerSample === 16) {
+for (let i = 0; i < interleaved.length; i++) interleaved[i] = src.getInt16(i * 2, true);
+} else if (bitsPerSample === 24) {
+for (let i = 0; i < interleaved.length; i++) {
+const o = i * 3;
+let v = src.getUint8(o) | (src.getUint8(o + 1) << 8) | (src.getUint8(o + 2) << 16);
+if (v & 0x800000) v -= 0x1000000; // sign-extend
+interleaved[i] = v;
+}
+} else if (bitsPerSample === 8) {
+for (let i = 0; i < interleaved.length; i++) interleaved[i] = src.getUint8(i) - 128;
+} else if (bitsPerSample === 32) {
+for (let i = 0; i < interleaved.length; i++) interleaved[i] = src.getInt32(i * 4, true);
+} else {
+console.warn('[WAV->FLAC] unsupported bit depth ' + bitsPerSample + ', leaving as-is');
+return wavArrayBuffer;
+}
+const result = await _encodeInterleavedPcmToFlac(interleaved, totalSamples, sampleRate, channels, bitsPerSample);
+return result || wavArrayBuffer;
+} catch (e) {
+console.error('[WAV->FLAC] conversion threw, leaving as-is:', e);
+return wavArrayBuffer;
+}
+}
+/**
+* Encodes any browser-decodable compressed audio (MP3, AAC/M4A, OGG, etc) into
+* a real FLAC bitstream. Used for the "(non-lossless)" download case: tracks
+* with no separate lossless master still get wrapped in a proper, consistently
+* tagged FLAC container for format consistency across a library/folder
+* download -- the (non-lossless) filename suffix is what actually communicates
+* real quality, not the container format. This does NOT improve audio
+* quality (a lossy MP3 source stays lossy-quality data, just FLAC-compressed
+* losslessly from that point on) -- it only standardizes the container.
+* Uses the browser's native AudioContext decoder, so it works for any format
+* the browser itself can play. Returns null if decoding or encoding fails, so
+* the caller can fall back to the original file untouched.
+*/
+async function encodeCompressedAudioToFlac(compressedArrayBuffer) {
+try {
+const AC = window.AudioContext || window.webkitAudioContext;
+if (!AC) { console.warn('[->FLAC] no AudioContext available, cannot decode source'); return null; }
+const ctx = new AC();
+let decoded;
+try {
+// decodeAudioData detaches/consumes the buffer, so hand it a copy
+decoded = await ctx.decodeAudioData(compressedArrayBuffer.slice(0));
+} finally {
+ctx.close().catch(() => {});
+}
+const channels = decoded.numberOfChannels;
+const sampleRate = decoded.sampleRate;
+const totalSamples = decoded.length;
+const channelData = [];
+for (let c = 0; c < channels; c++) channelData.push(decoded.getChannelData(c));
+// Convert float32 [-1,1] PCM to interleaved 16-bit-range Int32 samples.
+const interleaved = new Int32Array(totalSamples * channels);
+for (let i = 0; i < totalSamples; i++) {
+for (let c = 0; c < channels; c++) {
+const s = Math.max(-1, Math.min(1, channelData[c][i]));
+interleaved[i * channels + c] = Math.round(s * 32767);
+}
+}
+return await _encodeInterleavedPcmToFlac(interleaved, totalSamples, sampleRate, channels, 16);
+} catch (e) {
+console.error('[->FLAC] compressed-audio decode/encode failed:', e);
+return null;
+}
+}
+async function embedFlacMetadata(audioArrayBuffer, meta, opts = {}) {
+if (!meta) return audioArrayBuffer;
+try {
+const parsed = _parseFlacBlocks(audioArrayBuffer);
+if (!parsed) return audioArrayBuffer;
+const { blocks, audioStart } = parsed;
+const streaminfo = blocks[0];
+const oldVorbis = blocks.find(b => b.type === 4);
+const keepBlocks = blocks.slice(1).filter(b => b.type !== 4 && b.type !== 6 && b.type !== 1); // drop old VORBIS_COMMENT, PICTURE, PADDING
+const existing = _readVorbisComments(oldVorbis);
+const { overrideTrackNumber } = opts;
+if (overrideTrackNumber) existing.set('TRACKNUMBER', String(overrideTrackNumber));
+if (meta.title) existing.set('TITLE', meta.title);
+if (meta.artist) existing.set('ARTIST', meta.artist);
+if (meta.album && meta.album !== 'Unknown') existing.set('ALBUM', meta.album);
+const albumArtist = meta.albumArtist || existing.get('ALBUMARTIST') || meta.artist;
+if (albumArtist) existing.set('ALBUMARTIST', albumArtist);
+if (meta.year) {
+const yearNum = parseInt(String(meta.year).slice(0, 4), 10);
+if (!isNaN(yearNum) && yearNum > 0) existing.set('DATE', String(yearNum));
+}
+const art = await getAlbumArtForEmbed(meta);
+const newBlocksToWrite = [];
+newBlocksToWrite.push({ type: 0, data: streaminfo.data }); // STREAMINFO always first, untouched
+newBlocksToWrite.push({ type: 4, comments: [...existing.entries()] }); // new VORBIS_COMMENT
+if (art) newBlocksToWrite.push({ type: 6, art });
+for (const b of keepBlocks) newBlocksToWrite.push({ type: b.type, data: b.data });
+const parts = [];
+newBlocksToWrite.forEach((b, i) => {
+const isLast = i === newBlocksToWrite.length - 1;
+if (b.type === 0) {
+const header = new Uint8Array(4);
+header[0] = (isLast ? 0x80 : 0) | 0;
+header[1] = (b.data.byteLength >> 16) & 0xff; header[2] = (b.data.byteLength >> 8) & 0xff; header[3] = b.data.byteLength & 0xff;
+parts.push(header, b.data);
+} else if (b.type === 4) {
+parts.push(_buildVorbisCommentBlock(b.comments, isLast));
+} else if (b.type === 6) {
+parts.push(_buildPictureBlock(b.art, isLast));
+} else {
+const header = new Uint8Array(4);
+header[0] = (isLast ? 0x80 : 0) | b.type;
+header[1] = (b.data.byteLength >> 16) & 0xff; header[2] = (b.data.byteLength >> 8) & 0xff; header[3] = b.data.byteLength & 0xff;
+parts.push(header, b.data);
+}
+});
+const magic = new Uint8Array([0x66, 0x4C, 0x61, 0x43]); // 'fLaC'
+const audioFrames = new Uint8Array(audioArrayBuffer, audioStart);
+const totalLen = 4 + parts.reduce((s, p) => s + p.byteLength, 0) + audioFrames.byteLength;
+const out = new Uint8Array(totalLen);
+let off = 0;
+out.set(magic, off); off += 4;
+for (const p of parts) { out.set(p, off); off += p.byteLength; }
+out.set(audioFrames, off);
+return out.buffer;
+} catch (e) {
+console.error('[FLAC] Failed to embed metadata, returning untagged audio:', e);
+return audioArrayBuffer;
+}
+}
+/**
 * Determines whether a file should get ID3 tags embedded (MP3 only).
 */
 function isMp3Format(mimeType, fileName) {
 const mime = (mimeType || '').toLowerCase();
-if (mime.includes('mpeg') || mime.includes('mp3')) return true;
+// A known mimeType (especially one sniffed from the real bytes) is
+// authoritative. Falling back to the filename's extension here used to
+// happen unconditionally as an OR-alternative -- but for a lossless-redirect
+// track, `fileName` is the ORIGINAL folder file's name (almost always
+// ".mp3") which has nothing to do with what's actually being served. That
+// let a WAV/FLAC lossless master get misclassified as mp3 even after its
+// real format was correctly sniffed, which is exactly what corrupted these
+// downloads. Only fall back to the filename when we have no mimeType at all.
+if (mime) return mime.includes('mpeg') || mime.includes('mp3');
 const ext = (fileName || '').split('.').pop().toLowerCase();
 return ext === 'mp3';
+}
+function isFlacFormat(mimeType, fileName) {
+const mime = (mimeType || '').toLowerCase();
+if (mime) return mime.includes('flac');
+const ext = (fileName || '').split('.').pop().toLowerCase();
+return ext === 'flac';
+}
+/**
+* Inspects the actual bytes of a downloaded audio buffer and returns the real
+* Content-Type based on its file signature (magic bytes), ignoring whatever
+* the server/worker's Content-Type header claimed.
+*
+* This matters because the streaming worker's Content-Type for a `&lossless=1`
+* response isn't guaranteed to describe the bytes it's actually piping back —
+* it can end up reflecting the ORIGINAL (e.g. mp3) track's registered mime
+* instead of the lossless master's real format. Trusting that header blindly
+* is exactly how a WAV or FLAC master ended up saved to disk with a `.mp3`
+* extension, which then crashes players (like Elisa/ffmpeg) that try to parse
+* MP3 frames out of what's actually a RIFF/FLAC file. Returns null if the
+* signature isn't recognized, so the caller can fall back to the header.
+*/
+function sniffAudioMime(buffer) {
+if (!buffer || buffer.byteLength < 4) return null;
+const len = Math.min(buffer.byteLength, 12);
+const b = new Uint8Array(buffer, 0, len);
+const str = (start, n) => (start + n <= len) ? String.fromCharCode(...b.slice(start, start + n)) : '';
+if (str(0, 4) === 'fLaC') return 'audio/flac';
+if (str(0, 4) === 'RIFF' && str(8, 4) === 'WAVE') return 'audio/wav';
+if (str(0, 4) === 'FORM' && str(8, 4) === 'AIFF') return 'audio/aiff';
+if (str(0, 4) === 'OggS') return 'audio/ogg';
+if (str(4, 4) === 'ftyp') return 'audio/mp4'; // m4a / ALAC container
+if (b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33) return 'audio/mpeg'; // ID3v2 header
+if (b[0] === 0xFF && (b[1] & 0xE0) === 0xE0) return 'audio/mpeg'; // MPEG frame sync
+return null; // unrecognized — let the caller fall back to the reported header
 }
 /**
 * Maps a Content-Type to a sensible file extension for non-mp3 audio
@@ -27891,13 +28571,52 @@ return fallbackExt || 'mp3';
 * @returns {Promise<{arrayBuffer: ArrayBuffer, mimeType: string, trackNumber: number|null}|null>}
 */
 async function prepareTrackAudio(trackId, meta, opts = {}) {
-const { mimeHint = '', fileName = '', lossless = false } = opts;
+const { mimeHint = '', fileName = '', lossless = false, forceFlac = false } = opts;
 const mimeParam = mimeHint ? `&mime=${encodeURIComponent(mimeHint)}` : '';
 const losslessParam = lossless ? '&lossless=1' : '';
 const audioRes = await fetch(`${STREAMING_URL}?id=${trackId}${mimeParam}${losslessParam}`);
 if (!audioRes.ok) return null;
+const expectedAudioLen = parseInt(audioRes.headers.get('content-length') || '0', 10);
 let audioBuffer = await audioRes.arrayBuffer();
-const mimeType = audioRes.headers.get('content-type') || mimeHint || '';
+// If the connection dropped mid-stream (very plausible when a folder download
+// fires off many tracks' fetches back-to-back), audioRes.ok can still be true
+// and arrayBuffer() resolves with no error -- it just silently hands back
+// whatever bytes made it through before the drop. Without this check that
+// truncated buffer still gets an ID3 tag embedded onto it below, producing a
+// file that's basically "just the tags" with little or no real audio. Bail
+// out instead so the caller skips this track (a retry gets a fresh, usually
+// uninterrupted connection).
+if (expectedAudioLen > 0 && audioBuffer.byteLength < expectedAudioLen) return null;
+// Never trust the Content-Type header alone for lossless downloads — see
+// sniffAudioMime()'s comment for why it can lie about the actual bytes.
+const sniffedMime = sniffAudioMime(audioBuffer);
+let mimeType = sniffedMime || audioRes.headers.get('content-type') || mimeHint || '';
+// Real WAV->FLAC transcoding: a raw WAV master gets re-encoded into an
+// actual FLAC bitstream here (not just relabeled) so it downloads as a
+// genuinely lossless-compressed, correctly-tagged .flac file instead of a
+// WAV wearing whatever extension the original folder entry happened to have.
+if ((lossless || forceFlac) && mimeType === 'audio/wav') {
+audioBuffer = await encodeWavToFlac(audioBuffer);
+const reSniffed = sniffAudioMime(audioBuffer);
+if (reSniffed === 'audio/flac') mimeType = 'audio/flac';
+}
+// forceFlac (the "(non-lossless)" download case): even a track with no
+// separate lossless master still gets wrapped in a real FLAC container for
+// format consistency across a download. If the source is something other
+// than WAV/FLAC already (typically MP3), decode it with the browser's own
+// audio decoder and re-encode to FLAC. This does not add quality that
+// wasn't there, it just standardizes the container -- the "(non-lossless)"
+// filename suffix (added by the caller) is what actually communicates that
+// this isn't the true lossless master.
+if (forceFlac && mimeType !== 'audio/flac' && mimeType !== 'audio/wav') {
+const flacBuffer = await encodeCompressedAudioToFlac(audioBuffer);
+if (flacBuffer) {
+audioBuffer = flacBuffer;
+mimeType = 'audio/flac';
+} else {
+console.warn('[forceFlac] could not transcode to FLAC, keeping original format for this track');
+}
+}
 // If this track has a redirect, fetch the ORIGINAL (non-redirected) file too,
 // so its tags (comments, lyrics, track number, etc.) can be preserved.
 let tagSourceBuffer = null;
@@ -27952,6 +28671,10 @@ audioBuffer = await embedId3Metadata(audioBuffer, meta, {
 tagSourceBuffer: tagSource,
 overrideTrackNumber: trackNumber
 });
+} else if (isFlacFormat(mimeType, fileName)) {
+audioBuffer = await embedFlacMetadata(audioBuffer, meta, {
+overrideTrackNumber: trackNumber
+});
 }
 return { arrayBuffer: audioBuffer, mimeType, trackNumber };
 }
@@ -27961,14 +28684,14 @@ return { arrayBuffer: audioBuffer, mimeType, trackNumber };
 * ID3 tags before download. Returns null on fetch failure.
 */
 async function buildTaggedDownload(track, opts = {}) {
-const { lossless = false } = opts;
+const { lossless = false, forceFlac = false } = opts;
 const meta = await getCentralTrackMetadata(track.id);
-const result = await prepareTrackAudio(track.id, meta, { mimeHint: lossless ? '' : track.mimeType, fileName: track.name, lossless });
+const result = await prepareTrackAudio(track.id, meta, { mimeHint: (lossless || forceFlac) ? '' : track.mimeType, fileName: track.name, lossless, forceFlac });
 if (!result) return null;
 const origExt = (track.name.match(/\.([^.]+)$/) || [, 'mp3'])[1];
 const ext = isMp3Format(result.mimeType, track.name)
 ? 'mp3'
-: (lossless ? extFromMime(result.mimeType, origExt) : origExt);
+: ((lossless || forceFlac) ? extFromMime(result.mimeType, origExt) : origExt);
 const trackNumPrefix = (result.trackNumber !== null) ? String(result.trackNumber).padStart(2, '0') + '. ' : '';
 const baseTitle = (meta.title && meta.title !== 'Unknown Track') ? meta.title : track.name.replace(/\.[^/.]+$/, '');
 const artist = (meta.artist && meta.artist !== 'Unknown Artist') ? meta.artist : '';
@@ -28026,8 +28749,9 @@ showShareToast('No audio files in folder', 'error');
 return;
 }
 let lossless = false;
+let available = {};
 try {
-const available = await checkLosslessAvailability(tracks.map(t => t.id));
+available = await checkLosslessAvailability(tracks.map(t => t.id));
 const availableCount = Object.values(available).filter(Boolean).length;
 if (availableCount > 0) {
 const choice = await showLosslessDownloadChoice(availableCount, tracks.length);
@@ -28035,7 +28759,7 @@ if (choice === null) return; // user cancelled
 lossless = choice;
 }
 } catch (e) { /* lossless check failed — fall back to normal-only download */ }
-await _performFolderDownload(currentFolder, tracks, lossless);
+await _performFolderDownload(currentFolder, tracks, lossless, available);
 } catch (err) {
 showShareToast('Failed to create zip file', 'error');
 }
@@ -28077,26 +28801,36 @@ overlay.querySelector('#lossless-choice-cancel').addEventListener('click', () =>
 overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
 });
 }
-async function _performFolderDownload(currentFolder, tracks, lossless) {
+async function _performFolderDownload(currentFolder, tracks, lossless, available = {}) {
+// When the user asked for lossless, not every track in the folder necessarily
+// has a lossless master -- resolve per-track so we only request `lossless=1`
+// for tracks that actually have one, and clearly mark the rest in their
+// filename rather than silently downloading them as normal quality with no
+// indication (or worse, silently serving a non-lossless file mislabeled as
+// if it were the lossless pick).
+const addNonLosslessSuffix = (fileName) => fileName.replace(/(\.[^.]+)$/, ' (non-lossless)$1');
 try {
 if (tracks.length === 1) {
 const track = tracks[0];
-showShareToast(lossless ? 'Downloading lossless track...' : 'Downloading track...');
-const result = await buildTaggedDownload(track, { lossless });
+const trackLossless = lossless && !!available[track.id];
+const trackForceFlac = lossless && !trackLossless;
+showShareToast(trackLossless ? 'Downloading lossless track...' : 'Downloading track...');
+const result = await buildTaggedDownload(track, { lossless: trackLossless, forceFlac: trackForceFlac });
 if (!result) {
 showShareToast('Failed to download track', 'error');
 return;
 }
+const fileName = (lossless && !trackLossless) ? addNonLosslessSuffix(result.fileName) : result.fileName;
 const blob = new Blob([result.arrayBuffer], { type: result.mimeType || track.mimeType || 'audio/mpeg' });
 const blobUrl = URL.createObjectURL(blob);
 const a = document.createElement('a');
 a.href = blobUrl;
-a.download = result.fileName;
+a.download = fileName;
 document.body.appendChild(a);
 a.click();
 document.body.removeChild(a);
 setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-showShareToast(`Downloaded "${result.fileName}"!`, 'success');
+showShareToast(`Downloaded "${fileName}"!`, 'success');
 return;
 }
 showShareToast(`Creating zip with ${tracks.length} tracks${lossless ? ' (lossless)' : ''}...`);
@@ -28104,11 +28838,14 @@ const zip = new JSZip();
 let completed = 0;
 for (const track of tracks) {
 try {
-const result = await buildTaggedDownload(track, { lossless });
+const trackLossless = lossless && !!available[track.id];
+const trackForceFlac = lossless && !trackLossless;
+const result = await buildTaggedDownload(track, { lossless: trackLossless, forceFlac: trackForceFlac });
 if (!result) {
 continue;
 }
-zip.file(result.fileName, result.arrayBuffer);
+const fileName = (lossless && !trackLossless) ? addNonLosslessSuffix(result.fileName) : result.fileName;
+zip.file(fileName, result.arrayBuffer);
 completed++;
 showShareToast(`Adding to zip... (${completed}/${tracks.length})`);
 } catch (err) {
@@ -29498,6 +30235,21 @@ el.classList.remove('scrolled');
 }
 window.addEventListener('resize', debounce(updateQueueItemMarquee, 200));
 function play(idxOrId) {
+// A manual/programmatic play() call means whatever gapless pre-arming was
+// in progress no longer applies to the track that's about to load -- clear
+// it and make sure both gain nodes are back at full volume. Without this,
+// a manual skip that lands mid-way through the ARM_LEAD window could leave
+// a player muted at the graph level (audible silence with the transport
+// state showing "playing") or cause a later real boundary to misfire a
+// handoff against stale state.
+_gaplessArmedForPlayer = null;
+if (audioCtx && player1GainNode && player2GainNode) {
+const _now = audioCtx.currentTime;
+player1GainNode.gain.cancelScheduledValues(_now);
+player1GainNode.gain.setValueAtTime(1, _now);
+player2GainNode.gain.cancelScheduledValues(_now);
+player2GainNode.gain.setValueAtTime(1, _now);
+}
 {
 let _checkId = null;
 if (typeof idxOrId === 'string') {
@@ -29561,6 +30313,12 @@ renderQueue(); // Update queue UI when creating single-track queue
 idx = idxOrId;
 if (idx < 0 || idx >= queue.length) return;
 trackId = queue[idx].id;
+if (trackId.startsWith('__yt__') && typeof ytLoad === 'function') {
+const _ytTrack = queue[idx];
+const _ytVid = _ytTrack._ytVideoId || trackId.slice('__yt__'.length);
+ytLoad(_ytVid, { title: _ytTrack.title, author: _ytTrack.artist, thumb: _ytTrack.albumArt, videoId: _ytVid });
+return;
+}
 if (trackId.startsWith('__drv__') && typeof driveVideoLoad === 'function') {
 driveVideoLoad(trackId.slice('__drv__'.length));
 return;
@@ -31448,6 +32206,12 @@ player.pause();
 document.body.classList.remove('playing');
 }
 showNotification(`Removed "${title}" from queue`);
+// The virtualized queue DOM caches each row's actualIndex at render time
+// (dataset.actualIndex) -- after splicing the array, every row after
+// `idx` now points at a different track than its cached index says.
+// Without a re-render here, clicking a row plays whatever track now sits
+// at that stale index instead of the one actually displayed.
+setTimeout(() => renderQueue(), 0);
 } else {
 queue.splice(idx, 1);
 if (idx < qIndex) {
@@ -34255,6 +35019,9 @@ try { player.pause(); } catch(_) {}
 if (typeof player2 !== 'undefined' && player2 && player2 !== currentPlayer) {
 try { player2.pause(); } catch(_) {}
 }
+if (typeof _gaplessArmedForPlayer !== 'undefined') {
+_gaplessArmedForPlayer = null;
+}
 _ytCurrentData = { videoId: '__drv__' + resolvedId, title, author: artist, thumb: art, _isDriveVideo: true };
 isYTMode = true;
 if (art && typeof updateNowPlayingArt === 'function') updateNowPlayingArt(art);
@@ -34269,15 +35036,10 @@ if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended
 audioCtx.resume().catch(() => {});
 }
 if (typeof audioCtx !== 'undefined' && audioCtx && typeof audioInputNode !== 'undefined' && audioInputNode) {
-if (!videoEl._ytAudioConnected) {
-try {
-_ytSourceNode = audioCtx.createMediaElementSource(videoEl);
-_ytSourceNode.connect(audioInputNode);
-videoEl._ytAudioConnected = true;
-} catch(e) { console.warn('[driveVideo] Audio connect:', e); }
-}
-if (_ytSourceNode && videoEl._ytAudioConnected) {
-try { _ytSourceNode.connect(audioInputNode); } catch(e) {}
+const _drvGain = _ytEnsureGain(videoEl);
+if (_drvGain) {
+_drvGain.gain.cancelScheduledValues(audioCtx.currentTime);
+_drvGain.gain.setValueAtTime(1, audioCtx.currentTime);
 }
 }
 const _drvSpeed = (typeof effectsState !== 'undefined' && effectsState.speed) ? effectsState.speed / 100 : 1;
@@ -40568,11 +41330,12 @@ cancelCrossfade();
 }
 let nextIndex = qIndex + 1;
 const nextTrack = queue[nextIndex];
-const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
-const _preloadCached = nextTrack ? (_clientAudioBlobUrls[_audioCacheKey(nextTrack.id)] || null) : null;
+const _nextIsYTOrDrive = _isYTOrDriveTrack(nextTrack);
+const expectedUrl = (nextTrack && !_nextIsYTOrDrive) ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
+const _preloadCached = (nextTrack && !_nextIsYTOrDrive) ? (_clientAudioBlobUrls[_audioCacheKey(nextTrack.id)] || null) : null;
 const _preloadSrc = _preloadCached || expectedUrl;
 const hasCorrectNextTrack = nextPlayer.src === _preloadSrc || nextPlayer.src === expectedUrl;
-if (timeLeft <= PRELOAD_THRESHOLD && !hasCorrectNextTrack && nextTrack) {
+if (timeLeft <= PRELOAD_THRESHOLD && !hasCorrectNextTrack && nextTrack && !_nextIsYTOrDrive) {
 nextPlayer.src = _preloadSrc;
 if (effectsState && effectsState.speed && !_isPartyGuest()) {
 _applyPlaybackRate(nextPlayer, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
@@ -40590,6 +41353,8 @@ if (crossfadeEnabled && timeLeft <= crossfadeDuration && timeLeft > 0 && hasCorr
 if (nextPlayer.readyState >= 1 && !isCrossfading) {
 startCrossfade();
 }
+} else if (!crossfadeEnabled && hasCorrectNextTrack) {
+// arming moved to the dedicated fast-poll interval below (500ms poll here is too coarse for the 250ms arm window)
 }
 }
 } // end _doLogic
@@ -40647,11 +41412,12 @@ cancelCrossfade();
 }
 let nextIndex = qIndex + 1;
 const nextTrack = queue[nextIndex];
-const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
-const _preloadCached = nextTrack ? (_clientAudioBlobUrls[_audioCacheKey(nextTrack.id)] || null) : null;
+const _nextIsYTOrDrive = _isYTOrDriveTrack(nextTrack);
+const expectedUrl = (nextTrack && !_nextIsYTOrDrive) ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
+const _preloadCached = (nextTrack && !_nextIsYTOrDrive) ? (_clientAudioBlobUrls[_audioCacheKey(nextTrack.id)] || null) : null;
 const _preloadSrc = _preloadCached || expectedUrl;
 const hasCorrectNextTrack = nextPlayer.src === _preloadSrc || nextPlayer.src === expectedUrl;
-if (timeLeft <= PRELOAD_THRESHOLD && !hasCorrectNextTrack && nextTrack) {
+if (timeLeft <= PRELOAD_THRESHOLD && !hasCorrectNextTrack && nextTrack && !_nextIsYTOrDrive) {
 nextPlayer.src = _preloadSrc;
 if (effectsState && effectsState.speed && !_isPartyGuest()) {
 _applyPlaybackRate(nextPlayer, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
@@ -40669,6 +41435,8 @@ if (crossfadeEnabled && timeLeft <= crossfadeDuration && timeLeft > 0 && hasCorr
 if (nextPlayer.readyState >= 1 && !isCrossfading) {
 startCrossfade();
 }
+} else if (!crossfadeEnabled && hasCorrectNextTrack) {
+// arming moved to the dedicated fast-poll interval below (500ms poll here is too coarse for the 250ms arm window)
 }
 }
 } // end _doLogic2
@@ -40850,25 +41618,32 @@ if (_queueSearchTerm) {
 filterQueue('');
 }
 const nextTrack = queue[next];
-const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
+const _nextIsYTOrDrive = _isYTOrDriveTrack(nextTrack);
+const expectedUrl = (nextTrack && !_nextIsYTOrDrive) ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
 const hasPreloadedTrack = nextPlayer.src === expectedUrl;
-if (hasPreloadedTrack && nextTrack) {
+if (hasPreloadedTrack && nextTrack && !_nextIsYTOrDrive) {
+const _outgoingPlayer = currentPlayer; // = player, about to become nextPlayer below
 qIndex = next;
 const temp = currentPlayer;
 currentPlayer = nextPlayer;
 nextPlayer = temp;
+const _instantHandoffDone = _tryInstantGaplessHandoff(_outgoingPlayer, currentPlayer);
 const _doGaplessPlay = () => {
 if (!_isPartyGuest()) {
 _applyPlaybackRate(currentPlayer, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
 }
+if (!_instantHandoffDone) {
+// Not pre-armed in time (short track, Web Audio not ready yet, etc) --
+// fall back to the old reactive play() path so playback still continues.
 currentPlayer.play().catch(err => console.error('Gapless playback error:', err));
+}
 updateNowPlayingWithData(nextTrack);
 updateLyricsForTrackChange(nextTrack.id);
 updateQueueActiveState(qIndex);
 if (nextTrack.id) setTimeout(() => analyzeAndApplyNormalization(nextTrack.id), 100);
 if (lastfm) { lastfm.resetScrobbleState(); lastfm.currentScrobbleTrackId = nextTrack.id; }
 };
-if (currentPlayer.readyState >= 2) {
+if (_instantHandoffDone || currentPlayer.readyState >= 2) {
 _doGaplessPlay();
 } else {
 updateNowPlayingWithData(nextTrack); // update UI immediately while we wait
@@ -40919,25 +41694,30 @@ if (_queueSearchTerm) {
 filterQueue('');
 }
 const nextTrack = queue[next];
-const expectedUrl = nextTrack ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
+const _nextIsYTOrDrive = _isYTOrDriveTrack(nextTrack);
+const expectedUrl = (nextTrack && !_nextIsYTOrDrive) ? `https://gootapimask.goot-api.workers.dev/?id=${nextTrack.id}` : null;
 const hasPreloadedTrack = nextPlayer.src === expectedUrl;
-if (hasPreloadedTrack && nextTrack) {
+if (hasPreloadedTrack && nextTrack && !_nextIsYTOrDrive) {
+const _outgoingPlayer2 = currentPlayer; // = player2, about to become nextPlayer below
 qIndex = next;
 const temp = currentPlayer;
 currentPlayer = nextPlayer;
 nextPlayer = temp;
+const _instantHandoffDone2 = _tryInstantGaplessHandoff(_outgoingPlayer2, currentPlayer);
 const _doGaplessPlay2 = () => {
 if (!_isPartyGuest()) {
 _applyPlaybackRate(currentPlayer, (effectsState && effectsState.speed ? effectsState.speed : 100) / 100);
 }
+if (!_instantHandoffDone2) {
 currentPlayer.play().catch(err => console.error('Gapless playback error:', err));
+}
 updateNowPlayingWithData(nextTrack);
 updateLyricsForTrackChange(nextTrack.id);
 updateQueueActiveState(qIndex);
 if (nextTrack.id) setTimeout(() => analyzeAndApplyNormalization(nextTrack.id), 100);
 if (lastfm) { lastfm.resetScrobbleState(); lastfm.currentScrobbleTrackId = nextTrack.id; }
 };
-if (currentPlayer.readyState >= 2) {
+if (_instantHandoffDone2 || currentPlayer.readyState >= 2) {
 _doGaplessPlay2();
 } else {
 updateNowPlayingWithData(nextTrack);
@@ -43095,23 +43875,58 @@ function addSelectedToQueue(mode = 'last') {
 if (selectedTracks.size === 0) return;
 const tracksToAdd = Array.from(selectedTracks);
 let addedCount = 0;
+let movedCount = 0;
+let skippedCurrent = 0;
 if (mode === 'next') {
 // Insert in reverse order so they end up in original order after current track
 [...tracksToAdd].reverse().forEach(trackId => {
+// If this track is already sitting in the queue, move it rather than
+// adding a second copy -- remove its current entry first, correcting
+// qIndex the same way removeFromQueue does, then insert at the target
+// position (recomputed after the removal, since removing an earlier
+// item shifts qIndex/qIndex+1 down by one).
+const existingIdx = queue.findIndex(t => t.id === trackId);
+if (existingIdx === qIndex) { skippedCurrent++; return; } // already "next" relative to itself -- moving it would desync qIndex
+let entry;
+if (existingIdx !== -1) {
+entry = queue.splice(existingIdx, 1)[0];
+if (existingIdx < qIndex) qIndex--;
+movedCount++;
+} else {
 const m = trackMetadata[trackId] || {};
-queue.splice(qIndex + 1, 0, { id: trackId, title: m.title || 'Unknown Track', artist: m.artist || 'Unknown Artist', album: m.album || '', albumArt: m.albumArt });
+entry = { id: trackId, title: m.title || 'Unknown Track', artist: m.artist || 'Unknown Artist', album: m.album || '', albumArt: m.albumArt };
 addedCount++;
+}
+queue.splice(qIndex + 1, 0, entry);
 });
 } else {
 tracksToAdd.forEach(trackId => {
+const existingIdx = queue.findIndex(t => t.id === trackId);
+if (existingIdx === qIndex) { skippedCurrent++; return; }
+let entry;
+if (existingIdx !== -1) {
+entry = queue.splice(existingIdx, 1)[0];
+if (existingIdx < qIndex) qIndex--;
+movedCount++;
+} else {
 const m = trackMetadata[trackId] || {};
-queue.push({ id: trackId, title: m.title || 'Unknown Track', artist: m.artist || 'Unknown Artist', album: m.album || '', albumArt: m.albumArt });
+entry = { id: trackId, title: m.title || 'Unknown Track', artist: m.artist || 'Unknown Artist', album: m.album || '', albumArt: m.albumArt };
 addedCount++;
+}
+queue.push(entry);
 });
 }
-if (addedCount > 0) {
+if (addedCount > 0 || movedCount > 0) {
 renderQueue();
-showNotification(mode === 'next' ? `${addedCount} track(s) playing next!` : `${addedCount} track(s) added to end of queue!`);
+const parts = [];
+if (movedCount > 0) parts.push(`${movedCount} moved`);
+if (addedCount > 0) parts.push(`${addedCount} added`);
+if (skippedCurrent > 0) parts.push(`${skippedCurrent} already playing`);
+const summary = parts.join(', ');
+showNotification(mode === 'next' ? `${summary} — playing next!` : `${summary} — added to end of queue!`);
+clearSelection();
+} else if (skippedCurrent > 0) {
+showNotification(`Already playing`);
 clearSelection();
 }
 }
@@ -43128,47 +43943,72 @@ showNotification(`Select a playlist to add ${tracksToAdd.length} track(s)`);
 }
 async function downloadSelected() {
 if (selectedTracks.size === 0) return;
-const tracksToDownload = Array.from(selectedTracks);
-if (tracksToDownload.length === 1) {
-const trackId = tracksToDownload[0];
-const m = trackMetadata[trackId] || {};
-const artist = (m.artist || 'Unknown Artist').replace(/[<>:"/\\|?*]/g, '_');
-const title = (m.title || 'Unknown Track').replace(/[<>:"/\\|?*]/g, '_');
-const filename = `${artist} - ${title}.mp3`;
-showShareToast('Downloading track...');
+const trackIds = Array.from(selectedTracks);
+// buildTaggedDownload() expects a folder-file-shaped object (id, name,
+// mimeType) -- queue/selection entries only carry id/title/artist/album.
+// Build a safe adapter object per id so the shared download path (real
+// FLAC transcode + ID3/FLAC tag embedding, same as folder/playlist
+// downloads) works without ever touching an undefined .name.
+const tracks = trackIds.map(id => {
+const m = trackMetadata[id] || {};
+const safeName = (m.title && m.title !== 'Unknown Track' ? m.title : id) + '.mp3';
+return { id, name: safeName, mimeType: m.mimeType || '' };
+});
+const addNonLosslessSuffix = (fileName) => fileName.replace(/(\.[^.]+)$/, ' (non-lossless)$1');
+try {
+let lossless = false;
+let available = {};
+try {
+available = await checkLosslessAvailability(trackIds);
+const availableCount = Object.values(available).filter(Boolean).length;
+if (availableCount > 0) {
+const choice = await showLosslessDownloadChoice(availableCount, tracks.length);
+if (choice === null) return; // user cancelled
+lossless = choice;
+}
+} catch (e) { /* lossless check failed -- fall back to normal-only download */ }
+if (tracks.length === 1) {
+const track = tracks[0];
+const trackLossless = lossless && !!available[track.id];
+const trackForceFlac = lossless && !trackLossless;
+showShareToast(trackLossless ? 'Downloading lossless track...' : 'Downloading track...');
+const result = await buildTaggedDownload(track, { lossless: trackLossless, forceFlac: trackForceFlac });
+if (!result) {
+showShareToast('Failed to download track', 'error');
+return;
+}
+const fileName = (lossless && !trackLossless) ? addNonLosslessSuffix(result.fileName) : result.fileName;
+const blob = new Blob([result.arrayBuffer], { type: result.mimeType || 'audio/mpeg' });
+const blobUrl = URL.createObjectURL(blob);
 const a = document.createElement('a');
-a.href = `${STREAMING_URL}?id=${trackId}`;
-a.download = filename;
-a.style.display = 'none';
+a.href = blobUrl;
+a.download = fileName;
 document.body.appendChild(a);
 a.click();
 document.body.removeChild(a);
-showShareToast(`Downloading "${title}"...`, 'success');
+setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+showShareToast(`Downloaded "${fileName}"!`, 'success');
 clearSelection();
 return;
 }
-try {
-showShareToast(`Preparing ${tracksToDownload.length} track(s) for download...`);
+showShareToast(`Preparing ${tracks.length} track(s) for download${lossless ? ' (lossless)' : ''}...`);
 const zip = new JSZip();
 let completed = 0;
-for (const trackId of tracksToDownload) {
+for (const track of tracks) {
 try {
-const m = trackMetadata[trackId] || {};
-const url = `${STREAMING_URL}?id=${trackId}`;
-const response = await fetch(url);
-if (!response.ok) {
-console.warn(`Failed to fetch track ${trackId}`);
+const trackLossless = lossless && !!available[track.id];
+const trackForceFlac = lossless && !trackLossless;
+const result = await buildTaggedDownload(track, { lossless: trackLossless, forceFlac: trackForceFlac });
+if (!result) {
+console.warn(`Failed to fetch track ${track.id}`);
 continue;
 }
-const blob = await response.blob();
-const artist = (m.artist || 'Unknown Artist').replace(/[<>:"/\\|?*]/g, '_');
-const title = (m.title || 'Unknown Track').replace(/[<>:"/\\|?*]/g, '_');
-const fileName = `${artist} - ${title}.mp3`;
-zip.file(fileName, blob);
+const fileName = (lossless && !trackLossless) ? addNonLosslessSuffix(result.fileName) : result.fileName;
+zip.file(fileName, result.arrayBuffer);
 completed++;
-showShareToast(`Adding to zip... (${completed}/${tracksToDownload.length}")`);
+showShareToast(`Adding to zip... (${completed}/${tracks.length})`);
 } catch (err) {
-console.error(`Error downloading track ${trackId}:`, err);
+console.error(`Error downloading track ${track.id}:`, err);
 }
 }
 if (completed === 0) {
@@ -43191,7 +44031,7 @@ showShareToast(`Compressing... ${percent}%`);
 const zipUrl = URL.createObjectURL(zipBlob);
 const link = document.createElement('a');
 link.href = zipUrl;
-link.download = `Selected Tracks (${completed}).zip`;
+link.download = `Selected Tracks (${completed})${lossless ? ' (Lossless)' : ''}.zip`;
 document.body.appendChild(link);
 link.click();
 document.body.removeChild(link);
@@ -43292,6 +44132,36 @@ showShareToast('Failed to create zip file', 'error');
 function deleteSelected() {
 if (selectedTracks.size === 0) return;
 const tracksToDelete = Array.from(selectedTracks);
+// The same selection toolbar/checkboxes are reused across the queue panel
+// and playlist views -- figure out which one this selection actually came
+// from. Checking the `queue` array itself (rather than only DOM
+// `.selected` classes) avoids a false negative when a selected row has
+// been recycled out of the virtualized queue's DOM pool while scrolled
+// out of view -- its checkbox/class is gone from the DOM, but the track
+// id is still in `selectedTracks` and still really is a queue item.
+const inQueueCount = tracksToDelete.filter(id => queue.some(t => t.id === id)).length;
+const queueContainers = ['queueList', 'deQueueList'].map(id => document.getElementById(id)).filter(Boolean);
+const domSaysQueue = queueContainers.some(c => c.querySelector('.queue-item.selected, input[type="checkbox"]:checked'));
+const isFromQueue = domSaysQueue || inQueueCount === tracksToDelete.length;
+if (isFromQueue) {
+if (confirm(`Remove ${tracksToDelete.length} track(s) from the queue?`)) {
+let removedCount = 0;
+// Remove by id via the existing single-track remover so qIndex stays
+// consistent and the queue re-renders -- same logic path as the
+// per-row "Remove from Queue" popover action, just looped.
+tracksToDelete.forEach(trackId => {
+if (queue.some(t => t.id === trackId)) {
+removeFromQueue(trackId);
+removedCount++;
+}
+});
+if (removedCount > 0) {
+showNotification(`Removed ${removedCount} track(s) from queue!`);
+}
+clearSelection();
+}
+return;
+}
 if (confirm(`Delete ${tracksToDelete.length} track(s) from ${currentPlaylistName || 'current playlist'}?`)) {
 let deletedCount = 0;
 tracksToDelete.forEach(trackId => {
@@ -43311,17 +44181,64 @@ clearSelection();
 }
 }
 }
-function openSelectionMenu() {
+function _selectAllInSelectionContext() {
+// Check every checkbox in whichever container(s) currently have a
+// selection, so "Select All" matches whatever list the user was already
+// selecting from (queue, playlist, etc) instead of guessing a view.
+const containers = ['queueList', 'deQueueList', 'playlistSongBody'].map(id => document.getElementById(id)).filter(Boolean);
+let activeContainers = containers.filter(c => c.querySelector('.selected, input[type="checkbox"]:checked'));
+if (activeContainers.length === 0) activeContainers = containers; // nothing selected yet -- fall back to all known lists
+activeContainers.forEach(container => {
+container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+if (!cb.checked) {
+cb.checked = true;
+cb.dispatchEvent(new Event('change', { bubbles: true }));
+}
+});
+});
+}
+function _invertSelectionInContext() {
+const containers = ['queueList', 'deQueueList', 'playlistSongBody'].map(id => document.getElementById(id)).filter(Boolean);
+let activeContainers = containers.filter(c => c.querySelector('.selected, input[type="checkbox"]:checked'));
+if (activeContainers.length === 0) activeContainers = containers;
+activeContainers.forEach(container => {
+container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+cb.checked = !cb.checked;
+cb.dispatchEvent(new Event('change', { bubbles: true }));
+});
+});
+}
+function openSelectionMenu(event) {
 if (selectedTracks.size === 0) return;
-const tracksCount = selectedTracks.size;
-const options = [
-`Select All`,
-`Deselect All`,
-`Copy ${tracksCount} track(s)`,
-`Export to...`,
-`Share selection`
-];
-showNotification(`More actions available for ${tracksCount} track(s)`);
+const popover = document.getElementById('trackActionsPopover');
+const backdrop = document.getElementById('trackActionsBackdrop');
+if (!popover || !backdrop) return;
+const button = event.currentTarget;
+popover.innerHTML = `
+<button class="popover-item" onclick="closeTrackActionsPopover(); _selectAllInSelectionContext();">
+<i class="fa-solid fa-check-double"></i>
+<span>Select All</span>
+</button>
+<button class="popover-item" onclick="closeTrackActionsPopover(); _invertSelectionInContext();">
+<i class="fa-solid fa-arrows-rotate"></i>
+<span>Invert Selection</span>
+</button>
+<button class="popover-item" onclick="closeTrackActionsPopover(); clearSelection();">
+<i class="fa-solid fa-xmark"></i>
+<span>Deselect All</span>
+</button>
+`;
+const rect = button.getBoundingClientRect();
+const popoverHeight = 140;
+const popoverWidth = 200;
+let top = rect.top - popoverHeight - 8;
+let left = rect.left - popoverWidth + rect.width;
+if (top < 10) top = rect.bottom + 8;
+if (left < 10) left = 10;
+popover.style.top = top + 'px';
+popover.style.left = left + 'px';
+backdrop.classList.add('visible');
+popover.classList.add('visible');
 }
 function getTrackById(trackId) {
 const queueTrack = queue.find(t => t.id === trackId);
@@ -48520,6 +49437,17 @@ _ytDash = null;
 }
 const v = document.getElementById('ytVideo');
 if (v && v._ytHls) { try { v._ytHls.destroy(); } catch(e) {} v._ytHls = null; }
+// A fresh reactive load means whatever was being pre-buffered for a gapless
+// transition no longer applies to what's about to play -- clear it so an
+// armed-but-abandoned preload buffer can't end up silently stuck muted (or
+// double-playing) after a manual skip or unrelated track selection.
+_ytClearPreload();
+if (typeof audioCtx !== 'undefined' && audioCtx && v && v._ytGainNode) {
+try {
+v._ytGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+v._ytGainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+} catch (e) {}
+}
 _ytPlayCountedForId = null;
 _ytSyncExpandedView(false);
 if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
@@ -48601,10 +49529,11 @@ abr:    { autoSwitchBitrate: { video: false, audio: false } },
 },
 debug: { logLevel: dashjs.Debug.LOG_LEVEL_NONE },
 });
+const _wasMutedBeforeDash = videoEl ? videoEl.muted : false;
+if (videoEl) videoEl.muted = true;
 _ytDash.initialize(videoEl, mpdUrl, true);
 if (videoEl) {
 videoEl.volume = (typeof player !== 'undefined' && player) ? player.volume : 1;
-videoEl.muted  = (typeof player !== 'undefined' && player) ? player.muted  : false;
 }
 if (seekTo > 1) {
 _ytDash.on(dashjs.MediaPlayer.events.CAN_PLAY, function onReady() {
@@ -48627,10 +49556,7 @@ _dashApplySpeed();
 _ytDash.on(dashjs.MediaPlayer.events.CAN_PLAY, () => {
 if (spinner) spinner.style.display = 'none';
 _dashApplySpeed();
-});
-_ytDash.on(dashjs.MediaPlayer.events.PLAYBACK_ENDED, () => {
-isYTMode = false;
-skip(1);
+if (videoEl) videoEl.muted = _wasMutedBeforeDash;
 });
 _ytDash.on(dashjs.MediaPlayer.events.ERROR, () => {
 if (spinner) spinner.style.display = 'none';
@@ -48664,7 +49590,7 @@ videoEl.preservesPitch = false;
 videoEl.mozPreservesPitch = false;
 videoEl.webkitPreservesPitch = false;
 videoEl.playbackRate = _hlsRate;
-if (wasPlaying) videoEl.play().catch(() => {});
+if (wasPlaying) _ytSafePlay(videoEl);
 });
 videoEl._ytHls = hls;
 } catch(e) { console.warn('[yt quality hls] switch failed', e); }
@@ -48797,6 +49723,22 @@ _ytQualActive = _ytQualities.findIndex(q => q.height === data.height);
 if (_ytQualActive < 0) _ytQualActive = 0;
 _ytRenderQuality();
 isYTMode = true;  // set immediately so queue injection and player bar work synchronously
+// Connect this element to the Web Audio gain graph the same way
+// driveVideoLoad() already does -- without this, activeEl._ytGainNode is
+// never set for a normally-loaded (non-preloaded) video, so a later
+// gapless handoff has no gain node to flip to 0 on the outgoing side and
+// falls back to relying only on the id-swap/pause to stop it.
+if (typeof initAudioContext === 'function') { try { await initAudioContext(); } catch (e) {} }
+if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') {
+try { await audioCtx.resume(); } catch (e) {}
+}
+if (typeof audioCtx !== 'undefined' && audioCtx && typeof audioInputNode !== 'undefined' && audioInputNode) {
+const _ytActiveGain = _ytEnsureGain(videoEl);
+if (_ytActiveGain) {
+_ytActiveGain.gain.cancelScheduledValues(audioCtx.currentTime);
+_ytActiveGain.gain.setValueAtTime(1, audioCtx.currentTime);
+}
+}
 if (typeof Hls !== 'undefined' && Hls.isSupported()) {
 const _ytStartHls = (url) => {
 const hls = new Hls({ enableWorker: true, maxBufferLength: 30 });
@@ -48804,7 +49746,7 @@ hls.loadSource(YT_STREAM_PROXY + '/hls?url=' + encodeURIComponent(url));
 hls.attachMedia(videoEl);
 hls.on(Hls.Events.MANIFEST_PARSED, () => {
 if (spinner) spinner.style.display = 'none';
-const _doPlay = () => videoEl.play().catch(() => {});
+const _doPlay = () => _ytSafePlay(videoEl);
 if (videoEl.readyState >= 4) { _doPlay(); }
 else { videoEl.addEventListener('canplaythrough', _doPlay, { once: true }); }
 });
@@ -48832,7 +49774,7 @@ videoEl._ytHls = hls;
 _ytStartHls(hlsUrl);
 } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
 videoEl.src = YT_STREAM_PROXY + '/hls?url=' + encodeURIComponent(hlsUrl);
-videoEl.play().catch(() => {});
+_ytSafePlay(videoEl);
 if (spinner) spinner.style.display = 'none';
 }
 } else {
@@ -48899,6 +49841,18 @@ _ytRenderQuality();
 await _ytStartDASH(_ytQualActive);
 } // end else (adaptive/DASH path)
 isYTMode = true;
+// Same gain-graph connection as the HLS branch above -- see comment there.
+if (typeof initAudioContext === 'function') { try { await initAudioContext(); } catch (e) {} }
+if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') {
+try { await audioCtx.resume(); } catch (e) {}
+}
+if (typeof audioCtx !== 'undefined' && audioCtx && typeof audioInputNode !== 'undefined' && audioInputNode) {
+const _ytActiveGainDash = _ytEnsureGain(document.getElementById('ytVideo'));
+if (_ytActiveGainDash) {
+_ytActiveGainDash.gain.cancelScheduledValues(audioCtx.currentTime);
+_ytActiveGainDash.gain.setValueAtTime(1, audioCtx.currentTime);
+}
+}
 // Clear the play-button loading spinner once the YT video actually starts playing.
 const _ytVidElForClear = document.getElementById('ytVideo');
 if (_ytVidElForClear) {
@@ -48907,6 +49861,18 @@ _ytVidElForClear.addEventListener('error', () => clearTrackLoading(), { once: tr
 }
 if (typeof currentPlayer !== 'undefined' && currentPlayer) {
 currentPlayer.pause();
+}
+// Entering YT mode must also stop the *other* regular-audio player -- if it
+// had already been armed (playing muted, pre-buffered for a gapless
+// boundary that's about to be interrupted by this YT switch) it would
+// otherwise keep running silently in the background and eventually reach
+// its own natural end, un-muting itself mid-YouTube-playback via the
+// regular gapless handoff.
+if (typeof nextPlayer !== 'undefined' && nextPlayer) {
+try { nextPlayer.pause(); } catch (e) {}
+}
+if (typeof _gaplessArmedForPlayer !== 'undefined') {
+_gaplessArmedForPlayer = null;
 }
 const fakeId = YT_ID_PREFIX + videoId;
 const fakeTrack = {
@@ -48958,13 +49924,10 @@ videoEl2.onpause      = _ytOnPause;
 try {
 if (!audioCtx && typeof initAudioContext === 'function') initAudioContext();
 if (audioCtx && audioInputNode) {
-if (!videoEl2._ytAudioConnected) {
-_ytSourceNode = audioCtx.createMediaElementSource(videoEl2);
-_ytSourceNode.connect(audioInputNode);
-videoEl2._ytAudioConnected = true;
-}
-else if (_ytSourceNode) {
-try { _ytSourceNode.connect(audioInputNode); } catch(e) {}
+const _ytGain = _ytEnsureGain(videoEl2);
+if (_ytGain) {
+_ytGain.gain.cancelScheduledValues(audioCtx.currentTime);
+_ytGain.gain.setValueAtTime(1, audioCtx.currentTime);
 }
 }
 } catch(e) { console.warn('[YT] Audio connect:', e); }
@@ -49046,6 +50009,359 @@ document.getElementById('fsPlayIcon').className = 'fa-solid fa-play';
 const de = document.getElementById('dePlayIcon'); if (de) de.className = 'fa-solid fa-play';
 if (typeof stopAudioVisualizer === 'function') stopAudioVisualizer();
 }
+// ============================================================================
+// YouTube gapless dual-buffer system
+// ----------------------------------------------------------------------------
+// Mirrors the player/player2 dual-<audio>-element gapless system used for
+// regular tracks, adapted for video. #ytVideo2 is a permanently-hidden
+// second <video> that gets preloaded with the *next* queue track (only when
+// it's also a YouTube track) well before the current one ends, then armed
+// (started muted) just before the boundary, then swapped in with an instant
+// same-tick gain flip -- no reactive .play()-and-wait, no visible reload.
+//
+// The active element always keeps the id "ytVideo" -- a handoff swaps which
+// physical <video> node holds that id, not the DOM position of anything, so
+// every existing document.getElementById('ytVideo') call site (quality
+// switcher, fullscreen, scrub, casting, etc.) keeps working completely
+// unchanged and automatically ends up operating on the newly-active element.
+//
+// Unlike audio, resolving a YouTube stream URL and standing up HLS/DASH
+// takes real network time (not just a src swap), so preloading starts far
+// earlier (20s out) than the actual mute-arm window (which, like the audio
+// fix, is sized to real .play()-start latency, not "however long is
+// convenient" -- a larger window would silently discard real intro content,
+// exactly the bug that was just fixed for audio).
+const YT_GAPLESS_ARM_LEAD = 1.5; // seconds before end to arm the next video muted (position is pinned/corrected, so this only affects reliability of arming in time, not correctness)
+const YT_PRELOAD_LEAD = 20; // seconds before end to start resolving/buffering the next YT stream
+let _ytPreload = null; // preload record for the next queued YT track, or null
+function _ytActiveEl() { return document.getElementById('ytVideo'); }
+function _ytInactiveEl() { return document.getElementById('ytVideo2'); }
+function _ytApplyVisibility(el, visible) {
+if (!el) return;
+if (visible) {
+el.style.position = '';
+el.style.left = '';
+el.style.top = '';
+el.style.width = '';
+el.style.height = '';
+el.style.opacity = '';
+el.style.pointerEvents = '';
+} else {
+el.style.position = 'fixed';
+el.style.left = '-9999px';
+el.style.top = '-9999px';
+el.style.width = '2px';
+el.style.height = '2px';
+el.style.opacity = '0';
+el.style.pointerEvents = 'none';
+}
+}
+/**
+* Tears down and clears any in-flight or armed gapless preload -- called
+* whenever a reactive/manual load happens (via _ytTeardown) so a stale
+* preload can never end up double-decoding or stuck muted.
+*/
+function _ytClearPreload() {
+if (!_ytPreload) return;
+const rec = _ytPreload;
+_ytPreload = null;
+try { rec.el.pause(); } catch (e) {}
+if (rec.el._ytHls) { try { rec.el._ytHls.destroy(); } catch(e) {} rec.el._ytHls = null; }
+if (rec.dashInst) { try { rec.dashInst.reset(); } catch(e) {} }
+if (rec.gainNode && typeof audioCtx !== 'undefined' && audioCtx) {
+try { rec.gainNode.gain.setValueAtTime(0, audioCtx.currentTime); } catch(e) {}
+}
+try { rec.el.muted = false; } catch (e) {}
+}
+function _ytNextQueueVideoId() {
+const next = queue[qIndex + 1];
+if (!next) return null;
+if (next._isYT || (next.id && next.id.startsWith(YT_ID_PREFIX))) {
+return next._ytVideoId || next.id.slice(YT_ID_PREFIX.length);
+}
+return null;
+}
+/**
+* Starts resolving + buffering the next queue track's stream into the
+* hidden #ytVideo2 buffer, well ahead of the actual arm/handoff window.
+* Safe to call repeatedly -- no-ops if already preloading/preloaded the
+* right track. Never touches the *active* track's state (_ytQualities,
+* _ytCurrentData, etc), so the quality popover / now-playing UI for what's
+* currently playing is unaffected until the real handoff happens.
+*/
+async function _ytPreloadNextIfApplicable() {
+if (!isYTMode) return;
+if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
+const nextVideoId = _ytNextQueueVideoId();
+if (!nextVideoId) { console.log('[YT gapless] no preload: next queue item is not a YouTube track (or no next item)'); return; }
+if (_ytPreload && (_ytPreload.videoId === nextVideoId || _ytPreload.loading)) return;
+const el = _ytInactiveEl();
+if (!el) { console.log('[YT gapless] no preload: inactive video element not found'); return; }
+console.log('[YT gapless] starting preload for next video', nextVideoId);
+const nextTrack = queue[qIndex + 1];
+const fakeId = YT_ID_PREFIX + nextVideoId;
+const rec = {
+videoId: nextVideoId, fakeId,
+meta: {
+title: nextTrack.title || trackMetadata[fakeId]?.title || 'YouTube Video',
+author: nextTrack.artist || trackMetadata[fakeId]?.artist || 'YouTube',
+thumb: nextTrack.albumArt || trackMetadata[fakeId]?.albumArt || `https://i.ytimg.com/vi/${nextVideoId}/mqdefault.jpg`,
+},
+el, hls: null, dashInst: null, gainNode: null,
+ready: false, armed: false, loading: true,
+qualities: [], qualActive: -1, audioMeta: null,
+};
+_ytPreload = rec;
+try {
+const res = await fetch(`${YT_PROXY}/urls?v=${nextVideoId}`);
+const data = await res.json();
+if (_ytPreload !== rec) return; // superseded while the fetch was in flight
+if (data.error) throw new Error(data.error);
+const heights = Array.isArray(data.available_heights) && data.available_heights.length > 1
+? [...data.available_heights].sort((a, b) => b - a) : [data.height || 720];
+rec.qualities = heights.map(h => ({ label: _ytQLabel(h), height: h }));
+rec.qualActive = rec.qualities.findIndex(q => q.height === data.height);
+if (rec.qualActive < 0) rec.qualActive = 0;
+if (data.stream_type === 'hls' || (data.muxed_url && !data.video_url)) {
+const hlsUrl = data.muxed_url;
+if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+const hls = new Hls({ enableWorker: true, maxBufferLength: 30 });
+hls.loadSource(YT_STREAM_PROXY + '/hls?url=' + encodeURIComponent(hlsUrl));
+hls.attachMedia(el);
+hls.on(Hls.Events.MANIFEST_PARSED, () => { if (_ytPreload === rec) { rec.ready = true; console.log('[YT gapless] preload ready (hls.js)', rec.videoId); } });
+el._ytHls = hls;
+rec.hls = hls;
+} else if (el.canPlayType('application/vnd.apple.mpegurl')) {
+el.src = YT_STREAM_PROXY + '/hls?url=' + encodeURIComponent(hlsUrl);
+el.addEventListener('loadedmetadata', () => { if (_ytPreload === rec) { rec.ready = true; console.log('[YT gapless] preload ready (native hls)', rec.videoId); } }, { once: true });
+}
+} else {
+if (!data.video_url || !data.audio_url) throw new Error('No streams');
+rec.audioMeta = {
+audio_url: data.audio_url,
+audio_bitrate: data.audio_bitrate,
+audio_codec: data.audio_codec || 'mp4a.40.2',
+duration: data.duration || 0,
+};
+const mpdParams = new URLSearchParams({
+video: data.video_url, audio: data.audio_url, duration: data.duration || 0,
+vbr: data.video_bitrate || 0, abr: data.audio_bitrate || 0,
+vcodec: data.video_codec || 'avc1.42E01E', acodec: data.audio_codec || 'mp4a.40.2',
+width: data.width || 1280, height: data.height || 720,
+});
+const mpdUrl = `${YT_STREAM_PROXY}/dash?${mpdParams}`;
+const dash = dashjs.MediaPlayer().create();
+dash.updateSettings({
+streaming: { buffer: { initialBufferLevel: 4, bufferTimeAtTopQuality: 30 }, abr: { autoSwitchBitrate: { video: false, audio: false } } },
+debug: { logLevel: dashjs.Debug.LOG_LEVEL_NONE },
+});
+// autoPlay=false -- stays paused (but buffering) until _ytArmPreloadIfClose
+// explicitly plays it muted, same as the HLS path above.
+dash.initialize(el, mpdUrl, false);
+dash.on(dashjs.MediaPlayer.events.CAN_PLAY, function onReady() {
+dash.off(dashjs.MediaPlayer.events.CAN_PLAY, onReady);
+if (_ytPreload === rec) { rec.ready = true; console.log('[YT gapless] preload ready (dash)', rec.videoId); }
+});
+rec.dashInst = dash;
+}
+} catch (e) {
+console.warn('[YT gapless] preload failed, will fall back to a normal (non-gapless) load at the boundary', e);
+if (_ytPreload === rec) _ytPreload = null;
+} finally {
+if (_ytPreload === rec) rec.loading = false;
+}
+}
+/**
+* Starts the preloaded next video playing, muted, a short window before the
+* current one ends -- so it's already producing frames/audio by the time the
+* real boundary hits and the handoff just has to flip a gain node, not wait
+* on a fresh play() call. Mirrors _armGaplessNextPlayer for audio, including
+* the same lesson learned there: keep the lead window small (real .play()
+* latency only), or it silently eats real content from the start of the
+* next video.
+*/
+function _ytArmPreloadIfClose(timeLeft) {
+if (!_ytPreload) return;
+if (!_ytPreload.ready || _ytPreload.armed || _ytPreload.loading) return;
+if (timeLeft > YT_GAPLESS_ARM_LEAD || timeLeft <= 0) return;
+const el = _ytPreload.el;
+if (el.readyState < 2) { console.log('[YT gapless] arm skipped: preload element not buffered enough yet (readyState', el.readyState, ')'); return; }
+const gain = _ytEnsureGain(el);
+if (!gain || typeof audioCtx === 'undefined' || !audioCtx) { console.log('[YT gapless] arm skipped: could not get gain node for preload element'); return; }
+console.log('[YT gapless] arming preload', _ytPreload.videoId, 'timeLeft', timeLeft.toFixed(2));
+_ytPreload.gainNode = gain;
+_ytPreload.armed = true;
+try { el.currentTime = 0; } catch (e) {}
+const _rate = (typeof effectsState !== 'undefined' && effectsState.speed) ? effectsState.speed / 100 : 1;
+el.preservesPitch = false; el.mozPreservesPitch = false; el.webkitPreservesPitch = false;
+el.playbackRate = _rate;
+// Belt-and-suspenders: mute the element natively too. This has no effect
+// on the actual audible output (a MediaElementSource-connected element's
+// native volume/muted no longer reaches the speakers -- the gain node
+// below is what really silences it), but it satisfies the browser's own
+// autoplay-permission check for calling play() on a media element that
+// hasn't itself been directly interacted with.
+el.muted = true;
+gain.gain.cancelScheduledValues(audioCtx.currentTime);
+gain.gain.setValueAtTime(0, audioCtx.currentTime);
+el.play().catch(() => { _ytPreload.armed = false; });
+}
+/**
+* Performs the actual handoff at the real track boundary: instant gain
+* swap (old->0, new->1), then an id swap so the already-playing preload
+* element becomes "#ytVideo" and every existing call site keeps working
+* unchanged. Returns false (no-op) if the preload wasn't armed in time, so
+* the caller can fall back to a normal reactive load.
+*/
+function _ytTryInstantHandoff() {
+if (!_ytPreload || !_ytPreload.armed) { console.log('[YT gapless] handoff not possible: no armed preload at boundary (nothing preloaded in time)'); return false; }
+const rec = _ytPreload;
+const preloadEl = rec.el;
+if (preloadEl.paused) { console.log('[YT gapless] handoff not possible: armed preload element was paused'); _ytPreload = null; return false; }
+const activeEl = _ytActiveEl();
+const activeGain = activeEl._ytGainNode;
+if (typeof audioCtx === 'undefined' || !audioCtx || !rec.gainNode) { console.log('[YT gapless] handoff not possible: missing audioCtx or preload gain node'); return false; }
+console.log('[YT gapless] instant handoff firing', rec.videoId, activeGain ? '(active element had gain node)' : '(active element had NO gain node -- outgoing video will not be silenced via gain)');
+// However long the muted pre-roll actually ran, snap back to true 0 right
+// before unmuting instead of trusting the arm-lead timing to have been
+// exact -- same fix as the regular-audio gapless system.
+if (preloadEl.currentTime > 0.05) {
+try { preloadEl.currentTime = 0; } catch (e) {}
+}
+const now = audioCtx.currentTime;
+rec.gainNode.gain.cancelScheduledValues(now);
+rec.gainNode.gain.setValueAtTime(1, now);
+if (activeGain) {
+activeGain.gain.cancelScheduledValues(now);
+activeGain.gain.setValueAtTime(0, now);
+}
+preloadEl.muted = false;
+// Swap which physical element holds id="ytVideo" -- see comment block above.
+activeEl.id = 'ytVideo2';
+preloadEl.id = 'ytVideo';
+_ytApplyVisibility(activeEl, false);
+_ytApplyVisibility(preloadEl, true);
+// Swap the DASH instance pointer so the many existing _ytDash.xxx call
+// sites (quality switching, teardown, etc) keep referring to whichever
+// element is now active.
+const oldDash = _ytDash;
+_ytDash = rec.dashInst || null;
+// Bring the descriptive/UI state (quality popover, now-playing metadata,
+// audio-meta for quality switching) in line with the newly active track.
+_ytCurrentData = { ...(rec.meta || {}), videoId: rec.videoId };
+_ytQualities = rec.qualities || [];
+_ytQualActive = rec.qualActive;
+_ytAudioMeta = rec.audioMeta || null;
+_ytStreamCache = {};
+_ytRenderQuality();
+// ontimeupdate/onplay/onpause are normally (re)bound by ytLoad on every
+// load -- this element never went through that, so bind them here.
+preloadEl.ontimeupdate = _ytTimeUpdate;
+preloadEl.onplay = _ytOnPlay;
+preloadEl.onpause = _ytOnPause;
+// Retire the now-inactive element's old decoder so it's not silently still
+// downloading segments for the track that just ended, but leave the
+// element itself intact and reusable as the next preload buffer.
+if (activeEl._ytHls) { try { activeEl._ytHls.destroy(); } catch(e) {} activeEl._ytHls = null; }
+if (oldDash) { try { oldDash.reset(); } catch(e) {} }
+_ytPreload = null;
+_ytSyncGaplessUI(rec);
+return true;
+}
+/**
+* Mirrors the icon/visualizer/media-session/now-playing portion of a normal
+* track change. Needed because the instant-handoff path never calls
+* .play()/ytLoad for the newly-active element (it was already playing,
+* muted, from the pre-arm) -- so the usual onplay-driven and ytLoad-driven
+* UI updates never fire for this transition.
+*/
+function _ytSyncGaplessUI(rec) {
+qIndex = qIndex + 1; // the preloaded track was queue[qIndex+1]
+const track = queue[qIndex];
+const fakeId = rec.fakeId;
+const fullMeta = { title: rec.meta.title || 'YouTube Video', artist: rec.meta.author || 'YouTube', album: 'YouTube', albumArt: rec.meta.thumb, _isYT: true, _ytVideoId: rec.videoId };
+if (typeof trackMetadata !== 'undefined') trackMetadata[fakeId] = fullMeta;
+if (typeof saveCompleteTrackMetadata === 'function') saveCompleteTrackMetadata(fakeId, fullMeta).catch(() => {});
+const titleEl = document.getElementById('ytNowTitle');
+const artistEl = document.getElementById('ytNowArtist');
+if (titleEl) titleEl.textContent = fullMeta.title;
+if (artistEl) artistEl.textContent = fullMeta.artist;
+const thumbEl = document.getElementById('ytNowThumb');
+if (thumbEl) thumbEl.innerHTML = fullMeta.albumArt ? `<img src="${fullMeta.albumArt}" onerror="this.style.display='none'">` : '';
+if (typeof updateNowPlayingWithData === 'function' && track) updateNowPlayingWithData(track);
+if (typeof updateQueueActiveState === 'function') updateQueueActiveState(qIndex);
+if (typeof updateLyricsForTrackChange === 'function') updateLyricsForTrackChange(fakeId);
+if (typeof updateMediaSessionMetadata === 'function') updateMediaSessionMetadata(true);
+_ytPlayCountedForId = null;
+if (typeof lastfm !== 'undefined' && lastfm) { lastfm.resetScrobbleState(); lastfm.currentScrobbleTrackId = fakeId; }
+if (typeof clearTrackLoading === 'function') clearTrackLoading();
+const playIcon = document.getElementById('playIcon'); if (playIcon) playIcon.className = 'fa-solid fa-pause';
+const fsPlayIcon = document.getElementById('fsPlayIcon'); if (fsPlayIcon) fsPlayIcon.className = 'fa-solid fa-pause';
+const dePlay = document.getElementById('dePlayIcon'); if (dePlay) dePlay.className = 'fa-solid fa-pause';
+document.body.classList.add('playing');
+if (typeof startAudioVisualizer === 'function') startAudioVisualizer();
+if (typeof updateMediaSessionPlaybackState === 'function') updateMediaSessionPlaybackState();
+if (typeof updateMediaSessionPositionState === 'function') updateMediaSessionPositionState();
+}
+/**
+* Fallback path when no gapless handoff was ready at the boundary (next
+* track isn't YouTube, preload failed, or didn't finish buffering in time).
+* This is also what makes YouTube auto-advance *at all* -- previously
+* nothing called this when a video ended.
+*/
+function _ytFallbackAdvance() {
+console.log('[YT gapless] falling back to non-gapless advance (no preload was armed/ready in time)');
+_ytClearPreload();
+const next = qIndex + 1;
+if (next >= queue.length || next < 0) { return; }
+const nextTrack = queue[next];
+const isNextYT = nextTrack._isYT || (nextTrack.id && nextTrack.id.startsWith(YT_ID_PREFIX));
+if (isNextYT) {
+qIndex = next;
+const vid = nextTrack._ytVideoId || nextTrack.id.slice(YT_ID_PREFIX.length);
+ytLoad(vid, { title: nextTrack.title, author: nextTrack.artist, thumb: nextTrack.albumArt, videoId: vid });
+} else {
+isYTMode = false;
+const wrap = document.getElementById('ytPlayerWrap');
+if (wrap) wrap.style.display = 'none';
+play(next);
+}
+}
+function _ytHandleEnded(e) {
+const el = e.currentTarget || e.target;
+if (el !== _ytActiveEl()) return; // only the currently-active element's end matters
+if (!isYTMode) return;
+if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
+if (repeatMode === 1) {
+try { el.currentTime = 0; el.play().catch(() => {}); } catch (e2) {}
+return;
+}
+if (_ytTryInstantHandoff()) {
+_ytPreloadNextIfApplicable(); // chain: start preloading the (new) next track
+return;
+}
+_ytFallbackAdvance();
+}
+(function _ytBindEndedHandlers() {
+const a = document.getElementById('ytVideo');
+const b = document.getElementById('ytVideo2');
+if (a) a.addEventListener('ended', _ytHandleEnded);
+if (b) b.addEventListener('ended', _ytHandleEnded);
+})();
+// Dedicated poll for YT preload/arm -- separate from the audio gapless poll
+// above since it needs its own (much longer, network-bound) lead time for
+// preloading, and a different, shorter lead for the actual mute-arm.
+setInterval(() => {
+if (_ytPreload && _ytPreload.armed && !_ytPreload.el.paused && _ytPreload.el.currentTime > 0.3) {
+try { _ytPreload.el.currentTime = 0; } catch (e) {}
+}
+if (!isYTMode) return;
+const el = _ytActiveEl();
+if (!el || el.paused || !el.duration || !isFinite(el.duration)) return;
+const timeLeft = el.duration - el.currentTime;
+if (timeLeft <= YT_PRELOAD_LEAD) _ytPreloadNextIfApplicable();
+_ytArmPreloadIfClose(timeLeft);
+}, 250);
 const _origTogglePlay = togglePlay;
 window.togglePlay = function() {
 if (!isYTMode) { _origTogglePlay(); return; }
