@@ -41916,6 +41916,13 @@ switchSidebarTab('lyrics');
 }
 }
 }
+function _stripFeat(title) {
+if (!title) return title;
+return title
+.replace(/\s*[\(\[][^)\]]*\b(?:feat|ft)\.?[^)\]]*[\)\]]/gi, '')
+.replace(/\s+/g, ' ')
+.trim();
+}
 async function loadLyrics(trackId, target = 'sidebar', options = {}) {
 const textId = target === 'extended' ? 'extendedLyricsText' : target === 'mobile' ? 'mobileLyricsText' : 'sidebarLyricsText';
 const titleId = target === 'extended' ? 'extendedLyricsTitle' : target === 'mobile' ? 'mobileLyricsTitle' : 'sidebarLyricsTitle';
@@ -41991,8 +41998,23 @@ data = await _tryLyricsplusAPI(title, artist, album, duration, isrc);
 if (!data) {
 data = await _tryBinimumSearchAPI(title, artist, album, duration, isrc);
 }
+let lyricsTitle = title;
 if (!data) {
-const workerUrl = `${PLAYER_WORKER_URL}/lyrics?trackId=${encodeURIComponent(trackId)}&title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&force=true`;
+const strippedTitle = _stripFeat(title);
+if (strippedTitle && strippedTitle !== title) {
+console.log(`[Lyrics] retrying with feat. stripped: "${title}" -> "${strippedTitle}"`);
+data = await _tryBinimumAPI(strippedTitle, artist, album, duration, isrc);
+if (!data) {
+data = await _tryLyricsplusAPI(strippedTitle, artist, album, duration, isrc);
+}
+if (!data) {
+data = await _tryBinimumSearchAPI(strippedTitle, artist, album, duration, isrc);
+}
+if (data) lyricsTitle = strippedTitle;
+}
+}
+if (!data) {
+const workerUrl = `${PLAYER_WORKER_URL}/lyrics?trackId=${encodeURIComponent(trackId)}&title=${encodeURIComponent(lyricsTitle)}&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&force=true`;
 const response = await fetch(workerUrl, { cache: 'no-store' });
 if (!response.ok) {
 throw new Error(`Worker returned ${response.status}`);
