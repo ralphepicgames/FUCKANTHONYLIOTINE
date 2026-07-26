@@ -13593,6 +13593,65 @@ background: transparent !important; border: none !important; box-shadow: none !i
 /* END MOBILE */
 </style>
 <base target="_blank">
+<style id="dl-manager-styles">
+.dl-manager{ position:fixed; z-index:9500; font-family:inherit; }
+.dl-manager.hidden{ display:none; }
+.dl-manager.collapsed{ bottom:20px; right:20px; }
+.dl-manager.expanded{ bottom:20px; right:20px; width:360px; max-width:calc(100vw - 40px); max-height:min(70vh,560px); display:flex; flex-direction:column; background:var(--md-sys-color-surface-container-high); border:1px solid var(--md-sys-color-outline-variant); border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.5); overflow:hidden; }
+.dl-manager-pill{ display:flex; align-items:center; gap:10px; background:var(--md-sys-color-surface-container-high); border:1px solid var(--md-sys-color-outline-variant); border-radius:14px; padding:10px 16px; box-shadow:0 8px 24px rgba(0,0,0,0.45); cursor:pointer; min-width:200px; }
+.dl-manager-pill-ring{ position:relative; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:conic-gradient(var(--md-sys-color-primary) calc(var(--pct)*1%), var(--md-sys-color-outline-variant) 0); }
+.dl-manager-pill-ring i{ font-size:11px; background:var(--md-sys-color-surface-container-high); width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.dl-manager-pill-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.dl-manager-pill-title{ font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
+.dl-manager-pill-sub{ font-size:11px; opacity:0.65; }
+.dl-manager-header{ display:flex; align-items:center; gap:10px; padding:14px 14px 10px 16px; }
+.dl-manager-header>i{ font-size:15px; opacity:0.8; }
+.dl-manager-header-text{ flex:1; min-width:0; }
+.dl-manager-title{ font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dl-manager-subtitle{ font-size:11px; opacity:0.6; margin-top:2px; }
+.dl-manager-icon-btn{ background:none; border:none; color:var(--md-sys-color-on-surface); opacity:0.7; cursor:pointer; font-size:14px; padding:6px; border-radius:8px; }
+.dl-manager-icon-btn:hover{ opacity:1; background:var(--md-sys-color-outline-variant); }
+.dl-manager-overall{ display:flex; align-items:center; gap:10px; padding:0 16px 12px 16px; }
+.dl-manager-overall-track{ flex:1; height:6px; border-radius:3px; background:var(--md-sys-color-outline-variant); overflow:hidden; }
+.dl-manager-overall-fill{ height:100%; background:var(--md-sys-color-primary); transition:width 0.25s ease; }
+.dl-manager-overall-pct{ font-size:11px; opacity:0.65; width:34px; text-align:right; flex-shrink:0; }
+.dl-manager-list{ flex:1; overflow-y:auto; padding:0 10px 8px 10px; }
+.dl-album-row{ padding:8px 6px; border-radius:10px; }
+.dl-album-row:hover{ background:var(--md-sys-color-outline-variant); }
+.dl-album-row-top{ display:flex; align-items:center; gap:8px; }
+.dl-album-row-top>i{ font-size:12px; width:16px; text-align:center; opacity:0.75; }
+.dl-status-done .dl-album-row-top>i{ color:#4caf50; }
+.dl-status-error .dl-album-row-top>i{ color:var(--md-sys-color-error); }
+.dl-status-canceled .dl-album-row-top>i{ opacity:0.4; }
+.dl-album-name{ flex:1; min-width:0; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dl-status-canceled .dl-album-name, .dl-status-canceled .dl-track-name{ text-decoration:line-through; opacity:0.5; }
+.dl-album-pct{ font-size:11px; opacity:0.6; flex-shrink:0; }
+.dl-album-cancel, .dl-track-cancel{ background:none; border:none; color:var(--md-sys-color-on-surface); opacity:0.5; cursor:pointer; font-size:11px; padding:4px 6px; border-radius:6px; flex-shrink:0; }
+.dl-album-cancel:hover, .dl-track-cancel:hover{ opacity:1; background:var(--md-sys-color-outline-variant); }
+.dl-album-progress-track{ height:4px; border-radius:2px; background:var(--md-sys-color-outline-variant); overflow:hidden; margin:6px 0 2px 24px; }
+.dl-album-progress-fill{ height:100%; background:var(--md-sys-color-primary); transition:width 0.25s ease; }
+.dl-track-list{ margin:4px 0 2px 24px; display:flex; flex-direction:column; gap:2px; }
+.dl-track-row{ display:flex; align-items:center; gap:8px; padding:3px 0; }
+.dl-track-row>i{ font-size:10px; width:14px; text-align:center; opacity:0.6; }
+.dl-status-done.dl-track-row>i{ color:#4caf50; }
+.dl-status-error.dl-track-row>i{ color:var(--md-sys-color-error); }
+.dl-track-name{ flex:1; min-width:0; font-size:11.5px; opacity:0.8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dl-manager-footer{ padding:10px 14px 14px 14px; }
+.dl-manager-cancel-all{ width:100%; justify-content:center; color:var(--md-sys-color-error); }
+.dl-picker-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:10000; backdrop-filter:blur(8px); }
+.dl-picker-box{ background:var(--md-sys-color-surface-variant); padding:24px; border-radius:20px; max-width:420px; width:90%; border:1px solid var(--md-sys-color-outline); max-height:80vh; display:flex; flex-direction:column; }
+.dl-picker-box-narrow{ max-width:380px; }
+.dl-picker-box h3{ margin:0 0 6px 0; font-size:18px; }
+.dl-picker-sub{ font-size:13px; opacity:0.65; margin-bottom:16px; }
+.dl-picker-select-all-row{ font-size:13px; padding-bottom:8px; border-bottom:1px solid var(--md-sys-color-outline-variant); margin-bottom:8px; }
+.dl-picker-select-all-row label{ display:flex; align-items:center; gap:8px; cursor:pointer; }
+.dl-picker-list{ overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:2px; margin-bottom:16px; }
+.dl-picker-item{ display:flex; align-items:center; gap:10px; padding:8px 6px; border-radius:8px; font-size:13px; cursor:pointer; }
+.dl-picker-item:hover{ background:var(--md-sys-color-outline-variant); }
+.dl-picker-actions{ display:flex; gap:10px; justify-content:flex-end; }
+.dl-picker-actions-col{ display:flex; flex-direction:column; gap:10px; }
+.dl-picker-cancel-text{ justify-content:center; opacity:0.6; }
+</style>
 </head>
 <body>
 <div class="selection-action-bar" id="selectionBar">
@@ -27243,7 +27302,7 @@ const trackNumPrefix = (result.trackNumber !== null) ? String(result.trackNumber
 const baseTitle = (meta.title && meta.title !== 'Unknown Track') ? meta.title : track.name.replace(/\.[^/.]+$/, '');
 const artist = (meta.artist && meta.artist !== 'Unknown Artist') ? meta.artist : '';
 const fileName = trackNumPrefix + (artist ? `${artist} - ${baseTitle}` : baseTitle).replace(/[<>:"/\\|?*]/g, '_') + '.' + ext;
-return { arrayBuffer: result.arrayBuffer, fileName, mimeType: result.mimeType };
+return { arrayBuffer: result.arrayBuffer, fileName, mimeType: result.mimeType, meta: { artist: artist || meta.artist || '', title: baseTitle, duration: meta.duration || null, trackNumber: result.trackNumber } };
 }
 async function downloadSharedTrack() {
 if (!currentShareTrackId) {
@@ -27281,6 +27340,529 @@ closeShareModal();
 showShareToast('Failed to download track', 'error');
 }
 }
+function triggerBlobDownload(blob, filename) {
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = filename;
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+// ===== Persistent, collapsible download-progress modal used by folder/album/artist downloads =====
+const DownloadManager = {
+el: null,
+jobs: [],
+collapsed: false,
+visible: false,
+canceledAll: false,
+title: 'Downloading',
+_ensureEl() {
+if (this.el) return this.el;
+this.el = document.getElementById('downloadManagerModal') || (() => {
+const el = document.createElement('div');
+el.id = 'downloadManagerModal';
+el.className = 'dl-manager hidden';
+document.body.appendChild(el);
+return el;
+})();
+return this.el;
+},
+open(title) {
+this.visible = true;
+this.canceledAll = false;
+this.title = title || 'Downloading';
+this.collapsed = false;
+this.render();
+},
+close() {
+this.visible = false;
+this.render();
+},
+toggleCollapse() {
+this.collapsed = !this.collapsed;
+this.render();
+},
+cancelAll() {
+this.canceledAll = true;
+this.jobs.forEach(j => {
+if (j.status === 'queued') { j.status = 'canceled'; j.canceled = true; }
+else if (j.status === 'downloading') { j.canceled = true; }
+});
+this.render();
+},
+cancelJob(jobId) {
+const job = this.jobs.find(j => j.id === jobId);
+if (!job) return;
+if (job.status === 'queued') { job.status = 'canceled'; job.canceled = true; this.render(); }
+else if (job.status === 'downloading') { job.canceled = true; this.render(); }
+},
+cancelTrack(jobId, trackId) {
+const job = this.jobs.find(j => j.id === jobId);
+if (!job) return;
+const t = job.tracks.find(t => t.id === trackId);
+if (t && (t.status === 'queued' || t.status === 'downloading')) { t.status = 'canceled'; this.render(); }
+},
+setJobs(jobs) { this.jobs = jobs; this.render(); },
+updateJob(jobId, patch) {
+const job = this.jobs.find(j => j.id === jobId);
+if (!job) return;
+Object.assign(job, patch);
+this.render();
+},
+updateTrack(jobId, trackId, patch) {
+const job = this.jobs.find(j => j.id === jobId);
+if (!job) return;
+const t = job.tracks.find(t => t.id === trackId);
+if (!t) return;
+Object.assign(t, patch);
+this.render();
+},
+overallProgress() {
+if (!this.jobs.length) return 0;
+let total = 0, done = 0;
+for (const j of this.jobs) {
+const jt = j.tracks.length || 1;
+total += jt;
+if (j.tracks.length) {
+done += j.tracks.filter(t => t.status === 'done' || t.status === 'canceled' || t.status === 'error').length;
+} else if (j.status === 'done' || j.status === 'canceled' || j.status === 'error') {
+done += 1;
+}
+}
+return total ? Math.round((done / total) * 100) : 0;
+},
+render() {
+const el = this._ensureEl();
+const pct = this.overallProgress();
+const doneJobs = this.jobs.filter(j => j.status === 'done' || j.status === 'canceled' || j.status === 'error').length;
+if (!this.visible) { el.className = 'dl-manager hidden'; return; }
+if (this.collapsed) {
+el.className = 'dl-manager collapsed';
+el.innerHTML = `
+<div class="dl-manager-pill" onclick="DownloadManager.toggleCollapse()">
+<div class="dl-manager-pill-ring" style="--pct:${pct}"><i class="fa-solid fa-download"></i></div>
+<div class="dl-manager-pill-text">
+<div class="dl-manager-pill-title">${this._esc(this.title)}</div>
+<div class="dl-manager-pill-sub">${doneJobs}/${this.jobs.length} · ${pct}%</div>
+</div>
+</div>`;
+return;
+}
+const _prevListEl = el.querySelector('.dl-manager-list');
+const _prevScrollTop = _prevListEl ? _prevListEl.scrollTop : 0;
+el.className = 'dl-manager expanded';
+const rows = this.jobs.map(j => this._renderJobRow(j)).join('');
+el.innerHTML = `
+<div class="dl-manager-header">
+<i class="fa-solid fa-download"></i>
+<div class="dl-manager-header-text">
+<div class="dl-manager-title">${this._esc(this.title)}</div>
+<div class="dl-manager-subtitle">${doneJobs}/${this.jobs.length} albums complete</div>
+</div>
+<button class="dl-manager-icon-btn" title="Minimize" onclick="DownloadManager.toggleCollapse()"><i class="fa-solid fa-chevron-down"></i></button>
+</div>
+<div class="dl-manager-overall">
+<div class="dl-manager-overall-track"><div class="dl-manager-overall-fill" style="width:${pct}%"></div></div>
+<div class="dl-manager-overall-pct">${pct}%</div>
+</div>
+<div class="dl-manager-list">${rows}</div>
+<div class="dl-manager-footer">
+<button class="m3-btn dl-manager-cancel-all" onclick="DownloadManager.cancelAll()"><i class="fa-solid fa-ban"></i> Cancel All</button>
+</div>`;
+const _newListEl = el.querySelector('.dl-manager-list');
+if (_newListEl && _prevScrollTop) _newListEl.scrollTop = _prevScrollTop;
+},
+_renderJobRow(job) {
+const showTracks = job.tracks.length > 0 && (job.status === 'downloading' || job.tracks.some(t => t.status !== 'queued'));
+const trackRows = showTracks ? job.tracks.map(t => `
+<div class="dl-track-row dl-status-${t.status}">
+<i class="fa-solid ${this._statusIcon(t.status)}"></i>
+<span class="dl-track-name">${this._esc(t.name)}</span>
+${(t.status === 'queued' || t.status === 'downloading') ? `<button class="dl-track-cancel" onclick="DownloadManager.cancelTrack('${job.id}','${t.id}')" title="Cancel track"><i class="fa-solid fa-xmark"></i></button>` : ''}
+</div>`).join('') : '';
+const jobPct = job.tracks.length
+? Math.round((job.tracks.filter(t => t.status === 'done' || t.status === 'canceled' || t.status === 'error').length / job.tracks.length) * 100)
+: ((job.status === 'done') ? 100 : 0);
+return `
+<div class="dl-album-row dl-status-${job.status}">
+<div class="dl-album-row-top">
+<i class="fa-solid ${this._statusIcon(job.status)}"></i>
+<span class="dl-album-name">${this._esc(job.name)}</span>
+<span class="dl-album-pct">${jobPct}%</span>
+${(job.status === 'queued' || job.status === 'downloading') ? `<button class="dl-album-cancel" onclick="DownloadManager.cancelJob('${job.id}')" title="Cancel album"><i class="fa-solid fa-xmark"></i></button>` : ''}
+</div>
+<div class="dl-album-progress-track"><div class="dl-album-progress-fill" style="width:${jobPct}%"></div></div>
+${trackRows ? `<div class="dl-track-list">${trackRows}</div>` : ''}
+</div>`;
+},
+_statusIcon(status) {
+return { queued: 'fa-clock', downloading: 'fa-spinner fa-spin', done: 'fa-circle-check', canceled: 'fa-circle-xmark', error: 'fa-triangle-exclamation' }[status] || 'fa-clock';
+},
+_esc(s) { return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+};
+window.DownloadManager = DownloadManager;
+function showAlbumPickerModal(artistName, albumFolders) {
+return new Promise((resolve) => {
+const overlay = document.createElement('div');
+overlay.className = 'dl-picker-overlay';
+overlay.innerHTML = `
+<div class="dl-picker-box">
+<h3>Download albums — ${DownloadManager._esc(artistName)}</h3>
+<div class="dl-picker-sub">${albumFolders.length} album${albumFolders.length !== 1 ? 's' : ''} found. Choose which to download.</div>
+<div class="dl-picker-select-all-row"><label><input type="checkbox" id="dlPickAll" checked> Select all</label></div>
+<div class="dl-picker-list">
+${albumFolders.map((f, i) => `
+<label class="dl-picker-item">
+<input type="checkbox" class="dl-pick-album" data-idx="${i}" checked>
+<span>${DownloadManager._esc(f.name)}</span>
+</label>`).join('')}
+</div>
+<div class="dl-picker-actions">
+<button class="m3-btn m3-btn-tonal" id="dlPickCancel">Cancel</button>
+<button class="m3-btn m3-btn-filled" id="dlPickGo">Download</button>
+</div>
+</div>`;
+document.body.appendChild(overlay);
+const checks = () => Array.from(overlay.querySelectorAll('.dl-pick-album'));
+overlay.querySelector('#dlPickAll').addEventListener('change', (e) => { checks().forEach(c => c.checked = e.target.checked); });
+const cleanup = (val) => { overlay.remove(); resolve(val); };
+overlay.querySelector('#dlPickCancel').addEventListener('click', () => cleanup(null));
+overlay.querySelector('#dlPickGo').addEventListener('click', () => {
+const selected = checks().filter(c => c.checked).map(c => albumFolders[+c.dataset.idx]);
+cleanup(selected.length ? selected : null);
+});
+overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
+});
+}
+function showPackagingChoiceModal(albumCount) {
+return new Promise((resolve) => {
+const overlay = document.createElement('div');
+overlay.className = 'dl-picker-overlay';
+overlay.innerHTML = `
+<div class="dl-picker-box dl-picker-box-narrow">
+<h3>How should these download?</h3>
+<div class="dl-picker-sub">${albumCount} album${albumCount !== 1 ? 's' : ''} selected.</div>
+<div class="dl-picker-actions-col">
+<button class="m3-btn m3-btn-filled" id="dlPkgPer">One zip per album</button>
+<button class="m3-btn m3-btn-tonal" id="dlPkgMaster">One zip for everything</button>
+<button class="m3-btn dl-picker-cancel-text" id="dlPkgCancel">Cancel</button>
+</div>
+</div>`;
+document.body.appendChild(overlay);
+const cleanup = (val) => { overlay.remove(); resolve(val); };
+overlay.querySelector('#dlPkgPer').addEventListener('click', () => cleanup('per-album'));
+overlay.querySelector('#dlPkgMaster').addEventListener('click', () => cleanup('master'));
+overlay.querySelector('#dlPkgCancel').addEventListener('click', () => cleanup(null));
+overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
+});
+}
+function showAlbumLosslessChoice(albumName, availableCount, totalCount) {
+return new Promise((resolve) => {
+const overlay = document.createElement('div');
+overlay.className = 'dl-picker-overlay';
+const allHaveLossless = availableCount >= totalCount;
+const subtext = allHaveLossless
+? `All ${totalCount} tracks have a lossless version.`
+: `${availableCount} of ${totalCount} tracks have a lossless version — the rest will download normal quality.`;
+overlay.innerHTML = `
+<div class="dl-picker-box dl-picker-box-narrow">
+<h3>${DownloadManager._esc(albumName)}</h3>
+<div class="dl-picker-sub">${subtext}</div>
+<div class="dl-picker-actions-col">
+<button class="m3-btn m3-btn-filled" id="dlLLYes"><i class="fa-solid fa-gem"></i> Lossless</button>
+<button class="m3-btn m3-btn-tonal" id="dlLLNo">Normal Quality</button>
+<button class="m3-btn dl-picker-cancel-text" id="dlLLCancel">Skip this album</button>
+</div>
+</div>`;
+document.body.appendChild(overlay);
+const cleanup = (val) => { overlay.remove(); resolve(val); };
+overlay.querySelector('#dlLLYes').addEventListener('click', () => cleanup(true));
+overlay.querySelector('#dlLLNo').addEventListener('click', () => cleanup(false));
+overlay.querySelector('#dlLLCancel').addEventListener('click', () => cleanup(null));
+overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
+});
+}
+function findOtherVersionFolders(baseFolderName, subfolders) {
+if (!subfolders || !subfolders.length) return [];
+const _stripVariant = n => (n || '').replace(/[\s\-\u2013\u2014(]+(?:deluxe|expanded|remastered?|remaster|anniversary|bonus|complete|collector|special|limited|platinum|gold|super|explicit|clean|censored|edition|version|regular|vol\.?\s*\d+|\d+th|\d+st|\d+nd|\d+rd)\b.*/i, '').trim().toLowerCase();
+const base = _stripVariant(baseFolderName);
+if (!base) return [];
+const variants = subfolders.filter(f => {
+const fb = _stripVariant(f.name);
+return fb === base ||
+base.includes(fb.slice(0, Math.max(4, fb.length - 2))) ||
+fb.includes(base.slice(0, Math.max(4, base.length - 2)));
+});
+return (variants.length === subfolders.length) ? variants : [];
+}
+function showIncludeSinglesChoice(count) {
+return new Promise((resolve) => {
+const overlay = document.createElement('div');
+overlay.className = 'dl-picker-overlay';
+overlay.innerHTML = `
+<div class="dl-picker-box dl-picker-box-narrow">
+<h3>Include singles?</h3>
+<div class="dl-picker-sub">This artist also has ${count} single${count !== 1 ? 's' : ''} outside of any album. Download those too?</div>
+<div class="dl-picker-actions-col">
+<button class="m3-btn m3-btn-filled" id="dlSinglesYes">Include singles</button>
+<button class="m3-btn m3-btn-tonal" id="dlSinglesNo">Albums only</button>
+</div>
+</div>`;
+document.body.appendChild(overlay);
+const cleanup = (val) => { overlay.remove(); resolve(val); };
+overlay.querySelector('#dlSinglesYes').addEventListener('click', () => cleanup(true));
+overlay.querySelector('#dlSinglesNo').addEventListener('click', () => cleanup(false));
+overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(false); });
+});
+}
+function showOtherVersionsChoice(albumName, variantFolders) {
+return new Promise((resolve) => {
+const overlay = document.createElement('div');
+overlay.className = 'dl-picker-overlay';
+const names = variantFolders.map(f => DownloadManager._esc(f.name)).join(', ');
+overlay.innerHTML = `
+<div class="dl-picker-box dl-picker-box-narrow">
+<h3>Other version found</h3>
+<div class="dl-picker-sub">"${names}" looks like another version of ${DownloadManager._esc(albumName)}. Include it as a subfolder in this album's download?</div>
+<div class="dl-picker-actions-col">
+<button class="m3-btn m3-btn-filled" id="dlOVYes">Include it</button>
+<button class="m3-btn m3-btn-tonal" id="dlOVNo">Skip it</button>
+</div>
+</div>`;
+document.body.appendChild(overlay);
+const cleanup = (val) => { overlay.remove(); resolve(val); };
+overlay.querySelector('#dlOVYes').addEventListener('click', () => cleanup(true));
+overlay.querySelector('#dlOVNo').addEventListener('click', () => cleanup(false));
+overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(false); });
+});
+}
+function _buildM3UEntriesFromJob(job) {
+const done = job.tracks
+.map((t, idx) => ({ t, idx }))
+.filter(x => x.t.status === 'done' && x.t._m3uMeta);
+done.sort((a, b) => {
+const an = a.t._m3uMeta.trackNumber, bn = b.t._m3uMeta.trackNumber;
+if (Number.isFinite(an) && Number.isFinite(bn) && an !== bn) return an - bn;
+if (Number.isFinite(an) && !Number.isFinite(bn)) return -1;
+if (!Number.isFinite(an) && Number.isFinite(bn)) return 1;
+return a.idx - b.idx;
+});
+return done.map(x => ({ fileName: x.t._fileName, artist: x.t._m3uMeta.artist, title: x.t._m3uMeta.title, duration: x.t._m3uMeta.duration }));
+}
+function buildAlbumM3U(entries) {
+let out = '#EXTM3U\n';
+for (const e of entries) {
+const dur = Number.isFinite(e.duration) ? Math.round(e.duration) : -1;
+const label = e.artist ? `${e.artist} - ${e.title}` : (e.title || e.fileName);
+out += `#EXTINF:${dur},${label}\n${e.fileName}\n`;
+}
+return out;
+}
+async function downloadTracksWithManager(job, tracks, lossless, available, zipTarget = null, concurrency = 3) {
+job.tracks = tracks.map(t => ({ id: t.id, name: t.name, status: 'queued', _track: t }));
+DownloadManager.updateJob(job.id, { tracks: job.tracks, status: 'downloading' });
+const zip = zipTarget || new JSZip();
+let completed = 0;
+let cursor = 0;
+async function worker() {
+while (cursor < job.tracks.length) {
+const idx = cursor++;
+const entry = job.tracks[idx];
+if (DownloadManager.canceledAll || job.canceled || entry.status === 'canceled') {
+if (entry.status !== 'canceled') DownloadManager.updateTrack(job.id, entry.id, { status: 'canceled' });
+continue;
+}
+DownloadManager.updateTrack(job.id, entry.id, { status: 'downloading' });
+try {
+const trackLossless = lossless && !!available[entry.id];
+const trackForceFlac = lossless && !trackLossless;
+const result = await buildTaggedDownload(entry._track, { lossless: trackLossless, forceFlac: trackForceFlac });
+if (!result) throw new Error('empty result');
+const fileName = (lossless && !trackLossless) ? result.fileName.replace(/(\.[^.]+)$/, ' (non-lossless)$1') : result.fileName;
+zip.file(fileName, result.arrayBuffer);
+entry._fileName = fileName;
+entry._m3uMeta = result.meta || null;
+completed++;
+DownloadManager.updateTrack(job.id, entry.id, { status: 'done' });
+} catch (e) {
+DownloadManager.updateTrack(job.id, entry.id, { status: 'error' });
+}
+}
+}
+await Promise.all(Array.from({ length: Math.min(concurrency, job.tracks.length) }, worker));
+return { zip, completed };
+}
+async function downloadSingleFolder(folder, tracks, variantFolders = []) {
+tracks = tracks.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+let lossless = false;
+let available = {};
+try {
+available = await checkLosslessAvailability(tracks.map(t => t.id));
+const availableCount = Object.values(available).filter(Boolean).length;
+if (availableCount > 0) {
+const choice = await showAlbumLosslessChoice(folder.name, availableCount, tracks.length);
+if (choice === null) return;
+lossless = choice;
+}
+} catch (e) { /* lossless check failed — fall back to normal-only download */ }
+let includeVariants = false;
+if (variantFolders.length > 0) {
+includeVariants = await showOtherVersionsChoice(folder.name, variantFolders);
+}
+const job = { id: folder.id, name: folder.name, status: 'downloading', canceled: false, tracks: [] };
+DownloadManager.setJobs([job]);
+DownloadManager.open(`Downloading ${folder.name}`);
+try {
+if (tracks.length === 1 && !includeVariants) {
+job.tracks = [{ id: tracks[0].id, name: tracks[0].name, status: 'downloading', _track: tracks[0] }];
+DownloadManager.updateJob(job.id, { tracks: job.tracks });
+const track = tracks[0];
+const trackLossless = lossless && !!available[track.id];
+const trackForceFlac = lossless && !trackLossless;
+const result = await buildTaggedDownload(track, { lossless: trackLossless, forceFlac: trackForceFlac });
+if (!result) {
+DownloadManager.updateTrack(job.id, track.id, { status: 'error' });
+DownloadManager.updateJob(job.id, { status: 'error' });
+showShareToast('Failed to download track', 'error');
+return;
+}
+const fileName = (lossless && !trackLossless) ? result.fileName.replace(/(\.[^.]+)$/, ' (non-lossless)$1') : result.fileName;
+const blob = new Blob([result.arrayBuffer], { type: result.mimeType || track.mimeType || 'audio/mpeg' });
+triggerBlobDownload(blob, fileName);
+DownloadManager.updateTrack(job.id, track.id, { status: 'done' });
+DownloadManager.updateJob(job.id, { status: 'done' });
+showShareToast(`Downloaded "${fileName}"!`, 'success');
+return;
+}
+const { zip, completed } = await downloadTracksWithManager(job, tracks, lossless, available);
+if (DownloadManager.canceledAll || job.canceled) {
+DownloadManager.updateJob(job.id, { status: 'canceled' });
+return;
+}
+if (completed === 0) {
+DownloadManager.updateJob(job.id, { status: 'error' });
+showShareToast('Failed to download any tracks', 'error');
+return;
+}
+const m3uEntries = _buildM3UEntriesFromJob(job);
+if (m3uEntries.length) zip.file(`${folder.name.replace(/[<>:"/\\|?*]/g, '_')}.m3u`, buildAlbumM3U(m3uEntries));
+if (includeVariants && variantFolders.length) {
+for (const vf of variantFolders) {
+try {
+const vfTracks = (await getAllAudioFilesRecursive(vf.id)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+if (!vfTracks.length) continue;
+let vfAvailable = {};
+try { vfAvailable = await checkLosslessAvailability(vfTracks.map(t => t.id)); } catch (e) { /* fall back to normal quality */ }
+const vfJob = { id: vf.id, tracks: [] };
+const vfZipTarget = zip.folder(vf.name.replace(/[<>:"/\\|?*]/g, '_'));
+await downloadTracksWithManager(vfJob, vfTracks, lossless, vfAvailable, vfZipTarget);
+} catch (e) { /* skip broken variant folder */ }
+}
+}
+const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+triggerBlobDownload(zipBlob, `${folder.name.replace(/[<>:"/\\|?*]/g, '_')}${lossless ? ' (Lossless)' : ''}.zip`);
+DownloadManager.updateJob(job.id, { status: 'done' });
+showShareToast(`Downloaded ${completed} track${completed !== 1 ? 's' : ''} as zip!`, 'success');
+} catch (err) {
+DownloadManager.updateJob(job.id, { status: 'error' });
+showShareToast('Failed to create zip file', 'error');
+}
+}
+async function downloadArtistAlbums(artistFolder, albumFolders, singleTracks = []) {
+const chosen = await showAlbumPickerModal(artistFolder.name, albumFolders);
+if (!chosen || chosen.length === 0) return;
+let includeSingles = false;
+if (singleTracks.length > 0) {
+includeSingles = await showIncludeSinglesChoice(singleTracks.length);
+}
+const packaging = await showPackagingChoiceModal(chosen.length + (includeSingles ? 1 : 0));
+if (!packaging) return;
+const sanitize = s => (s || '').replace(/[<>:"/\\|?*]/g, '_');
+const jobs = chosen.map((f, i) => ({
+id: f.id, name: f.name, status: 'queued', canceled: false, tracks: [],
+_folderLabel: `${String(i + 1).padStart(2, '0')} ${artistFolder.name} - ${f.name}`
+}));
+if (includeSingles) {
+jobs.push({ id: 'singles-' + artistFolder.id, name: 'Singles', status: 'queued', canceled: false, tracks: [], _isSingles: true, _folderLabel: `${artistFolder.name} - Singles` });
+}
+DownloadManager.setJobs(jobs);
+DownloadManager.open(`Downloading ${artistFolder.name}`);
+const masterZip = packaging === 'master' ? new JSZip() : null;
+let anyCompleted = false;
+for (const job of jobs) {
+if (DownloadManager.canceledAll || job.canceled) { DownloadManager.updateJob(job.id, { status: 'canceled' }); continue; }
+DownloadManager.updateJob(job.id, { status: 'downloading' });
+try {
+let albumTracks, variantFolders = [];
+if (job._isSingles) {
+albumTracks = singleTracks.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+} else {
+albumTracks = (await getAllAudioFilesRecursive(job.id)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+try {
+const directSub = (await getFolderContents(job.id)).filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+variantFolders = findOtherVersionFolders(job.name, directSub);
+} catch (e) { /* variant detection failure — proceed without it */ }
+}
+if (!albumTracks.length) { DownloadManager.updateJob(job.id, { status: 'error' }); continue; }
+let available = {};
+try { available = await checkLosslessAvailability(albumTracks.map(t => t.id)); } catch (e) { /* fall back to normal quality */ }
+const availableCount = Object.values(available).filter(Boolean).length;
+let lossless = false;
+if (availableCount > 0) {
+const choice = await showAlbumLosslessChoice(job.name, availableCount, albumTracks.length);
+if (choice === null) { DownloadManager.updateJob(job.id, { status: 'canceled' }); continue; }
+lossless = choice;
+}
+if (DownloadManager.canceledAll || job.canceled) { DownloadManager.updateJob(job.id, { status: 'canceled' }); continue; }
+let includeVariants = false;
+if (variantFolders.length > 0) {
+includeVariants = await showOtherVersionsChoice(job.name, variantFolders);
+}
+if (DownloadManager.canceledAll || job.canceled) { DownloadManager.updateJob(job.id, { status: 'canceled' }); continue; }
+const folderLabel = sanitize(job._folderLabel || job.name);
+const zipTarget = packaging === 'master' ? masterZip.folder(folderLabel) : new JSZip();
+const { zip: albumZip, completed } = await downloadTracksWithManager(job, albumTracks, lossless, available, zipTarget);
+if (DownloadManager.canceledAll || job.canceled) { DownloadManager.updateJob(job.id, { status: 'canceled' }); continue; }
+if (completed === 0) { DownloadManager.updateJob(job.id, { status: 'error' }); continue; }
+if (!job._isSingles) {
+const m3uEntries = _buildM3UEntriesFromJob(job);
+if (m3uEntries.length) albumZip.file(`${folderLabel}.m3u`, buildAlbumM3U(m3uEntries));
+}
+if (includeVariants && variantFolders.length) {
+for (const vf of variantFolders) {
+try {
+const vfTracks = (await getAllAudioFilesRecursive(vf.id)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+if (!vfTracks.length) continue;
+let vfAvailable = {};
+try { vfAvailable = await checkLosslessAvailability(vfTracks.map(t => t.id)); } catch (e) { /* fall back to normal quality */ }
+const vfJob = { id: vf.id, tracks: [] };
+const vfZipTarget = albumZip.folder(sanitize(vf.name));
+await downloadTracksWithManager(vfJob, vfTracks, lossless, vfAvailable, vfZipTarget);
+} catch (e) { /* skip broken variant folder */ }
+}
+}
+anyCompleted = true;
+if (packaging !== 'master') {
+const zipBlob = await albumZip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+triggerBlobDownload(zipBlob, `${folderLabel}${lossless ? ' (Lossless)' : ''}.zip`);
+}
+DownloadManager.updateJob(job.id, { status: 'done' });
+} catch (e) {
+DownloadManager.updateJob(job.id, { status: 'error' });
+}
+}
+if (packaging === 'master' && anyCompleted) {
+try {
+const zipBlob = await masterZip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+triggerBlobDownload(zipBlob, `${sanitize(artistFolder.name)}.zip`);
+} catch (e) {
+showShareToast('Failed to generate combined zip', 'error');
+}
+}
+showShareToast(anyCompleted ? 'Download complete!' : 'No albums were downloaded', anyCompleted ? 'success' : 'error');
+}
 async function downloadCurrentFolder() {
 const currentFolder = stack[stack.length - 1];
 if (!currentFolder || !currentFolder.id) {
@@ -27288,25 +27870,21 @@ showShareToast('No folder selected', 'error');
 return;
 }
 try {
-showShareToast('Preparing folder download...');
+showShareToast('Checking folder contents...');
 const files = await getFolderContents(currentFolder.id);
-const tracks = files.filter(f => f.mimeType && (f.mimeType?.includes('audio') || f.mimeType?.startsWith('video/')) && !f.name.toLowerCase().endsWith('.m3u'));
-if (tracks.length === 0) {
+const subfolders = files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
+const directTracks = files.filter(f => f.mimeType && (f.mimeType?.includes('audio') || f.mimeType?.startsWith('video/')) && !f.name.toLowerCase().endsWith('.m3u'));
+const variantSubs = findOtherVersionFolders(currentFolder.name, subfolders);
+const isAlbumWithVariants = subfolders.length > 0 && variantSubs.length === subfolders.length;
+if (subfolders.length > 0 && !isAlbumWithVariants) {
+await downloadArtistAlbums(currentFolder, subfolders, directTracks);
+return;
+}
+if (directTracks.length === 0) {
 showShareToast('No audio files in folder', 'error');
 return;
 }
-let lossless = false;
-let available = {};
-try {
-available = await checkLosslessAvailability(tracks.map(t => t.id));
-const availableCount = Object.values(available).filter(Boolean).length;
-if (availableCount > 0) {
-const choice = await showLosslessDownloadChoice(availableCount, tracks.length);
-if (choice === null) return; // user cancelled
-lossless = choice;
-}
-} catch (e) { /* lossless check failed — fall back to normal-only download */ }
-await _performFolderDownload(currentFolder, tracks, lossless, available);
+await downloadSingleFolder(currentFolder, directTracks, variantSubs);
 } catch (err) {
 showShareToast('Failed to create zip file', 'error');
 }
@@ -27341,80 +27919,6 @@ overlay.querySelector('#lossless-choice-normal').addEventListener('click', () =>
 overlay.querySelector('#lossless-choice-cancel').addEventListener('click', () => cleanup(null));
 overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
 });
-}
-async function _performFolderDownload(currentFolder, tracks, lossless, available = {}) {
-const addNonLosslessSuffix = (fileName) => fileName.replace(/(\.[^.]+)$/, ' (non-lossless)$1');
-try {
-if (tracks.length === 1) {
-const track = tracks[0];
-const trackLossless = lossless && !!available[track.id];
-const trackForceFlac = lossless && !trackLossless;
-showShareToast(trackLossless ? 'Downloading lossless track...' : 'Downloading track...');
-const result = await buildTaggedDownload(track, { lossless: trackLossless, forceFlac: trackForceFlac });
-if (!result) {
-showShareToast('Failed to download track', 'error');
-return;
-}
-const fileName = (lossless && !trackLossless) ? addNonLosslessSuffix(result.fileName) : result.fileName;
-const blob = new Blob([result.arrayBuffer], { type: result.mimeType || track.mimeType || 'audio/mpeg' });
-const blobUrl = URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = blobUrl;
-a.download = fileName;
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-showShareToast(`Downloaded "${fileName}"!`, 'success');
-return;
-}
-showShareToast(`Creating zip with ${tracks.length} tracks${lossless ? ' (lossless)' : ''}...`);
-const zip = new JSZip();
-let completed = 0;
-for (const track of tracks) {
-try {
-const trackLossless = lossless && !!available[track.id];
-const trackForceFlac = lossless && !trackLossless;
-const result = await buildTaggedDownload(track, { lossless: trackLossless, forceFlac: trackForceFlac });
-if (!result) {
-continue;
-}
-const fileName = (lossless && !trackLossless) ? addNonLosslessSuffix(result.fileName) : result.fileName;
-zip.file(fileName, result.arrayBuffer);
-completed++;
-showShareToast(`Adding to zip... (${completed}/${tracks.length})`);
-} catch (err) {
-}
-}
-if (completed === 0) {
-showShareToast('Failed to download any tracks', 'error');
-return;
-}
-showShareToast('Generating zip file...');
-const zipBlob = await zip.generateAsync({
-type: 'blob',
-compression: 'DEFLATE',
-compressionOptions: {
-level: 6
-}
-}, (metadata) => {
-const percent = Math.round(metadata.percent);
-if (percent % 10 === 0) {
-showShareToast(`Compressing... ${percent}%`);
-}
-});
-const zipUrl = URL.createObjectURL(zipBlob);
-const link = document.createElement('a');
-link.href = zipUrl;
-link.download = `${currentFolder.name.replace(/[<>:"/\\|?*]/g, '_')}${lossless ? ' (Lossless)' : ''}.zip`;
-document.body.appendChild(link);
-link.click();
-document.body.removeChild(link);
-setTimeout(() => URL.revokeObjectURL(zipUrl), 100);
-showShareToast(`Downloaded ${completed} track${completed !== 1 ? 's' : ''} as zip!`, 'success');
-} catch (err) {
-showShareToast('Failed to create zip file', 'error');
-}
 }
 function showShareToast(message, type = 'success') {
 const existingToast = document.querySelector('.share-toast');
@@ -45286,6 +45790,7 @@ window.switchOfflineTab    = switchOfflineTab;
 onclick="closeTrackActionsPopover()"></div>
 <div class="track-actions-popover" id="trackActionsPopover">
 </div>
+<div id="downloadManagerModal" class="dl-manager hidden"></div>
 <div class="metadata-update-modal" id="metadataUpdateModal"
 style="display: none;">
 <div class="metadata-update-content">
