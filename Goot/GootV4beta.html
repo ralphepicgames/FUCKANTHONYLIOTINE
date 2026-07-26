@@ -10161,9 +10161,9 @@ content: '';
 position: absolute;
 inset: 0;
 background: linear-gradient(to bottom,
-rgba(0, 0, 0, 0.25) 0%,
-rgba(0, 0, 0, 0.35) 50%,
-rgba(0, 0, 0, 0.5) 100%);
+rgba(0, 0, 0, 0.6) 0%,
+rgba(0, 0, 0, 0.7) 50%,
+rgba(0, 0, 0, 0.82) 100%);
 pointer-events: none;
 }
 /* Light mode - brighter background with lighter overlay */
@@ -10331,7 +10331,7 @@ font-size: 18px;
 line-height: 1.8;
 white-space: pre-wrap;
 font-family: var(--font-fallback);
-opacity: 0.85;
+opacity: 0.95;
 letter-spacing: 0.2px;
 font-weight: 400;
 text-align: left;
@@ -42310,6 +42310,18 @@ const agent = p.getAttributeNS('http://www.w3.org/ns/ttml#metadata', 'agent') ||
 const spans = Array.from(p.children).filter(el => el.localName === 'span');
 const syllabus = [];
 let plainText = '';
+// A span is followed by a real word-break only if the very next sibling
+// node in the source is (or contains) whitespace text — e.g. "See</span> <span>this"
+// (a space between spans = new word). When spans sit back-to-back with no
+// separating text node — e.g. "si</span><span>lently" — they're syllables
+// of the same word and must NOT get a space inserted between them.
+const hasSpaceAfter = (node) => {
+let sib = node.nextSibling;
+while (sib && sib.nodeType === 8) sib = sib.nextSibling; // skip comment nodes
+if (!sib) return true; // end of parent — treat as word end
+if (sib.nodeType === 3) return /\s/.test(sib.textContent); // text node
+return false; // immediately followed by another element — same word
+};
 const walkSpans = (spanList, isBg) => {
 spanList.forEach(span => {
 const role = span.getAttribute('ttm:role') || span.getAttributeNS('http://www.w3.org/ns/ttml#metadata', 'role');
@@ -42320,13 +42332,14 @@ return;
 const sBegin = span.getAttribute('begin');
 const sEnd = span.getAttribute('end');
 const rawText = span.textContent || '';
-const wordText = /\s$/.test(rawText) ? rawText : (rawText + ' ');
+const needsSpace = !/\s$/.test(rawText) && hasSpaceAfter(span);
+const wordText = needsSpace ? (rawText + ' ') : rawText;
 if (sBegin !== null) {
 const sB = toMs(sBegin);
 const sE = toMs(sEnd);
 syllabus.push({ time: sB, duration: Math.max(0, sE - sB), text: wordText, isBackground: !!isBg });
 }
-plainText += (plainText && !plainText.endsWith(' ') ? ' ' : '') + rawText.trim();
+plainText += rawText.trim() + (hasSpaceAfter(span) ? ' ' : '');
 });
 };
 if (spans.length > 0) {
