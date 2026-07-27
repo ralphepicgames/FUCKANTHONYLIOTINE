@@ -21192,6 +21192,24 @@ return track.art;
 }
 return '';
 }
+// Rewrites an album-art URL to request a smaller version, so contexts that
+// only show tiny thumbnails (queue rows, Listen Again cards) don't pull down
+// full-resolution art. Our own worker's /r2/album-art/ route handles ?w=
+// server-side (resizes once, then serves every later request straight from
+// Cloudflare's edge cache), so this just appends that param. Anything else
+// (blob:, data:, ytimg, etc.) is returned unchanged since there's nothing
+// safe to rewrite.
+const QUEUE_ART_SIZE = 500;
+const LISTEN_AGAIN_ART_SIZE = 700;
+function getSizedArtUrl(url, size) {
+if (!url || typeof url !== 'string') return url;
+if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+if (url.includes('/r2/album-art/')) {
+const sep = url.includes('?') ? '&' : '?';
+return `${url}${sep}w=${size}`;
+}
+return url;
+}
 if ('mediaSession' in navigator) {
 document.addEventListener('DOMContentLoaded', () => initMediaSession(), { once: true });
 }
@@ -21787,7 +21805,7 @@ if (_folderFetchInFlight.has(folderId)) return _folderFetchInFlight.get(folderId
 }
 const fetchPromise = (async () => {
 try {
-const filesPromise = fetch(`${STREAMING_URL}?list=${folderId}`, { cache: refresh ? 'no-store' : 'default' });
+const filesPromise = fetch(`${STREAMING_URL}?list=${folderId}${refresh ? '&refresh=1' : ''}`, { cache: refresh ? 'no-store' : 'default' });
 const filesRes = await filesPromise;
 if (!filesRes.ok) throw new Error(`Failed to fetch folder contents (status ${filesRes.status}")`);
 const json = await filesRes.json();
@@ -25751,7 +25769,7 @@ if (artContainer && !artContainer.querySelector('img.loaded')) {
 const artSrc = getAlbumArtForTrack(t);
 if (artSrc) {
 const img = document.createElement('img');
-img.src = artSrc;
+img.src = getSizedArtUrl(artSrc, QUEUE_ART_SIZE);
 img.className = 'loaded';
 img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
 if (artSrc.startsWith('http')) img.crossOrigin = 'anonymous';
@@ -25779,7 +25797,7 @@ if (pooledArtContainer && !pooledArtContainer.querySelector('img.loaded')) {
 const artSrc = getAlbumArtForTrack(t);
 if (artSrc) {
 const img = document.createElement('img');
-img.src = artSrc;
+img.src = getSizedArtUrl(artSrc, QUEUE_ART_SIZE);
 img.className = 'loaded';
 img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
 if (artSrc.startsWith('http')) img.crossOrigin = 'anonymous';
@@ -25796,7 +25814,7 @@ const m = t._isYT
 : (trackMetadata[t.id] || {title:'...', artist:'...', album:'...'});
 const albumArtSrc = getAlbumArtForTrack(t);
 const artHTML = albumArtSrc
-? `<img src="${albumArtSrc}" class="loaded" style="width:100%;height:100%;object-fit:cover;" ${albumArtSrc.startsWith('http') ? 'crossorigin="anonymous"' : ''}>`
+? `<img src="${getSizedArtUrl(albumArtSrc, QUEUE_ART_SIZE)}" class="loaded" style="width:100%;height:100%;object-fit:cover;" ${albumArtSrc.startsWith('http') ? 'crossorigin="anonymous"' : ''}>`
 : '<i class="fa-solid fa-music" style="opacity:0.2"></i>';
 if (window._gootDebugQueue) {
 console.warn(`[GootQueue] NEW DOM element created for track ${t.id} at index ${i} (pool miss)`);
@@ -36782,7 +36800,7 @@ data-folder-id="${item.folderId || ''}"
 data-album="${item.name}"
 id="listen-album-${globalIndex}">
 <div class="listen-again-track-art">
-<img src="${artUrl}" alt="${item.name}"
+<img src="${getSizedArtUrl(artUrl, LISTEN_AGAIN_ART_SIZE)}" alt="${item.name}"
 onload="this.classList.add('fade-in', 'loaded'); _applyListenAgainCardColor(this);"
 onerror="this.src='${fallbackImg}'">
 <div class="pinned-badge"><i class="fa-solid fa-heart"></i></div>
@@ -36815,7 +36833,7 @@ data-type="playlist" data-name="${encodeURIComponent(item.name)}"
 id="listen-playlist-${globalIndex}"
 data-playlist="${item.name}">
 <div class="listen-again-track-art">
-<img src="${artUrl}" alt="${item.name}"
+<img src="${getSizedArtUrl(artUrl, LISTEN_AGAIN_ART_SIZE)}" alt="${item.name}"
 onload="this.classList.add('fade-in', 'loaded'); _applyListenAgainCardColor(this);"
 onerror="this.src='${fallbackImg}'">
 <div class="pinned-badge"><i class="fa-solid fa-heart"></i></div>
@@ -36855,7 +36873,7 @@ data-track-id="${item.id}"
 onclick="playMostPlayedTrack('${item.id}')"
 id="listen-track-${globalIndex}">
 <div class="listen-again-track-art">
-<img src="${albumArtUrl}" alt="${item.title}"
+<img src="${getSizedArtUrl(albumArtUrl, LISTEN_AGAIN_ART_SIZE)}" alt="${item.title}"
 onload="this.classList.add('fade-in', 'loaded'); _applyListenAgainCardColor(this);"
 onerror="this.src='${fallbackImg}'; this.classList.add('loaded');">
 ${isPinnedTrack ? '<div class="pinned-badge"><i class="fa-solid fa-heart"></i></div>' : ''}
@@ -36885,8 +36903,8 @@ ${isPinnedTrack ? `
 async function lazyLoadListenAgainArt(displayItems) {
 function setArt(el, url) {
 if (!el || !url || url.startsWith('data:image/svg+xml,%3Csvg')) return; // skip placeholder
-if (el.src === url) return;
 if (url.startsWith('blob:')) {
+if (el.src === url) return;
 el.src = url;
 el.classList.add('fade-in', 'loaded');
 el.onerror = () => {
@@ -36896,7 +36914,7 @@ el.dataset.blobFailed = '1';
 if (item.album && item.album !== 'Unknown') {
 R2AlbumArt.get(item.album, item.artist || '').then(u => {
 if (u && el) {
-el.src = u;
+el.src = getSizedArtUrl(u, LISTEN_AGAIN_ART_SIZE);
 el.classList.add('fade-in', 'loaded');
 albumArtCache[item.album] = u;
 }
@@ -36905,7 +36923,9 @@ albumArtCache[item.album] = u;
 };
 return;
 }
-el.src = url;
+const sizedUrl = getSizedArtUrl(url, LISTEN_AGAIN_ART_SIZE);
+if (el.src === sizedUrl) return;
+el.src = sizedUrl;
 el.classList.add('fade-in', 'loaded');
 el.onerror = () => { el.src = ''; el.onerror = null; };
 }
