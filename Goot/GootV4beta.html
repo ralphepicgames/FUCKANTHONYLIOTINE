@@ -42081,6 +42081,7 @@ if (data) lyricsTitle = titleForRetry;
 }
 }
 if (!data) {
+try {
 const workerUrl = `${PLAYER_WORKER_URL}/lyrics?trackId=${encodeURIComponent(trackId)}&title=${encodeURIComponent(lyricsTitle)}&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&force=true`;
 const response = await fetch(workerUrl, { cache: 'no-store' });
 if (!response.ok) {
@@ -42121,11 +42122,19 @@ parsed.push({ time, text });
 data = { type: 'Line', lyrics: parsed, _source: 'worker' };
 } else if (plainLyrics) {
 data = { lyrics: plainLyrics, _source: 'worker' };
-} else {
+}
+} catch (e) {
+console.warn('[Worker] lyrics fetch failed:', e);
+}
+}
+if (!data) {
+console.log('[Lyrics] all other sources failed, trying client-side lrclib.net directly');
+data = await _tryLrclibAPI(lyricsTitle, artist, album, duration);
+}
+if (!data) {
 if (_resolveInFlight) { _resolveInFlight(null); delete window._lyricsInFlight[trackId]; }
 showLyricsError('No lyrics found for this track.', target);
 return;
-}
 }
 const hasContent = (data.type === 'Line' || data.type === 'Word')
 ? data.lyrics && data.lyrics.length > 0
@@ -42335,6 +42344,65 @@ console.warn('[BinimumSearch] lyrics fetch failed:', e);
 return null;
 }
 }
+async function _tryLrclibAPI(title, artist, album, durationSecs) {
+try {
+const q = `${artist} ${title}`.replace(/\s+/g, ' ').trim();
+if (!q) return null;
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 15000);
+let resp;
+try {
+resp = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(q)}`, { cache: 'no-store', signal: controller.signal });
+} finally {
+clearTimeout(timeout);
+}
+if (!resp || !resp.ok) {
+console.warn(`[LRCLIB] request failed with status ${resp ? resp.status : 'no response'}`);
+return null;
+}
+const results = await resp.json();
+if (!Array.isArray(results) || results.length === 0) {
+console.warn('[LRCLIB] no results');
+return null;
+}
+// Prefer whichever result's duration is closest to the track's real duration, when known
+let best = results[0];
+if (durationSecs) {
+let bestDiff = Infinity;
+for (const r of results) {
+if (typeof r.duration !== 'number') continue;
+const diff = Math.abs(r.duration - durationSecs);
+if (diff < bestDiff) { bestDiff = diff; best = r; }
+}
+}
+const syncedLyrics = best.syncedLyrics;
+const plainLyrics = best.plainLyrics;
+if (syncedLyrics) {
+const parsed = [];
+for (const line of syncedLyrics.split('\n')) {
+const match = line.match(/^\[(\d+):(\d+\.\d+)\]\s?(.*)/);
+if (match) {
+const time = (parseInt(match[1], 10) * 60 + parseFloat(match[2])) * 1000;
+const text = match[3] || '';
+parsed.push({ time, text });
+}
+}
+if (parsed.length) {
+console.log('[LRCLIB] line-synced hit');
+return { type: 'Line', lyrics: parsed, _source: 'lrclib' };
+}
+}
+if (plainLyrics && plainLyrics.trim()) {
+console.log('[LRCLIB] plain lyrics hit');
+return { lyrics: plainLyrics, _source: 'lrclib' };
+}
+console.warn('[LRCLIB] result had no usable lyrics');
+return null;
+} catch (e) {
+console.warn('[LRCLIB] lyrics fetch failed:', e);
+return null;
+}
+}
 function _parseBinimumTTML(ttmlText) {
 try {
 const xml = new DOMParser().parseFromString(ttmlText, 'application/xml');
@@ -42501,6 +42569,9 @@ const _provider = _providerMap[_lpSrc] || (_lpSrc ? _lpSrc : 'LyricsPlus');
 _badgeLabel = `${_provider} · ${_typeLabel}`;
 _badgeIcon = 'fa-solid fa-waveform-lines';
 } else if (_src === 'worker') {
+_badgeLabel = 'LRCLIB · Line';
+_badgeIcon = 'fa-solid fa-cloud';
+} else if (_src === 'lrclib') {
 _badgeLabel = 'LRCLIB · Line';
 _badgeIcon = 'fa-solid fa-cloud';
 }
