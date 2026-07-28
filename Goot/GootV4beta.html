@@ -10248,7 +10248,7 @@ display: block;
 }
 .lyrics-adlib {
 display: block;
-font-size: 0.62em;
+font-size: 0.8em;
 font-weight: 600;
 opacity: 0.62;
 letter-spacing: -0.1px;
@@ -10265,7 +10265,7 @@ content: '↳ ';
 opacity: 0.6;
 }
 .lyric-word-bg {
-font-size: 0.78em;
+font-size: 0.92em;
 opacity: 0.75;
 }
 /* Song part label */
@@ -10300,42 +10300,110 @@ text-align: center;
 .lyric-word {
 display: inline;
 position: relative;
-/* Left-to-right fill: filled=on-surface (black/white per theme).
-Unfilled half uses a semi-transparent on-surface so words are
-visible before being "sung" without any accent-color ghost. */
+/* ONE gradient, always. Every state (future / filling / past) is just
+a different background-position on this same 300%-wide, 7-stop
+gradient -- never a different gradient, never a different
+background-size. Swapping gradients or sizes between states can't be
+animated by the browser (it's a hard cut), which is what produced the
+"jump" between words. Driving everything off a single continuous
+gradient means word-to-word transitions are pure position movement,
+which IS smoothly animatable/steppable and reads as one fluid sweep.
+
+Zones (in gradient-space, 0-100% of the 3x-wide image):
+  0%   -33%  filled (fully lit)
+  33%  -40%  soft ramp up into the glint
+  40%  -50%  glint peak approach
+  50%        glint peak
+  50%  -60%  glint fades back down
+  60%  -67%  soft ramp down into unfilled
+  67%  -100% unfilled (dim)
+
+background-position 100%->0% sweeps the visible window from the
+all-unfilled end, through the glint band at the midpoint, to the
+all-filled end -- see JS _wordFillTick, which maps word progress 0->1
+directly onto that 100%->0% sweep. */
 background-image: linear-gradient(
-to right,
-var(--md-sys-color-on-surface) 50%,
-color-mix(in srgb, var(--md-sys-color-on-surface) 40%, transparent) 50%
+  to right,
+  var(--md-sys-color-on-surface) 0%,
+  var(--md-sys-color-on-surface) 33%,
+  color-mix(in srgb, var(--md-sys-color-on-surface) 90%, white 30%) 40%,
+  color-mix(in srgb, var(--md-sys-color-on-surface) 60%, white 100%) 50%,
+  color-mix(in srgb, var(--md-sys-color-on-surface) 90%, white 30%) 60%,
+  color-mix(in srgb, var(--md-sys-color-on-surface) 40%, transparent) 67%,
+  color-mix(in srgb, var(--md-sys-color-on-surface) 40%, transparent) 100%
 );
-background-size: 200% 100%;
+background-size: 300% 100%;
 background-position: 100% 0; /* start at "unlit" right side */
 -webkit-background-clip: text;
 background-clip: text;
 -webkit-text-fill-color: transparent;
-/* JS drives --wfill (0→1) for smooth per-word fill */
-transition: background-position 0s linear; /* overridden per-word by JS */
-will-change: background-position, opacity;
+/* Word spacing: a real space *text node* is placed between word spans
+(outside the clipped-text elements -- see displayLyrics), not as a
+trailing glyph inside them. This gives the browser a genuine line-wrap
+opportunity (unlike CSS margin, which creates no wrap point), and
+sits outside the background-clip:text rendering path so it can't be
+silently swallowed the way an in-span trailing space could. */
+/* background-position is driven per-frame by JS (_wordFillTick) while
+a word is active, so it must NOT be a transitioned property -- a CSS
+transition fighting a rAF loop that retargets every frame is exactly
+what causes stutter/jumpiness (each frame chases an easing curve that
+never resolves before the next frame moves the target again). Only
+opacity/filter get transitions; background-position changes instantly
+to whatever value JS sets, which -- since JS updates every frame -- IS
+the smooth animation. */
+transition: opacity 0.25s ease;
+will-change: background-position, opacity, filter;
 contain: style;
 filter: none;
 }
-/* Future words in active line — dim them */
+/* Future words in active line -- fill gradient alone conveys progress,
+no opacity dimming so they keep the same visible background as the
+word currently being filled. */
 .lyrics-line.active .lyric-word {
-opacity: 0.35;
-transition: opacity 0.3s ease;
+opacity: 1;
 }
-/* Word being filled right now */
+/* Word being filled right now. Only filter (the glow) transitions;
+background-position is left to JS's per-frame rAF updates (see base
+rule above) so the fill sweep itself is never fighting a CSS easing
+curve. */
 .lyrics-line.active .lyric-word.word-active {
 opacity: 1;
+/* glow lives on the text glyphs via drop-shadow on the clipped bg;
+   fades in on word-start, fades out once word-past takes over */
+filter: drop-shadow(0 0 3px color-mix(in srgb, var(--md-sys-color-on-surface) 70%, transparent))
+        drop-shadow(0 0 8px color-mix(in srgb, var(--md-sys-color-on-surface) 35%, transparent));
+transition: filter 0.12s ease;
 /* background-position animated by JS rAF for smooth fill */
 }
-/* Words already spoken */
+/* Optional: active word scales up slightly while being sung, like Apple
+Music. Off by default -- enabled via Settings > Appearance. Scoped to
+inline-block + transform only when the setting is on, so default
+layout/inline flow is completely untouched when it's off. */
+html.lyrics-word-scale-enabled .lyrics-line.active .lyric-word.word-active {
+display: inline-block;
+transform: scale(1.08);
+transform-origin: center bottom;
+transition: filter 0.15s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+html.lyrics-word-scale-enabled .lyrics-line.active .lyric-word.word-past {
+display: inline-block;
+transform: scale(1);
+transform-origin: center bottom;
+transition: background-position 0.12s ease-out, opacity 0.2s ease, filter 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+html.lyrics-word-scale-enabled .lyrics-line.active .lyric-word:not(.word-active):not(.word-past) {
+display: inline-block;
+transform: scale(1);
+transform-origin: center bottom;
+}
+/* Words already spoken -- same gradient, parked at the fully-lit end */
 .lyrics-line.active .lyric-word.word-past {
 opacity: 1;
-background-position: 0% 0; /* fully lit */
-transition: background-position 0.12s ease-out, opacity 0.2s ease;
+background-position: 0% 0;  /* fully lit */
+filter: none;
+transition: background-position 0.12s ease-out, opacity 0.2s ease, filter 0.2s ease;
 }
-/* Past entire lines — fully lit, no fill animation */
+/* Past entire lines -- fully lit, no fill animation, no glint */
 .lyrics-line.past .lyric-word {
 opacity: 1;
 background-position: 0% 0;
@@ -10351,6 +10419,62 @@ background-position: 100% 0;
 #extendedLyricsAutoScrollToggle{ transition: all 0.2s var(--motion-standard); color: var(--md-sys-color-primary); }
 #lyricsAutoScrollToggle:hover,
 #extendedLyricsAutoScrollToggle:hover{ background: var(--md-sys-color-primary-container); }
+/* ── Lyrics manual sync offset stepper ── "−  +0.5s  +" ─────────────── */
+.lyrics-offset-stepper {
+display: flex;
+align-items: center;
+gap: 2px;
+height: 32px;
+padding: 0 4px;
+border-radius: 100px;
+background: var(--md-sys-color-surface-container-high);
+position: relative;
+}
+.lyrics-offset-stepper.dark-variant {
+background: rgba(255,255,255,0.08);
+border: 1px solid rgba(255,255,255,0.1);
+}
+.lyrics-offset-btn {
+width: 24px;
+height: 24px;
+display: flex;
+align-items: center;
+justify-content: center;
+border: none;
+border-radius: 50%;
+background: transparent;
+color: inherit;
+font-size: 12px;
+cursor: pointer;
+transition: background 0.15s ease;
+padding: 0;
+}
+.lyrics-offset-btn:hover {
+background: color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent);
+}
+.lyrics-offset-btn:active {
+background: color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent);
+}
+.lyrics-offset-value {
+min-width: 40px;
+text-align: center;
+font-size: 11px;
+font-weight: 600;
+font-family: var(--font-fallback);
+font-variant-numeric: tabular-nums;
+opacity: 0.85;
+user-select: none;
+}
+.lyrics-offset-badge {
+position: absolute;
+top: -3px;
+right: -3px;
+width: 7px;
+height: 7px;
+border-radius: 50%;
+background: var(--md-sys-color-primary);
+display: none;
+}
 /* Plain text lyrics - Material 3 Typography */
 .lyrics-text {
 color: var(--md-sys-color-on-surface);
@@ -14954,6 +15078,13 @@ Split
 </div>
 <div class="m3-toggle"><input type="checkbox" id="perfModeToggle" onchange="togglePerfMode()"><span class="m3-toggle-track"><span class="m3-toggle-thumb"></span></span></div>
 </label>
+<label class="m3-setting-row" style="cursor:pointer;">
+<div class="m3-setting-info">
+<span class="m3-setting-label">Active Word Scale</span>
+<span class="m3-setting-desc">Slightly enlarges the word being sung in word-by-word lyrics, like Apple Music</span>
+</div>
+<div class="m3-toggle"><input type="checkbox" id="lyricsWordScaleToggle" onchange="toggleLyricsWordScale()"><span class="m3-toggle-track"><span class="m3-toggle-thumb"></span></span></div>
+</label>
 <div class="m3-setting-row" style="flex-direction:column;align-items:flex-start;gap:12px;cursor:default;">
 <div class="m3-setting-info">
 <span class="m3-setting-label">Font</span>
@@ -17018,6 +17149,12 @@ track
 playing</p>
 </div>
 <div style="display:flex;gap:6px;align-items:center;">
+<div class="lyrics-offset-stepper" title="Adjust lyrics sync">
+<span class="lyrics-offset-badge"></span>
+<button class="lyrics-offset-btn" onclick="adjustLyricsSyncOffset(-500)" title="Shift lyrics 0.5s earlier">−</button>
+<span class="lyrics-offset-value" ondblclick="resetLyricsSyncOffset()" title="Double-click to reset">+0.0s</span>
+<button class="lyrics-offset-btn" onclick="adjustLyricsSyncOffset(500)" title="Shift lyrics 0.5s later">+</button>
+</div>
 <button id="lyricsAutoScrollToggle" onclick="toggleLyricsAutoScroll()" title="Toggle auto-scroll" style="display:flex;align-items:center;gap:5px;padding:0 12px;height:32px;border-radius:100px;background:var(--md-sys-color-primary-container);border:none;color:var(--md-sys-color-primary);font-size:12px;font-weight:600;font-family:var(--font-fallback);cursor:pointer;white-space:nowrap;transition:all 0.2s;">
 <i class="fa-solid fa-arrows-up-down" style="font-size:12px;"></i><span>Scroll</span>
 </button>
@@ -17380,7 +17517,13 @@ Lyrics</h3>
 style="margin:3px 0 0;font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;">
 No track playing</p>
 </div>
-<div style="display:flex;gap:4px;">
+<div style="display:flex;gap:4px;align-items:center;">
+<div class="lyrics-offset-stepper dark-variant" title="Adjust lyrics sync" style="color:rgba(255,255,255,0.85);">
+<span class="lyrics-offset-badge"></span>
+<button class="lyrics-offset-btn" onclick="adjustLyricsSyncOffset(-500)" title="Shift lyrics 0.5s earlier">−</button>
+<span class="lyrics-offset-value" ondblclick="resetLyricsSyncOffset()" title="Double-click to reset">+0.0s</span>
+<button class="lyrics-offset-btn" onclick="adjustLyricsSyncOffset(500)" title="Shift lyrics 0.5s later">+</button>
+</div>
 <button onclick="openLyricsSelectSheet()" style="width:36px;height:36px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:50%;color:rgba(255,255,255,0.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.18s ease;" onmouseover="this.style.background='rgba(255,255,255,0.16)';this.style.color='white'" onmouseout="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.7)'" title="Share lyrics">
 <i class="fa-solid fa-share-nodes" style="font-size:14px;"></i>
 </button>
@@ -22256,6 +22399,11 @@ if (losslessToggleEl) losslessToggleEl.checked = isLosslessPreferred();
 document.getElementById('animationsToggle').checked = localStorage.getItem('goot_animations_disabled') === 'true';
 if (localStorage.getItem('goot_animations_disabled') === 'true') {
 document.documentElement.classList.add('animations-disabled');
+}
+const lyricsWordScaleEl = document.getElementById('lyricsWordScaleToggle');
+if (lyricsWordScaleEl) lyricsWordScaleEl.checked = localStorage.getItem('goot_lyrics_word_scale') === 'true';
+if (localStorage.getItem('goot_lyrics_word_scale') === 'true') {
+document.documentElement.classList.add('lyrics-word-scale-enabled');
 }
 const blurDisabled = localStorage.getItem('goot_blur_disabled') === 'true';
 document.getElementById('blurToggle').checked = blurDisabled;
@@ -34137,6 +34285,11 @@ document.documentElement.classList.add('animations-disabled');
 document.documentElement.classList.remove('animations-disabled');
 }
 }
+function toggleLyricsWordScale() {
+const enabled = document.getElementById('lyricsWordScaleToggle').checked;
+localStorage.setItem('goot_lyrics_word_scale', enabled);
+document.documentElement.classList.toggle('lyrics-word-scale-enabled', enabled);
+}
 (function() {
 'use strict';
 let vizMode = localStorage.getItem('goot_viz_mode') || 'bars';
@@ -41961,6 +42114,48 @@ let currentLyricsData = null;
 let lyricsUpdateInterval = null;
 let lyricsJustLoaded = false; // Flag to prevent immediate auto-scroll after load
 let lyricsAutoScrollEnabled = true; // Auto-scroll toggle state
+// Manual sync offset (ms). Positive = lyrics shown later (delay added);
+// negative = lyrics shown earlier. Persisted globally, per ±0.5s step.
+let lyricsSyncOffsetMs = (function () {
+const saved = parseFloat(localStorage.getItem('lyricsSyncOffsetMs'));
+return Number.isFinite(saved) ? saved : 0;
+})();
+function _lyricsOffsetLabel() {
+const s = lyricsSyncOffsetMs / 1000;
+const sign = s > 0 ? '+' : s < 0 ? '−' : '';
+return `${sign}${Math.abs(s).toFixed(1)}s`;
+}
+function _refreshLyricsOffsetUI() {
+document.querySelectorAll('.lyrics-offset-value').forEach(el => {
+el.textContent = _lyricsOffsetLabel();
+});
+document.querySelectorAll('.lyrics-offset-badge').forEach(el => {
+el.style.display = lyricsSyncOffsetMs !== 0 ? '' : 'none';
+});
+}
+function adjustLyricsSyncOffset(deltaMs) {
+lyricsSyncOffsetMs = Math.round((lyricsSyncOffsetMs + deltaMs) / 100) * 100;
+localStorage.setItem('lyricsSyncOffsetMs', String(lyricsSyncOffsetMs));
+_refreshLyricsOffsetUI();
+// Force an immediate re-evaluation at the shifted time instead of waiting
+// for the next 4ms-guarded rAF tick.
+_lyricsLastTimeMs = -1;
+if (typeof updateLyricsPosition === 'function') updateLyricsPosition();
+}
+function resetLyricsSyncOffset() {
+lyricsSyncOffsetMs = 0;
+localStorage.setItem('lyricsSyncOffsetMs', '0');
+_refreshLyricsOffsetUI();
+_lyricsLastTimeMs = -1;
+if (typeof updateLyricsPosition === 'function') updateLyricsPosition();
+}
+window.adjustLyricsSyncOffset = adjustLyricsSyncOffset;
+window.resetLyricsSyncOffset = resetLyricsSyncOffset;
+if (document.readyState === 'loading') {
+document.addEventListener('DOMContentLoaded', _refreshLyricsOffsetUI);
+} else {
+_refreshLyricsOffsetUI();
+}
 const LYRICS_API_BASE = 'https://lrclib.net/api/search'; // kept for reference; actual calls go via worker
 function toggleLyricsPanel() {
 const sidebar = document.getElementById('sidebar');
@@ -42603,11 +42798,34 @@ lastPartIndex = partIndex;
 }
 let innerHTML;
 if (isWordLevel && Array.isArray(line.syllabus) && line.syllabus.length > 0) {
-innerHTML = line.syllabus.map((syl, wIdx) => {
+const mainSyls = [];
+const bgSyls = [];
+line.syllabus.forEach((syl, wIdx) => {
+(syl.isBackground ? bgSyls : mainSyls).push({ syl, wIdx });
+});
+const renderSyl = ({ syl, wIdx }) => {
 const bgClass = syl.isBackground ? ' lyric-word-bg' : '';
 const bgAttr = syl.isBackground ? ' data-bg="1"' : '';
-return `<span class="lyric-word${bgClass}" data-wtime="${syl.time}" data-wdur="${syl.duration || 0}" data-widx="${wIdx}"${bgAttr}>${escapeHtml(syl.text)}</span>`;
-}).join('');
+// The parser marks a real word boundary by leaving a trailing space
+// on syl.text (syllables of the same word have none). That space is
+// emitted here as a sibling text node AFTER the closing </span> —
+// not inside the clipped-text span — so it (a) gives the browser a
+// genuine line-wrap point between words, unlike CSS margin, and
+// (b) sits outside the background-clip:text rendering path, so it
+// can't be silently swallowed the way an in-span trailing space
+// could once the line transforms to full (active) size.
+const isWordBoundary = /\s$/.test(syl.text);
+const trailingSpace = isWordBoundary ? ' ' : '';
+return `<span class="lyric-word${bgClass}" data-wtime="${syl.time}" data-wdur="${syl.duration || 0}" data-widx="${wIdx}"${bgAttr}>${escapeHtml(syl.text.replace(/\s+$/, ''))}</span>${trailingSpace}`;
+};
+if (bgSyls.length) {
+const mainHTML = mainSyls.map(renderSyl).join('');
+const bgHTML = bgSyls.map(renderSyl).join('');
+innerHTML = (mainHTML ? `<span class="lyrics-line-main">${mainHTML}</span>` : '') +
+`<span class="lyrics-adlib">${bgHTML}</span>`;
+} else {
+innerHTML = mainSyls.map(renderSyl).join('');
+}
 } else {
 const { segments, stillOpen } = _splitAdlibSegments(line.text || '', _adlibCarryOpen);
 const wasCarry = _adlibCarryOpen;
@@ -42737,6 +42955,7 @@ span.style.backgroundPosition = `${(1 - progress) * 100}% 0`;
 if (progress >= 1) {
 span.classList.add('word-past');
 span.classList.remove('word-active');
+span.style.transition = 'background-position 0.12s ease-out, opacity 0.2s ease, filter 0.2s ease';
 span.style.backgroundPosition = '0% 0';
 _wordFillActive.delete(span);
 } else {
@@ -42791,7 +43010,7 @@ _isLyricsVisible('mobileLyricsSyncedContainer');
 if (!_lyricsVisibleCache) return;
 const player = currentPlayer || document.getElementById('player');
 if (!player || !player.duration) return;
-const currentTime = player.currentTime * 1000; // ms
+const currentTime = player.currentTime * 1000 + lyricsSyncOffsetMs; // ms, shifted by manual offset
 if (Math.abs(currentTime - _lyricsLastTimeMs) < 4) return;
 _lyricsLastTimeMs = currentTime;
 const lyrics = currentLyricsData.lyrics;
@@ -42827,7 +43046,7 @@ if (elapsed >= wDur) {
 if (!span.classList.contains('word-past')) {
 span.classList.add('word-past');
 span.classList.remove('word-active');
-span.style.transition = 'opacity 0.2s ease';
+span.style.transition = 'background-position 0.12s ease-out, opacity 0.2s ease, filter 0.2s ease';
 span.style.backgroundPosition = '0% 0';
 _wordFillActive.delete(span);
 }
@@ -42835,7 +43054,15 @@ _wordFillActive.delete(span);
 if (!span.classList.contains('word-active')) {
 span.classList.add('word-active');
 span.classList.remove('word-past');
-span.style.transition = 'opacity 0.2s ease';
+/* Transition opacity + filter (the glow fade-in) only — deliberately
+NOT background-position, which is about to be driven every rAF frame
+by _wordFillTick. A CSS transition on a property that's also being
+reassigned every frame is what produces stutter: each frame starts a
+new easing race that the next frame immediately interrupts. Leaving
+background-position untransitioned means each rAF write is applied
+instantly, and since those writes happen ~60x/sec, the *sequence* of
+instant writes is what reads as one smooth sweep. */
+span.style.transition = 'opacity 0.2s ease, filter 0.12s ease';
 }
 if (!_wordFillActive.has(span)) {
 _wordFillActive.set(span, {
@@ -42898,7 +43125,7 @@ scrollParent.scrollTo({ top: target, behavior: 'smooth' });
 function seekToLyric(timeMs) {
 const player = currentPlayer || document.getElementById('player');
 if (player && player.duration) {
-player.currentTime = timeMs / 1000; // Convert ms to seconds
+player.currentTime = (timeMs - lyricsSyncOffsetMs) / 1000; // Convert ms to seconds, undo manual offset
 updateLyricsPosition(); // Immediate update
 }
 }
@@ -48152,9 +48379,17 @@ style="margin:0;font-size:15px;font-weight:700;color:white;">
 style="margin:3px 0 0;font-size:12px;color:rgba(255,255,255,0.5);">
 </p>
 </div>
+<div style="display:flex;gap:6px;align-items:center;">
+<div class="lyrics-offset-stepper dark-variant" title="Adjust lyrics sync" style="height:28px;color:rgba(255,255,255,0.85);">
+<span class="lyrics-offset-badge"></span>
+<button class="lyrics-offset-btn" onclick="adjustLyricsSyncOffset(-500)" title="Shift lyrics 0.5s earlier" style="width:22px;height:22px;">−</button>
+<span class="lyrics-offset-value" ondblclick="resetLyricsSyncOffset()" title="Double-tap to reset" style="min-width:36px;font-size:10px;">+0.0s</span>
+<button class="lyrics-offset-btn" onclick="adjustLyricsSyncOffset(500)" title="Shift lyrics 0.5s later" style="width:22px;height:22px;">+</button>
+</div>
 <button id="mobileLyricsAutoScrollBtn" onclick="toggleLyricsAutoScroll()" style="background:var(--md-sys-color-primary-container);border:none;color:var(--md-sys-color-primary);border-radius:100px;padding:5px 13px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font-fallback);display:flex;align-items:center;gap:5px;">
 <i class="fa-solid fa-scroll" style="font-size:10px;"></i> Auto-scroll
 </button>
+</div>
 </div>
 <div id="mobileLyricsContent"
 style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;">
