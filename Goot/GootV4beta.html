@@ -39334,7 +39334,11 @@ const currentTrack = queue[qIndex];
 // A truncated buffer makes the browser report a duration that matches its own
 // short length, so player.duration alone can't reveal the truncation — cross-check
 // against the real duration from our own metadata store as ground truth too.
-const knownDuration = currentTrack ? (trackMetadata[currentTrack.id]?.duration || currentTrack.duration || null) : null;
+// NOTE: trackMetadata/.duration (and the queue item's .duration fallback) are
+// stored in milliseconds throughout this app, while player.currentTime/duration
+// are in seconds — convert before comparing or this fires on every normal ended event.
+const knownDurationMs = currentTrack ? (trackMetadata[currentTrack.id]?.duration || currentTrack.duration || null) : null;
+const knownDuration = knownDurationMs ? knownDurationMs / 1000 : null;
 const duration = player.duration;
 const endedEarly = (duration && currentTime && (duration - currentTime) > 5) ||
 (knownDuration && currentTime && (knownDuration - currentTime) > 5);
@@ -39410,7 +39414,9 @@ if (isCrossfading || currentPlayer !== player2) return;
 if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
 const currentTime = player2.currentTime;
 const currentTrack = queue[qIndex];
-const knownDuration = currentTrack ? (trackMetadata[currentTrack.id]?.duration || currentTrack.duration || null) : null;
+// See the matching comment in player.onended — trackMetadata durations are in ms.
+const knownDurationMs = currentTrack ? (trackMetadata[currentTrack.id]?.duration || currentTrack.duration || null) : null;
+const knownDuration = knownDurationMs ? knownDurationMs / 1000 : null;
 const duration = player2.duration;
 const endedEarly = (duration && currentTime && (duration - currentTime) > 5) ||
 (knownDuration && currentTime && (knownDuration - currentTime) > 5);
@@ -41955,6 +41961,15 @@ return title
 .replace(/\s+/g, ' ')
 .trim();
 }
+function _extractFeatArtists(title) {
+if (!title) return [];
+const match = title.match(/[\(\[]\s*(?:feat|ft)\.?\s+([^)\]]+)[\)\]]/i);
+if (!match) return [];
+return match[1]
+.split(/,|&|\bx\b|\band\b/i)
+.map(s => s.trim())
+.filter(Boolean);
+}
 async function loadLyrics(trackId, target = 'sidebar', options = {}) {
 const textId = target === 'extended' ? 'extendedLyricsText' : target === 'mobile' ? 'mobileLyricsText' : 'sidebarLyricsText';
 const titleId = target === 'extended' ? 'extendedLyricsTitle' : target === 'mobile' ? 'mobileLyricsTitle' : 'sidebarLyricsTitle';
@@ -42043,6 +42058,26 @@ if (!data) {
 data = await _tryBinimumSearchAPI(strippedTitle, artist, album, duration, isrc);
 }
 if (data) lyricsTitle = strippedTitle;
+}
+if (!data) {
+const featArtists = _extractFeatArtists(title);
+if (featArtists.length) {
+const existingArtists = artist.split(',').map(a => a.trim().toLowerCase());
+const newFeatured = featArtists.filter(a => !existingArtists.includes(a.toLowerCase()));
+if (newFeatured.length) {
+const artistWithFeat = [artist, ...newFeatured].join(', ');
+const titleForRetry = strippedTitle || title;
+console.log(`[Lyrics] retrying with featured artist(s) added to artist field: "${artist}" -> "${artistWithFeat}"`);
+data = await _tryBinimumAPI(titleForRetry, artistWithFeat, album, duration, isrc);
+if (!data) {
+data = await _tryLyricsplusAPI(titleForRetry, artistWithFeat, album, duration, isrc);
+}
+if (!data) {
+data = await _tryBinimumSearchAPI(titleForRetry, artistWithFeat, album, duration, isrc);
+}
+if (data) lyricsTitle = titleForRetry;
+}
+}
 }
 }
 if (!data) {
