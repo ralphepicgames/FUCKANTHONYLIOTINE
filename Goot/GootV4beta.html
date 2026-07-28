@@ -42499,7 +42499,7 @@ type: isWordLevel ? 'Word' : 'Line',
 lyrics: lyrics,
 songParts: songParts.length > 0 ? songParts : null,
 _source: 'lyricsplus',
-_lpSource: 'binimum',
+_lpSource: 'binimum-ttml',
 _isWordLevel: isWordLevel
 };
 } catch (e) {
@@ -42564,6 +42564,7 @@ const _providerMap = {
 'spotify': 'Spotify',
 'lyricsplus': 'LyricsPlus',
 'binimum': 'Binimum',
+'binimum-ttml': 'Apple (Binimum TTML)',
 };
 const _provider = _providerMap[_lpSrc] || (_lpSrc ? _lpSrc : 'LyricsPlus');
 _badgeLabel = `${_provider} · ${_typeLabel}`;
