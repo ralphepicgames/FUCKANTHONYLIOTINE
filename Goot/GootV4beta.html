@@ -17557,10 +17557,15 @@ if (_partialWorkerFetchIds.has(trackId)) buf = null;
 if (!buf) {
 const res = await fetch(streamUrl(trackId), { priority: 'low' });
 if (!res.ok) return;
+// We deliberately sent no Range header, so a 206/Content-Range response means
+// something upstream handed us a partial file while claiming completeness —
+// never trust that as "the whole song," no matter what Content-Length says.
+if (res.status === 206 || res.headers.get('Content-Range')) return;
 contentType = res.headers.get('Content-Type') || contentType;
 const expectedLen = parseInt(res.headers.get('Content-Length') || '0', 10);
 buf = await res.arrayBuffer();
-if (expectedLen > 0 && buf.byteLength < expectedLen) return; // truncated — skip
+if (!expectedLen) return; // can't verify completeness without a real Content-Length — don't cache a guess
+if (buf.byteLength < expectedLen) return; // truncated — skip
 }
 if (!buf || buf.byteLength === 0) return;
 await cache.put(key, new Response(buf, {
@@ -39324,12 +39329,17 @@ p.addEventListener('error',    () => { if (currentPlayer === p) clearTrackLoadin
 player.onended = () => {
 if (isCrossfading || currentPlayer !== player) return;
 if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
-const duration = player.duration;
 const currentTime = player.currentTime;
-if (duration && currentTime && (duration - currentTime) > 5) {
-console.warn('Track ended prematurely - likely a truncated/corrupted cache entry. Evicting and retrying with streaming URL...');
-_blobUrlsBlocked = true;
 const currentTrack = queue[qIndex];
+// A truncated buffer makes the browser report a duration that matches its own
+// short length, so player.duration alone can't reveal the truncation — cross-check
+// against the real duration from our own metadata store as ground truth too.
+const knownDuration = currentTrack ? (trackMetadata[currentTrack.id]?.duration || currentTrack.duration || null) : null;
+const duration = player.duration;
+const endedEarly = (duration && currentTime && (duration - currentTime) > 5) ||
+(knownDuration && currentTime && (knownDuration - currentTime) > 5);
+if (endedEarly) {
+console.warn('Track ended prematurely - likely a truncated/corrupted cache entry. Evicting and retrying with streaming URL...');
 if (currentTrack) {
 _evictBadTrackCache(currentTrack.id);
 player.src = streamUrl(currentTrack.id);
@@ -39398,12 +39408,14 @@ setTimeout(() => analyzeAndApplyNormalization(queue[qIndex].id), 100);
 player2.onended = () => {
 if (isCrossfading || currentPlayer !== player2) return;
 if (typeof _isPartyGuest === 'function' && _isPartyGuest()) return;
-const duration = player2.duration;
 const currentTime = player2.currentTime;
-if (duration && currentTime && (duration - currentTime) > 5) {
-console.warn('Track ended prematurely - likely a truncated/corrupted cache entry. Evicting and retrying with streaming URL...');
-_blobUrlsBlocked = true;
 const currentTrack = queue[qIndex];
+const knownDuration = currentTrack ? (trackMetadata[currentTrack.id]?.duration || currentTrack.duration || null) : null;
+const duration = player2.duration;
+const endedEarly = (duration && currentTime && (duration - currentTime) > 5) ||
+(knownDuration && currentTime && (knownDuration - currentTime) > 5);
+if (endedEarly) {
+console.warn('Track ended prematurely - likely a truncated/corrupted cache entry. Evicting and retrying with streaming URL...');
 if (currentTrack) {
 _evictBadTrackCache(currentTrack.id);
 player2.src = streamUrl(currentTrack.id);
