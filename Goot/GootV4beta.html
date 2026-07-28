@@ -23,7 +23,6 @@ overflow: visible;
 flex-shrink: 0;
 }
 /* Play/pause penis icon spans in extended view and mini player */
-/* I'm Claude and that was pretty funny. */
 .clean-btn.play-btn-large>span,
 .play-btn.player-bar-play-btn>span {
 display: flex;
@@ -10231,7 +10230,8 @@ text-align: left;
 padding-left: 4px;
 padding-right: 36px;
 }
-.lyrics-line[data-singer="v1"] {
+.lyrics-line[data-singer="v1"],
+.lyrics-line[data-singer="v3"] {
 text-align: right;
 padding-left: 36px;
 padding-right: 4px;
@@ -10241,6 +10241,32 @@ transform-origin: right center;
 text-align: left;
 padding-left: 4px;
 padding-right: 36px;
+}
+/* ── Ad-libs / background vocals — smaller, sit under the main lyric ──── */
+.lyrics-line-main {
+display: block;
+}
+.lyrics-adlib {
+display: block;
+font-size: 0.62em;
+font-weight: 600;
+opacity: 0.62;
+letter-spacing: -0.1px;
+margin-top: 2px;
+}
+.lyrics-line[data-singer="v1"] .lyrics-adlib,
+.lyrics-line[data-singer="v3"] .lyrics-adlib {
+transform-origin: right center;
+}
+/* Adlib text carried over from an unclosed "(" on the previous synced line —
+mark it as a continuation instead of a fresh parenthetical aside. */
+.lyrics-adlib.lyrics-adlib-continues::before {
+content: '↳ ';
+opacity: 0.6;
+}
+.lyric-word-bg {
+font-size: 0.78em;
+opacity: 0.75;
 }
 /* Song part label */
 .lyrics-source-badge {
@@ -42508,6 +42534,39 @@ console.warn('[Binimum] TTML parse failed:', e);
 return null;
 }
 }
+function _splitAdlibSegments(text, carryOpen) {
+const segments = [];
+let depth = carryOpen ? 1 : 0;
+let buf = '';
+let curType = carryOpen ? 'adlib' : 'main';
+const flush = () => {
+if (buf.length) segments.push({ text: buf, type: curType });
+buf = '';
+};
+for (let i = 0; i < (text || '').length; i++) {
+const ch = text[i];
+if (ch === '(' && depth === 0) {
+flush();
+curType = 'adlib';
+depth = 1;
+buf += ch;
+} else if (ch === '(' && depth > 0) {
+depth++;
+buf += ch;
+} else if (ch === ')' && depth > 0) {
+depth--;
+buf += ch;
+if (depth === 0) {
+flush();
+curType = 'main';
+}
+} else {
+buf += ch;
+}
+}
+flush();
+return { segments, stillOpen: depth > 0 };
+}
 function displayLyrics(data, trackId, target = 'sidebar') {
 const textId = target === 'extended' ? 'extendedLyricsText' : target === 'mobile' ? 'mobileLyricsText' : 'sidebarLyricsText';
 const textContent = document.getElementById(textId);
@@ -42534,6 +42593,7 @@ target: target
 };
 let lyricsHTML = '';
 let lastPartIndex = -1;
+let _adlibCarryOpen = false;
 data.lyrics.forEach((line, index) => {
 const singer = line.element?.singer || '';
 const partIndex = line.element?.songPartIndex ?? -1;
@@ -42543,11 +42603,28 @@ lastPartIndex = partIndex;
 }
 let innerHTML;
 if (isWordLevel && Array.isArray(line.syllabus) && line.syllabus.length > 0) {
-innerHTML = line.syllabus.map((syl, wIdx) =>
-`<span class="lyric-word" data-wtime="${syl.time}" data-wdur="${syl.duration || 0}" data-widx="${wIdx}">${escapeHtml(syl.text)}</span>`
-).join('');
+innerHTML = line.syllabus.map((syl, wIdx) => {
+const bgClass = syl.isBackground ? ' lyric-word-bg' : '';
+const bgAttr = syl.isBackground ? ' data-bg="1"' : '';
+return `<span class="lyric-word${bgClass}" data-wtime="${syl.time}" data-wdur="${syl.duration || 0}" data-widx="${wIdx}"${bgAttr}>${escapeHtml(syl.text)}</span>`;
+}).join('');
+} else {
+const { segments, stillOpen } = _splitAdlibSegments(line.text || '', _adlibCarryOpen);
+const wasCarry = _adlibCarryOpen;
+_adlibCarryOpen = stillOpen;
+if (segments.some(seg => seg.type === 'adlib')) {
+let mainHTML = '';
+let adlibHTML = '';
+segments.forEach(seg => {
+if (seg.type === 'adlib') adlibHTML += escapeHtml(seg.text);
+else mainHTML += escapeHtml(seg.text);
+});
+const continuationClass = wasCarry ? ' lyrics-adlib-continues' : '';
+innerHTML = (mainHTML ? `<span class="lyrics-line-main">${mainHTML}</span>` : '') +
+`<span class="lyrics-adlib${continuationClass}">${adlibHTML}</span>`;
 } else {
 innerHTML = escapeHtml(line.text);
+}
 }
 lyricsHTML += `<div class="lyrics-line" data-time="${line.time}" data-dur="${line.duration || 0}" data-index="${index}" data-singer="${escapeHtml(singer)}" onclick="seekToLyric(${line.time})">${innerHTML}</div>`;
 });
