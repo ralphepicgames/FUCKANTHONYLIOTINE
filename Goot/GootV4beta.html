@@ -40767,7 +40767,11 @@ function _toggleShareVersionTag(btn) {
 function buildShareLink(token) {
   let link = GOOT_APP_BASE_URL + '?t=' + encodeURIComponent(token);
   if (_shareVersionTagEnabled) link += '&v=' + Date.now().toString(36);
-  link += '#' + token;
+  // No "#token" fragment appended -- the "?t=" query param alone is enough.
+  // _tryPendingTrack() already falls back to reading "?t=" when the hash is
+  // empty, so links generated without the fragment still open correctly in
+  // the app. Old links with the "#token" suffix (shared before this change)
+  // keep working too, since that hash-reading path is untouched.
   return link;
 }
 function _refreshOpenShareLinks() {
