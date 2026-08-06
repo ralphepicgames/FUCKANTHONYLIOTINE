@@ -42649,8 +42649,14 @@ if (!Array.isArray(json.results) || json.results.length === 0 || !json.results[0
 console.warn('[BinimumSearch] no results with lyricsUrl');
 return null;
 }
-const lyricsUrl = json.results[0].lyricsUrl;
-console.log('[BinimumSearch] search hit, following lyricsUrl:', lyricsUrl);
+// Prefer a word-level timed result over line-level; the API doesn't sort by
+// timing quality, so results[0] can be a "line" match even when a "word"
+// match exists elsewhere in the array for the same track.
+const candidates = json.results.filter(r => r && r.lyricsUrl);
+let chosen = candidates.find(r => r.timing_type === 'word');
+if (!chosen) chosen = candidates.find(r => r.timing_type !== 'line') || candidates[0];
+const lyricsUrl = chosen.lyricsUrl;
+console.log(`[BinimumSearch] search hit (${candidates.length} candidate${candidates.length === 1 ? '' : 's'}, chose timing_type="${chosen.timing_type || 'unknown'}"), following lyricsUrl:`, lyricsUrl);
 const lController = new AbortController();
 const lTimeout = setTimeout(() => lController.abort(), 15000);
 let lResp;
