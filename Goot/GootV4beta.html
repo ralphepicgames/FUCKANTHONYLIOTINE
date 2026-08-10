@@ -24533,7 +24533,7 @@ ${artHTML}
 </div>
 </td>
 <\!-- Album -->
-<td class="song-row-album meta-album np-clickable" onclick="event.stopPropagation(); navigateToRealAlbumFolder('${(m.album||'').replace(/'/g,"\\'")}', '${(m.artist||'').replace(/'/g,"\\'")}', '${t.id}');" title="Go to album folder">${m.album}</td>
+<td class="song-row-album meta-album np-clickable" onclick="event.stopPropagation(); if (document.body.classList.contains('meta-edit-mode')) return; navigateToRealAlbumFolder('${(m.album||'').replace(/'/g,"\\'")}', '${(m.artist||'').replace(/'/g,"\\'")}', '${t.id}');" title="Go to album folder">${m.album}</td>
 <\!-- Duration -->
 <td class="song-row-duration" data-track-id="${t.id}" data-duration="${m.duration || t.duration || ''}">
 ${m.duration ? formatTrackDuration(m.duration) : (t.duration ? formatTrackDuration(t.duration) : '<span style="opacity:0.25">—</span>')}
