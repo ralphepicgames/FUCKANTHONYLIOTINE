@@ -42414,10 +42414,10 @@ window._lyricsInFlight[trackId] = new Promise(r => { _resolveInFlight = r; });
 try {
 let data = await _tryUnisonAPI(title, artist, album);
 if (!data) {
-data = await _tryBinimumAPI(title, artist, album, duration, isrc);
+data = await _tryLyricsplusAPI(title, artist, album, duration, isrc);
 }
 if (!data) {
-data = await _tryLyricsplusAPI(title, artist, album, duration, isrc);
+data = await _tryBinimumAPI(title, artist, album, duration, isrc);
 }
 if (!data) {
 data = await _tryBinimumSearchAPI(title, artist, album, duration, isrc);
@@ -42429,10 +42429,10 @@ if (strippedTitle && strippedTitle !== title) {
 console.log(`[Lyrics] retrying with feat. stripped: "${title}" -> "${strippedTitle}"`);
 data = await _tryUnisonAPI(strippedTitle, artist, album);
 if (!data) {
-data = await _tryBinimumAPI(strippedTitle, artist, album, duration, isrc);
+data = await _tryLyricsplusAPI(strippedTitle, artist, album, duration, isrc);
 }
 if (!data) {
-data = await _tryLyricsplusAPI(strippedTitle, artist, album, duration, isrc);
+data = await _tryBinimumAPI(strippedTitle, artist, album, duration, isrc);
 }
 if (!data) {
 data = await _tryBinimumSearchAPI(strippedTitle, artist, album, duration, isrc);
@@ -42450,10 +42450,10 @@ const titleForRetry = strippedTitle || title;
 console.log(`[Lyrics] retrying with featured artist(s) added to artist field: "${artist}" -> "${artistWithFeat}"`);
 data = await _tryUnisonAPI(titleForRetry, artistWithFeat, album);
 if (!data) {
-data = await _tryBinimumAPI(titleForRetry, artistWithFeat, album, duration, isrc);
+data = await _tryLyricsplusAPI(titleForRetry, artistWithFeat, album, duration, isrc);
 }
 if (!data) {
-data = await _tryLyricsplusAPI(titleForRetry, artistWithFeat, album, duration, isrc);
+data = await _tryBinimumAPI(titleForRetry, artistWithFeat, album, duration, isrc);
 }
 if (!data) {
 data = await _tryBinimumSearchAPI(titleForRetry, artistWithFeat, album, duration, isrc);
@@ -42630,11 +42630,14 @@ return null;
 }
 }
 async function _tryLyricsplusAPI(title, artist, album, durationSecs, isrc) {
-async function _lpFetch() {
-const endpoints = [
-'https://lyrics.geeked.wtf/v2/lyrics/get',
-'https://lyricsplus.prjktla.workers.dev/v2/lyrics/get',
+const KPOE_MIRRORS = [
+'https://lyrics.geeked.wtf',
+'https://lyricsplus.prjktla.workers.dev',
+'https://lyricsplus-seven.vercel.app',
+'https://lyrics-plus-backend.vercel.app',
+'https://lyricsplus.binimum.org',
 ];
+async function _lpFetchOne(base) {
 const params = new URLSearchParams({
 title:    title,
 artist:   artist,
@@ -42642,30 +42645,33 @@ album:    album || '',
 duration: durationSecs || 0,
 });
 if (isrc) params.set('isrc', isrc);
-for (const base of endpoints) {
+const url = `${base.replace(/\/$/, '')}/v2/lyrics/get?${params}`;
 const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), 15000);
 try {
-const resp = await fetch(`${base}?${params}`, { cache: 'no-store', signal: controller.signal });
-if (!resp.ok) { clearTimeout(timeout); continue; }
-const json = await resp.json();
-clearTimeout(timeout);
-return json;
+const resp = await fetch(url, { cache: 'no-store', signal: controller.signal });
+if (!resp.ok) return null;
+return await resp.json();
 } catch (e) {
-clearTimeout(timeout);
 console.warn(`[LyricsPlus] endpoint failed (${base}):`, e);
+return null;
+} finally {
+clearTimeout(timeout);
+}
+}
+// shuffle mirrors so load spreads out, then try each til one hits
+const shuffled = [...KPOE_MIRRORS].sort(() => Math.random() - 0.5);
+try {
+for (const base of shuffled) {
+const json = await _lpFetchOne(base);
+if (!json) continue;
+const data = _parseLP(json, 'lyricsplus');
+if (data) {
+console.log(`[LyricsPlus] ${data._isWordLevel ? 'word-level' : 'line-synced'} from ${data._lpSource || base}`);
+return data;
 }
 }
 return null;
-}
-try {
-const json = await _lpFetch();
-console.log('[LyricsPlus] raw response:', JSON.stringify(json).slice(0, 400));
-const data = _parseLP(json, 'lyricsplus');
-if (data) {
-console.log(`[LyricsPlus] ${data._isWordLevel ? 'word-level' : 'line-synced'} from ${data._lpSource}`);
-}
-return data || null;
 } catch (e) {
 console.warn('LyricsPlus API failed:', e);
 return null;
