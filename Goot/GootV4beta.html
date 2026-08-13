@@ -48840,12 +48840,14 @@ const input = document.getElementById('mobileSearchInput');
 overlay.classList.add('open');
 document.body.style.overflow = 'hidden';
 setTimeout(() => input && input.focus(), 100);
+_startMobileSearchMirror();
 }
 function closeMobileSearch() {
 const overlay = document.getElementById('mobileSearchOverlay');
 overlay.classList.remove('open');
 document.body.style.overflow = '';
 clearMobileSearch();
+_stopMobileSearchMirror();
 }
 function clearMobileSearch() {
 const input = document.getElementById('mobileSearchInput');
@@ -48854,6 +48856,43 @@ const results = document.getElementById('mobileSearchResults');
 if (input) input.value = '';
 if (clear) clear.classList.remove('visible');
 if (results) results.innerHTML = '<div class="top-search-empty"><i class="fa-solid fa-music"></i><p>Search for songs, artists, or albums</p></div>';
+}
+function _bindMobileResultClicks() {
+const mobileResults = document.getElementById('mobileSearchResults');
+if (!mobileResults) return;
+mobileResults.querySelectorAll('[onclick]').forEach(el => {
+const fn = el.getAttribute('onclick');
+el.removeAttribute('onclick');
+el.addEventListener('click', (ev) => {
+try { eval(fn); } catch(err) {}
+closeMobileSearch();
+});
+});
+}
+let _mobileSearchObserver = null;
+function _startMobileSearchMirror() {
+_stopMobileSearchMirror();
+const dropdown = document.getElementById('topSearchDropdownContent') || document.getElementById('topSearchDropdown');
+const mobileResults = document.getElementById('mobileSearchResults');
+if (!dropdown || !mobileResults) return;
+// Real search results land asynchronously (debounce + network), so a single
+// delayed copy race-loses to slow fetches and freezes the loading spinner.
+// Mirror continuously instead, for as long as the overlay is open.
+const sync = () => {
+if (mobileResults.innerHTML !== dropdown.innerHTML) {
+mobileResults.innerHTML = dropdown.innerHTML;
+_bindMobileResultClicks();
+}
+};
+sync();
+_mobileSearchObserver = new MutationObserver(sync);
+_mobileSearchObserver.observe(dropdown, { childList: true, subtree: true, characterData: true });
+}
+function _stopMobileSearchMirror() {
+if (_mobileSearchObserver) {
+_mobileSearchObserver.disconnect();
+_mobileSearchObserver = null;
+}
 }
 function handleMobileSearchInput(e) {
 const q = e.target.value.trim();
@@ -48865,21 +48904,6 @@ mainInput.value = e.target.value;
 const ev = new Event('input', { bubbles: true });
 mainInput.dispatchEvent(ev);
 }
-clearTimeout(window._mobileSearchMirrorTimer);
-window._mobileSearchMirrorTimer = setTimeout(() => {
-const dropdown = document.getElementById('topSearchDropdownContent') || document.getElementById('topSearchDropdown');
-const mobileResults = document.getElementById('mobileSearchResults');
-if (dropdown && mobileResults) {
-mobileResults.innerHTML = dropdown.innerHTML;
-mobileResults.querySelectorAll('[onclick]').forEach(el => {
-const fn = el.getAttribute('onclick');
-el.addEventListener('click', (ev) => {
-try { eval(fn); } catch(err) {}
-closeMobileSearch();
-});
-});
-}
-}, 350);
 }
 document.addEventListener('keydown', e => {
 if (e.key === 'Escape' && document.getElementById('mobileSearchOverlay')?.classList.contains('open')) {
@@ -51566,6 +51590,20 @@ function _currentFolderName() {
     return _gfmStack.length ? _gfmStack[_gfmStack.length-1].name : 'Root';
 }
 
+// The main app's homepage/library browsing caches folder listings (in-memory +
+// sessionStorage) separately from this file manager. Whenever GFM creates,
+// renames, deletes, or uploads anything, clear that cache so changes show up
+// on the homepage immediately instead of the stale listing lingering.
+function _invalidateMainAppFolderCache() {
+    try {
+        if (typeof folderContentsCache !== 'undefined' && folderContentsCache.clear) folderContentsCache.clear();
+    } catch(_) {}
+    try {
+        if (typeof FOLDER_TREE_CACHE_KEY !== 'undefined') sessionStorage.removeItem(FOLDER_TREE_CACHE_KEY);
+        else sessionStorage.removeItem('goot_folder_tree_cache');
+    } catch(_) {}
+}
+
 function _showStatus(msg, isErr) {
     const root = document.getElementById('gfm-root');
     if (!root) return;
@@ -51727,6 +51765,7 @@ function _showNewFolderModal() {
             if (res.ok && data.success) {
                 overlay.remove();
                 _showStatus('✓ Created: ' + data.path);
+                _invalidateMainAppFolderCache();
                 _loadFolder(_currentFolderId(), _currentFolderName());
             } else {
                 status.textContent = data.error || 'Error';
@@ -51766,6 +51805,7 @@ function _showRenameModal(folderId, currentName) {
             if (res.ok && data.success) {
                 overlay.remove();
                 _showStatus('✓ Renamed to: ' + newName);
+                _invalidateMainAppFolderCache();
                 _loadFolder(_currentFolderId(), _currentFolderName());
             } else {
                 status.textContent = data.error || 'Error';
@@ -51830,6 +51870,7 @@ function _showCoverModal(folderId, folderName) {
             if (res.ok && data.success) {
                 overlay.remove();
                 _showStatus('✓ Cover set for: ' + folderName);
+                _invalidateMainAppFolderCache();
                 _loadFolder(_currentFolderId(), _currentFolderName());
             } else {
                 status.textContent = data.error || 'Error';
@@ -51859,7 +51900,7 @@ function _showDeleteFolderModal(folderId, folderName) {
                 body: JSON.stringify({folder: folderId})
             });
             const data = await res.json();
-            if (res.ok && data.success) { overlay.remove(); _showStatus('✓ Deleted: ' + folderName); _loadFolder(_currentFolderId(), _currentFolderName()); }
+            if (res.ok && data.success) { overlay.remove(); _showStatus('✓ Deleted: ' + folderName); _invalidateMainAppFolderCache(); _loadFolder(_currentFolderId(), _currentFolderName()); }
             else { status.textContent = data.error || 'Error'; status.style.display = ''; }
         } catch(e) { status.textContent = e.message; status.style.display = ''; }
     };
@@ -51885,7 +51926,7 @@ function _showDeleteFileModal(fileId, fileName) {
                 body: JSON.stringify({id: fileId})
             });
             const data = await res.json();
-            if (res.ok && data.success) { overlay.remove(); _showStatus('✓ Deleted: ' + fileName); _loadFolder(_currentFolderId(), _currentFolderName()); }
+            if (res.ok && data.success) { overlay.remove(); _showStatus('✓ Deleted: ' + fileName); _invalidateMainAppFolderCache(); _loadFolder(_currentFolderId(), _currentFolderName()); }
             else { status.textContent = data.error || 'Error'; status.style.display = ''; }
         } catch(e) { status.textContent = e.message; status.style.display = ''; }
     };
@@ -51914,7 +51955,7 @@ function _showRenameFileModal(fileId, currentName) {
                 body: JSON.stringify({id: fileId, newName})
             });
             const data = await res.json();
-            if (res.ok && data.success) { overlay.remove(); _showStatus('✓ Renamed to: ' + newName); _loadFolder(_currentFolderId(), _currentFolderName()); }
+            if (res.ok && data.success) { overlay.remove(); _showStatus('✓ Renamed to: ' + newName); _invalidateMainAppFolderCache(); _loadFolder(_currentFolderId(), _currentFolderName()); }
             else { status.textContent = data.error || 'Error'; status.style.display = ''; }
         } catch(e) { status.textContent = e.message; status.style.display = ''; }
     };
