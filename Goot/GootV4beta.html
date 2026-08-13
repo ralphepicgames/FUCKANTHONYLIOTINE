@@ -6195,6 +6195,13 @@ animation: asteroidCrash 1.5s cubic-bezier(0.36, 0, 0.66, -0.56);
 position: relative;
 z-index: 100;
 }
+/* Generic hidden utility folders (e.g. internal caches) - shown quietly, not targeted by the reveal effect */
+.folder-card.hidden-util-folder{ display: none; }
+.folder-card.hidden-util-folder.quietly-revealed{ display: block; animation: quietFadeIn 0.6s ease-out; }
+@keyframes quietFadeIn {
+from { opacity: 0; transform: translateY(6px); }
+to { opacity: 1; transform: translateY(0); }
+}
 /* Asteroid crash animation — flies in from top, no horizontal bleed */
 @keyframes asteroidCrash {
 0% {
@@ -17615,10 +17622,17 @@ const METADATA_API_URL = SCANNER_WORKER_URL;
 const SEARCH_API_URL = PLAYER_WORKER_URL;
 const STREAMING_URL = PLAYER_WORKER_URL;
 const GOOT_LOCAL_DIRECT_BASE = "https://goot-api.duckdns.org:3500";
+// Niggle Rock now lives on the self-hosted server instead of Drive.
+// Any folder/track id discovered while browsing under SECRET_FOLDER_ID gets
+// added here so folder listing + streaming route to GOOT_LOCAL_DIRECT_BASE.
+const _niggleRockIds = new Set(['18TI5Y9cORQbEw6AOb2sQHW-lUTUgSKMB']);
 function isLosslessPreferred() {
 return localStorage.getItem('goot_prefer_lossless') === 'true';
 }
 function streamUrl(id, extraParams = '') {
+if (_niggleRockIds.has(id)) {
+return `${GOOT_LOCAL_DIRECT_BASE}/audio?id=${id}${extraParams}`;
+}
 return `${STREAMING_URL}?id=${id}${isLosslessPreferred() ? '&lossless=1' : ''}${extraParams}`;
 }
 const _losslessAvailCache = new Map(); // trackId -> boolean
@@ -22015,6 +22029,7 @@ arr.forEach(v => { if (v) counts[v] = (counts[v] || 0) + 1; });
 return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
 }
 async function getFolderWithMeta(folderId, refresh = false) {
+if (_niggleRockIds.has(folderId)) refresh = true; // never trust stale cached listings for the self-hosted folder
 if (!refresh) {
 const cached = folderContentsCache.get(folderId);
 if (cached) return cached.data;
@@ -22022,11 +22037,19 @@ if (_folderFetchInFlight.has(folderId)) return _folderFetchInFlight.get(folderId
 }
 const fetchPromise = (async () => {
 try {
-const filesPromise = fetch(`${STREAMING_URL}?list=${folderId}${refresh ? '&refresh=1' : ''}`, { cache: refresh ? 'no-store' : 'default' });
+const _isNiggleRock = _niggleRockIds.has(folderId);
+const filesPromise = _isNiggleRock
+? fetch(`${GOOT_LOCAL_DIRECT_BASE}/list?folder=${encodeURIComponent(folderId)}${refresh ? '&refresh=1' : ''}`, { cache: refresh ? 'no-store' : 'default' })
+: fetch(`${STREAMING_URL}?list=${folderId}${refresh ? '&refresh=1' : ''}`, { cache: refresh ? 'no-store' : 'default' });
 const filesRes = await filesPromise;
 if (!filesRes.ok) throw new Error(`Failed to fetch folder contents (status ${filesRes.status}")`);
 const json = await filesRes.json();
 const files = json.files || json || [];
+if (_isNiggleRock) {
+// Mark every child id (subfolders + tracks) as self-hosted so nested
+// navigation and playback keep routing to GOOT_LOCAL_DIRECT_BASE.
+files.forEach(f => { if (f && f.id) _niggleRockIds.add(f.id); });
+}
 const updatedIds = [];
 files.forEach(f => {
 if (!f._meta) return;
@@ -22640,8 +22663,12 @@ if (!trackMetadata[f.id].name) trackMetadata[f.id].name = f.name;
 }
 }
 }
-const folders = _folders_all;
 const SECRET_FOLDER_ID = '18TI5Y9cORQbEw6AOb2sQHW-lUTUgSKMB';
+const folders = _folders_all.slice().sort((a, b) => {
+const aUtil = a.id !== SECRET_FOLDER_ID && a.name.startsWith('.goot.hidden');
+const bUtil = b.id !== SECRET_FOLDER_ID && b.name.startsWith('.goot.hidden');
+return (aUtil === bUtil) ? 0 : (aUtil ? 1 : -1);
+});
 const hasFolders = folders.length > 0;
 const depth = stack.length;
 const _stripVariant = n => n.replace(/[\s\-\u2013\u2014(]+(?:deluxe|expanded|remastered?|remaster|anniversary|bonus|complete|collector|special|limited|platinum|gold|super|explicit|clean|censored|edition|version|regular|vol\.?\s*\d+|\d+th|\d+st|\d+nd|\d+rd)\b.*/i, '').trim().toLowerCase();
@@ -22729,8 +22756,10 @@ folders.forEach(f => {
 if (hasOnlyVariantFolders && variantFolders.some(v => v.id === f.id)) return;
 const card = document.createElement("div");
 card.className = "folder-card playlist-card";
-if (f.id === SECRET_FOLDER_ID || f.name.startsWith('.goot.hidden')) {
+if (f.id === SECRET_FOLDER_ID) {
 card.classList.add('secret-folder');
+} else if (f.name.startsWith('.goot.hidden')) {
+card.classList.add('hidden-util-folder');
 }
 card.dataset.folderId = f.id;
 card.dataset.folderName = f.name;
@@ -41538,6 +41567,9 @@ return;
 _doRevealSecretFolder();
 }
 function _doRevealSecretFolder() {
+document.querySelectorAll('.folder-card.hidden-util-folder').forEach(el => {
+el.classList.add('quietly-revealed');
+});
 const secretFolder = document.querySelector('.folder-card.secret-folder');
 if (secretFolder) {
 secretFolder.style.display = 'block';
