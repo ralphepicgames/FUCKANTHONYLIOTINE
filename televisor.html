@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Televisor</title>
   <!-- Favicon using the provided base64 PNG image data -->
    <link rel="icon" id="dynamicFavicon" type="image/png" href="">
@@ -109,7 +109,10 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.2s ease;
+      transition: background 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.2, 0.64, 1);
+    }
+    .nav-icon-wrapper svg {
+      transition: transform 0.22s cubic-bezier(0.34, 1.2, 0.64, 1);
     }
     .nav-item:hover .nav-icon-wrapper {
       background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
@@ -1301,22 +1304,12 @@
       animation: mv-slideup 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
     .mv-poster-card:hover {
-      transform: translateY(-6px) scale(1.04);
-      box-shadow:
-        0 0 0 2px rgba(0,0,0,0.9),
-        0 16px 36px rgba(0,0,0,0.75),
-        0 0 20px color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
       z-index: 10;
     }
     .mv-poster-card:active {
-      transform: translateY(-2px) scale(1.01);
       transition-duration: 0.1s;
     }
     .mv-poster-card.active {
-      box-shadow:
-        0 0 0 2.5px var(--md-sys-color-primary),
-        0 8px 24px rgba(0,0,0,0.7),
-        0 0 28px color-mix(in srgb, var(--md-sys-color-primary) 45%, transparent);
       z-index: 5;
     }
     .mv-poster-card.active:hover { z-index: 10; }
@@ -1335,7 +1328,7 @@
       display: block;
       transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .mv-poster-card:hover img { transform: scale(1.06); }
+    .mv-poster-card:hover img { /* no zoom — title/year overlay is the indicator */ }
     .mv-poster-overlay {
       position: absolute;
       inset: 0;
@@ -1353,7 +1346,8 @@
       padding: 9px;
     }
     .mv-poster-card:hover .mv-poster-overlay,
-    .mv-poster-card.active .mv-poster-overlay { opacity: 1; }
+    .mv-poster-card.active .mv-poster-overlay,
+    .mv-poster-card.tv-focused .mv-poster-overlay { opacity: 1; }
     .mv-poster-title {
       font-size: 11px;
       font-weight: 600;
@@ -1966,22 +1960,12 @@
       animation: mv-slideup 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
     .niggle-vid-card:hover {
-      transform: translateY(-6px) scale(1.04);
-      box-shadow:
-        0 0 0 2px rgba(0,0,0,0.9),
-        0 16px 36px rgba(0,0,0,0.75),
-        0 0 20px color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
       z-index: 10;
     }
     .niggle-vid-card:active {
-      transform: translateY(-2px) scale(1.01);
       transition-duration: 0.1s;
     }
     .niggle-vid-card.active {
-      box-shadow:
-        0 0 0 2.5px var(--md-sys-color-primary),
-        0 8px 24px rgba(0,0,0,0.7),
-        0 0 28px color-mix(in srgb, var(--md-sys-color-primary) 45%, transparent);
       z-index: 5;
     }
     .niggle-vid-card.active:hover { z-index: 10; }
@@ -2001,7 +1985,7 @@
       display: block;
       transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .niggle-vid-card:hover .niggle-vid-inner img { transform: scale(1.06); }
+    .niggle-vid-card:hover .niggle-vid-inner img { /* no zoom — title overlay is the indicator */ }
 
     /* Gradient overlay with title — same as .mv-poster-overlay */
     .niggle-vid-overlay {
@@ -2021,7 +2005,8 @@
       padding: 9px;
     }
     .niggle-vid-card:hover .niggle-vid-overlay,
-    .niggle-vid-card.active .niggle-vid-overlay { opacity: 1; }
+    .niggle-vid-card.active .niggle-vid-overlay,
+    .niggle-vid-card.tv-focused .niggle-vid-overlay { opacity: 1; }
     .niggle-vid-title {
       font-size: 11px;
       font-weight: 600;
@@ -2138,7 +2123,7 @@
         z-index: 99;
         padding: 6px 10px;
       }
-      .top-bar-logo { display: none; } /* hide logo to save space */
+      .top-bar-logo { /* keep visible for D-pad / Niggle unlock */ transform: scale(0.85); }
 
       /* Music panel: allow it to expand naturally */
       #musicPanel {
@@ -2332,9 +2317,507 @@
       padding: 16px; text-align: center;
       font-size: 13px; color: var(--md-sys-color-on-surface-variant);
     }
+
+
+    /* Movies / Niggle — Netflix/Fire-TV style player chrome */
+    .mv-video-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
+      z-index: 20;
+      border-radius: inherit;
+      background:
+        linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 26%),
+        linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.4) 38%, transparent 70%);
+    }
+    #moviesIframeWrap.controls-visible .mv-video-overlay,
+    #niggleVideoWrap.controls-visible .mv-video-overlay {
+      opacity: 1;
+      pointer-events: all;
+    }
+    #moviesIframeWrap.cursor-hidden,
+    #niggleVideoWrap.cursor-hidden {
+      cursor: none;
+    }
+
+    /* Center play/pause hit target (big, Fire-TV friendly) */
+    .mv-center-play {
+      position: absolute;
+      left: 50%; top: 48%;
+      transform: translate(-50%, -50%);
+      width: 88px; height: 88px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #fff;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.15s, background 0.15s;
+      z-index: 22;
+    }
+    .mv-center-play svg { width: 42px; height: 42px; fill: currentColor; margin-left: 3px; }
+    .mv-center-play .mv-center-pause { margin-left: 0; }
+    #moviesIframeWrap.controls-visible.mv-is-paused .mv-center-play,
+    #niggleVideoWrap.controls-visible.mv-is-paused .mv-center-play {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .mv-center-play:hover { background: rgba(0,0,0,0.65); }
+    .mv-center-play.tv-focused {
+      outline: none !important;
+      box-shadow: none !important;
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      transform: translate(-50%, -50%) scale(1.08);
+      opacity: 1 !important;
+      pointer-events: all !important;
+    }
+
+    /* Bottom control dock */
+    .mv-dock {
+      position: relative;
+      z-index: 21;
+      padding: 6px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* Progress: scrubber full width with times underneath ends */
+    .mv-scrub-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mv-progress-wrap {
+      position: relative;
+      height: 4px;
+      background: rgba(255,255,255,0.28);
+      border-radius: 99px;
+      cursor: pointer;
+      transition: height 0.15s ease;
+      touch-action: none;
+    }
+    .mv-progress-wrap:hover {
+      height: 5px;
+    }
+    .mv-progress-buf {
+      position: absolute; left: 0; top: 0; height: 100%;
+      background: rgba(255,255,255,0.2);
+      border-radius: 99px; width: 0%;
+    }
+    .mv-progress-fill {
+      position: absolute; left: 0; top: 0; height: 100%;
+      background: color-mix(in srgb, var(--md-sys-color-primary) 50%, #fff 50%);
+      border-radius: 99px; width: 0%;
+      opacity: 0.95;
+    }
+    .mv-progress-thumb {
+      position: absolute; top: 50%;
+      width: 12px; height: 12px;
+      background: #fff;
+      border-radius: 50%;
+      border: none;
+      padding: 0;
+      margin: 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+      transform: translate(-50%, -50%);
+      left: 0%;
+      pointer-events: auto;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s, width 0.15s, height 0.15s, opacity 0.15s;
+      z-index: 3;
+      outline: none;
+      opacity: 0.95;
+    }
+    #moviesIframeWrap.controls-visible .mv-progress-thumb,
+    #niggleVideoWrap.controls-visible .mv-progress-thumb,
+    .mv-progress-wrap:hover .mv-progress-thumb {
+      opacity: 1;
+    }
+    /* Up from transport → focus the DOT only */
+    /* focus/scrub size handled later (no glow) */
+    .mv-progress-wrap.mv-scrubbing {
+      height: 5px;
+    }
+    .mv-progress-wrap.mv-scrubbing .mv-progress-fill {
+      opacity: 1;
+    }
+    .mv-time-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 1px;
+    }
+    .mv-time-row .bar-time {
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.25px;
+      color: rgba(255,255,255,0.72);
+      min-width: 48px;
+      font-weight: 500;
+    }
+
+    /* Transport row: left cluster | spacer | right cluster */
+    .mv-transport {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 48px;
+    }
+    .mv-transport-left,
+    .mv-transport-right {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .mv-transport-mid {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+        /* Movie/Niggle player controls — normal sizes */
+    .mv-video-overlay .control-btn,
+    .mv-video-overlay .bar-icon-btn {
+      color: rgba(255,255,255,0.95);
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+      transition: color 0.15s, background 0.15s, transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1);
+    }
+    .mv-video-overlay .control-btn::after,
+    .mv-video-overlay .bar-icon-btn::after {
+      content: ''; position: absolute; inset: 0;
+      border-radius: 50%; background: currentColor;
+      opacity: 0; transition: opacity 0.15s;
+    }
+    .mv-video-overlay .control-btn:hover,
+    .mv-video-overlay .bar-icon-btn:hover { color: #fff; }
+    .mv-video-overlay .control-btn:hover::after,
+    .mv-video-overlay .bar-icon-btn:hover::after { opacity: 0.12; }
+    .mv-video-overlay .control-btn svg,
+    .mv-video-overlay .bar-icon-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+      display: block;
+    }
+    .mv-video-overlay .mv-pp-btn {
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      min-height: 48px;
+      background: rgba(255,255,255,0.14);
+      color: #fff;
+      border-radius: 50%;
+      margin: 0 6px;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.3);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .mv-video-overlay .mv-pp-btn::after { display: none; }
+    .mv-video-overlay .mv-pp-btn:hover {
+      background: rgba(255,255,255,0.28);
+      color: #fff;
+    }
+    .mv-video-overlay .mv-pp-btn svg {
+      width: 26px;
+      height: 26px;
+    }
+    .mv-seek-btn {
+      flex-direction: column;
+      gap: 0;
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
+      min-height: 42px;
+      font-size: 9px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.88);
+    }
+    .mv-seek-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+    .mv-seek-lbl {
+      font-family: 'Google Sans', sans-serif;
+      font-size: 9px;
+      line-height: 1;
+      position: relative;
+      z-index: 1;
+      opacity: 0.85;
+    }
+
+    .mv-video-overlay input[type=range].mv-vol-slider {
+      -webkit-appearance: none;
+      width: 0;
+      height: 4px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 99px; outline: none; cursor: pointer;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: width 0.2s ease, opacity 0.2s ease, margin 0.2s ease;
+      margin: 0;
+    }
+    .mv-vol-group:hover .mv-vol-slider,
+    .mv-vol-group:focus-within .mv-vol-slider,
+    .mv-vol-group.tv-vol-open .mv-vol-slider {
+      width: 90px;
+      opacity: 1;
+      margin-left: 4px;
+    }
+    .mv-video-overlay input[type=range].mv-vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+    }
+    .mv-video-overlay input[type=range].mv-vol-slider::-moz-range-thumb {
+      width: 14px; height: 14px;
+      background: #fff;
+      border-radius: 50%; border: none;
+    }
+    .mv-vol-group {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    /* overlay TV focus: see no-glow rules below */
+
+
+    /* Keep overlays visible while D-pad is on their controls */
+    /* TV lock used to force-show chrome; that blocked auto-hide.
+       Visibility is controlled solely by .controls-visible now. */
+    .player-video-wrap.tv-controls-locked .player-overlay {
+      opacity: 1 !important;
+      pointer-events: all !important;
+    }
+
+    /* Fire TV: slightly larger targets when body is in tv-nav-mode */
+    body.tv-nav-mode .mv-video-overlay .control-btn,
+    body.tv-nav-mode .mv-video-overlay .bar-icon-btn {
+      width: 48px; height: 48px;
+    }
+    body.tv-nav-mode .mv-video-overlay .control-btn svg,
+    body.tv-nav-mode .mv-video-overlay .bar-icon-btn svg {
+      width: 24px; height: 24px;
+    }
+    body.tv-nav-mode .mv-video-overlay .mv-pp-btn {
+      width: 56px; height: 56px;
+    }
+    body.tv-nav-mode .mv-video-overlay .mv-pp-btn svg {
+      width: 30px; height: 30px;
+    }
+    body.tv-nav-mode .mv-seek-btn {
+      width: 48px; height: 48px;
+    }
+    body.tv-nav-mode .mv-seek-btn svg {
+      width: 24px; height: 24px;
+    }
+    body.tv-nav-mode .mv-progress-wrap {
+      height: 6px;
+    }
+    body.tv-nav-mode .mv-dock {
+      padding: 12px 18px 18px;
+    }
+
+    /* ══════════════════════════════════════════════
+       TV / D-pad spatial navigation focus styles
+    ══════════════════════════════════════════════ */
+    .tv-focusable:focus {
+      outline: none;
+    }
+
+    /* Default D-pad focus for UI chrome (nav, grids, etc.) — kept subtle */
+    .nav-item.tv-focused,
+    .ch-card.tv-focused,
+    .queue-item.tv-focused,
+    .playlist-item.tv-focused,
+    .search-result-item.tv-focused,
+    .ch-qa-chip.tv-focused,
+    .ch-tab.tv-focused,
+    .sq-tab.tv-focused,
+    .mv-pill.tv-focused,
+    .settings-btn.tv-focused,
+    .unified-search-btn.tv-focused,
+    .unified-add-btn.tv-focused,
+    .sq-action-btn.tv-focused,
+    .ch-lookup-btn.tv-focused,
+    .ch-header-add-btn.tv-focused,
+    .button.tv-focused,
+    .episode-select.tv-focused,
+    .unified-search.tv-focused,
+    input.tv-focused,
+    select.tv-focused {
+      outline: 2px solid color-mix(in srgb, var(--md-sys-color-primary) 70%, #fff 30%);
+      outline-offset: 2px;
+      z-index: 20;
+      position: relative;
+    }
+
+    /* Logo */
+    #topBarLogo.tv-focused,
+    .top-bar-logo.tv-focused {
+      position: absolute !important;
+      left: 16px !important;
+      outline: 2px solid color-mix(in srgb, var(--md-sys-color-primary) 70%, #fff 30%);
+      outline-offset: 2px;
+      border-radius: 10px;
+      z-index: 30;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+    .top-bar {
+      overflow: visible;
+    }
+    .nav-rail, .top-bar, .top-bar-logo {
+      overflow-anchor: none;
+    }
+    .nav-item.tv-focused .nav-icon-wrapper {
+      background: var(--md-sys-color-primary-container);
+      transform: scale(1.18);
+    }
+    .nav-item.tv-focused .nav-icon-wrapper svg {
+      transform: scale(1.12);
+    }
+    .nav-item.tv-focused {
+      opacity: 1;
+      color: var(--md-sys-color-primary);
+    }
+    /* Poster / niggle focus: title (and year) overlay only — no outline, no scale */
+    .mv-poster-card.tv-focused,
+    .niggle-vid-card.tv-focused {
+      outline: none !important;
+      box-shadow:
+        0 0 0 2px rgba(0,0,0,0.85),
+        0 4px 14px rgba(0,0,0,0.5);
+      transform: none;
+      z-index: 10;
+    }
+    .queue-item.tv-focused {
+      background: color-mix(in srgb, var(--md-sys-color-primary-container) 40%, transparent);
+    }
+
+    /* ── Player overlays: NO glow — scale only ── */
+    .mv-video-overlay .tv-focused,
+    .mv-video-overlay button.tv-focused,
+    .mv-video-overlay .control-btn.tv-focused,
+    .mv-video-overlay .bar-icon-btn.tv-focused,
+    .mv-video-overlay .tv-media-btn.tv-focused,
+    .mv-video-overlay .settings-btn.tv-focused,
+    .player-overlay .tv-focused,
+    .player-overlay button.tv-focused,
+    .player-overlay .control-btn.tv-focused,
+    .player-overlay .bar-icon-btn.tv-focused,
+    .player-overlay .settings-btn.tv-focused {
+      outline: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+      -webkit-box-shadow: none !important;
+    }
+    .mv-progress-thumb.tv-focused,
+    .mv-progress-thumb:focus,
+    .mv-progress-thumb.mv-scrubbing,
+    .mv-progress-wrap.mv-scrubbing .mv-progress-thumb {
+      outline: none !important;
+      filter: none !important;
+    }
+    .mv-video-overlay .control-btn.tv-focused::after,
+    .mv-video-overlay .bar-icon-btn.tv-focused::after,
+    .player-overlay .control-btn.tv-focused::after,
+    .player-overlay .bar-icon-btn.tv-focused::after {
+      opacity: 0 !important;
+    }
+    .mv-video-overlay .control-btn.tv-focused,
+    .mv-video-overlay .bar-icon-btn.tv-focused,
+    .mv-video-overlay .tv-media-btn.tv-focused,
+    .mv-video-overlay button.tv-focused,
+    .player-overlay .control-btn.tv-focused,
+    .player-overlay .bar-icon-btn.tv-focused,
+    .player-overlay button.tv-focused {
+      position: relative;
+      transform: scale(1.55);
+      color: #fff;
+      background: rgba(255,255,255,0.22);
+      outline: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+    }
+    .mv-video-overlay .mv-pp-btn.tv-focused,
+    .player-overlay #playPauseBtn.tv-focused {
+      transform: scale(1.45);
+      background: rgba(255,255,255,0.32);
+      outline: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+    }
+    .mv-progress-thumb.tv-focused,
+    .mv-progress-thumb:focus {
+      position: absolute;
+      transform: translate(-50%, -50%) scale(1.35) !important;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      opacity: 1;
+      outline: none !important;
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.25) !important;
+      filter: none !important;
+    }
+    .mv-progress-thumb.mv-scrubbing,
+    .mv-progress-wrap.mv-scrubbing .mv-progress-thumb {
+      position: absolute;
+      transform: translate(-50%, -50%) scale(1.45) !important;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      opacity: 1;
+      outline: none !important;
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.3) !important;
+      filter: none !important;
+    }
+
+    body.tv-nav-mode *:focus {
+      outline: none;
+    }
+
+    /* Dock at normal size — no global scale */
+    #moviesIframeWrap,
+    #niggleVideoWrap {
+      overflow: hidden;
+    }
   </style>
 </head>
 <body>
+
     <div class="app-shell" id="playerContainer">
 
       <!-- ── Left Nav Rail ── -->
@@ -2666,8 +3149,56 @@
               allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
               referrerpolicy="no-referrer-when-downgrade"
             ></iframe>
-            <!-- Video element for direct HLS/MP4 streams (fallback) -->
-            <video id="moviesVideo" style="width:100%;height:100%;display:none;" controls playsinline></video>
+            <!-- Video element for direct HLS/MP4 streams (no native controls — custom overlay) -->
+            <video id="moviesVideo" style="width:100%;height:100%;display:none;" playsinline></video>
+            <!-- Custom overlay controls (mirrors music player) -->
+            <div class="mv-video-overlay" id="mvVideoOverlay">
+              <div class="mv-dock">
+                <div class="mv-scrub-row">
+                  <div class="mv-progress-wrap" id="mvProgressWrap" data-media="movies">
+                    <div class="mv-progress-buf" id="mvProgressBuf"></div>
+                    <div class="mv-progress-fill" id="mvProgressFill"></div>
+                    <button type="button" class="mv-progress-thumb tv-focusable" id="mvProgressThumb" data-media="movies" tabindex="0" role="slider" aria-label="Seek position" title="Seek"></button>
+                  </div>
+                  <div class="mv-time-row">
+                    <span class="bar-time" id="mvTimeElapsed">0:00</span>
+                    <span class="bar-time" id="mvTimeTotal">0:00</span>
+                  </div>
+                </div>
+                <div class="mv-transport">
+                  <div class="mv-transport-left">
+                    <div class="mv-vol-group">
+                      <button type="button" class="bar-icon-btn tv-media-btn" data-media="movies" data-action="mute" title="Mute" id="mvMuteBtn">
+                        <svg viewBox="0 0 24 24" width="40" height="40" id="mvVolIcon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                        <svg viewBox="0 0 24 24" width="40" height="40" id="mvMuteIcon" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                      </button>
+                      <input type="range" class="mv-vol-slider" id="mvVolSlider" min="0" max="1" step="0.02" value="1" title="Volume">
+                    </div>
+                  </div>
+                  <div class="mv-transport-mid">
+                    <button type="button" class="control-btn mv-seek-btn tv-media-btn" data-media="movies" data-action="seek-back" title="Back 10s">
+                      <svg viewBox="0 0 24 24" width="40" height="40"><path d="M11.99 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                      <span class="mv-seek-lbl">10</span>
+                    </button>
+                    <button type="button" class="control-btn mv-pp-btn tv-media-btn" data-media="movies" data-action="playpause" title="Play/Pause" id="mvPlayPauseBtn">
+                      <svg viewBox="0 0 24 24" width="40" height="40" id="mvPlayIcon"><path d="M8 5v14l11-7z"/></svg>
+                      <svg viewBox="0 0 24 24" width="40" height="40" id="mvPauseIcon" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+                    <button type="button" class="control-btn mv-seek-btn tv-media-btn" data-media="movies" data-action="seek-fwd" title="Forward 10s">
+                      <svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+                      <span class="mv-seek-lbl">10</span>
+                    </button>
+                  </div>
+                  <div class="mv-transport-right">
+                    <button type="button" class="bar-icon-btn tv-media-btn" data-media="movies" data-action="fullscreen" title="Fullscreen" id="mvFsBtn">
+                      <svg viewBox="0 0 24 24" width="40" height="40" id="mvFsIcon"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                      <svg viewBox="0 0 24 24" width="40" height="40" id="mvExitFsIcon" style="display:none"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div id="mvIframeLoading" style="display:flex;position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#000;color:rgba(255,255,255,0.5);font-size:13px;font-family:'Google Sans',sans-serif;">
               <div style="width:32px;height:32px;border:3px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:mv-spin 0.7s linear infinite;"></div>
               Loading player…
@@ -2685,7 +3216,7 @@
           <!-- Handle lookup bar -->
           <div class="ch-lookup-bar">
             <div class="ch-lookup-field">
-              <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+              <svg viewBox="0 0 24 24" width="40" height="40"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
               <input id="channelHandleInput" type="text" placeholder="Look up a channel by @handle…" autocomplete="off"
                 onkeydown="if(event.key==='Enter')lookupChannel()">
             </div>
@@ -2705,7 +3236,7 @@
                 <div class="ch-header-meta" id="channelHeaderMeta"></div>
               </div>
               <button class="ch-header-add-btn" id="channelAddBtn" onclick="toggleChannelQuickAccess()">
-                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                <svg viewBox="0 0 24 24" width="40" height="40"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 <span id="channelAddBtnLabel">Add to quick access</span>
               </button>
             </div>
@@ -2724,7 +3255,7 @@
 
               <!-- Placeholder before any channel is loaded -->
               <div class="ch-placeholder" id="channelPlaceholder">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                 <div class="ch-placeholder-title">Look up a channel</div>
                 <div class="ch-placeholder-sub">Enter an @handle above to see its videos, shorts, playlists, and posts — or pick a saved channel from quick access.</div>
               </div>
@@ -2752,7 +3283,7 @@
 
               <!-- Placeholder -->
               <div class="mv-player-placeholder" id="nigglePlayerPlaceholder">
-                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                <svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
                 <div class="mv-player-placeholder-title">Pick a vid</div>
                 <div class="mv-player-placeholder-sub">Select a video from the grid to start playing</div>
               </div>
@@ -2767,7 +3298,55 @@
 
               <!-- Video player wrap -->
               <div id="niggleVideoWrap" style="display:none;position:relative;flex:1;min-height:0;background:#000;border-radius:0 0 var(--md-shape-corner-large) var(--md-shape-corner-large);overflow:hidden;">
-                <video id="niggleVideo" style="width:100%;height:100%;display:block;" controls playsinline></video>
+                <video id="niggleVideo" style="width:100%;height:100%;display:block;" playsinline></video>
+                <!-- Custom overlay controls (mirrors music player) -->
+                <div class="mv-video-overlay" id="niggleVideoOverlay">
+                  <div class="mv-dock">
+                    <div class="mv-scrub-row">
+                      <div class="mv-progress-wrap" id="ngProgressWrap" data-media="niggle">
+                        <div class="mv-progress-buf" id="ngProgressBuf"></div>
+                        <div class="mv-progress-fill" id="ngProgressFill"></div>
+                        <button type="button" class="mv-progress-thumb tv-focusable" id="ngProgressThumb" data-media="niggle" tabindex="0" role="slider" aria-label="Seek position" title="Seek"></button>
+                      </div>
+                      <div class="mv-time-row">
+                        <span class="bar-time" id="ngTimeElapsed">0:00</span>
+                        <span class="bar-time" id="ngTimeTotal">0:00</span>
+                      </div>
+                    </div>
+                    <div class="mv-transport">
+                      <div class="mv-transport-left">
+                        <div class="mv-vol-group">
+                          <button type="button" class="bar-icon-btn tv-media-btn" data-media="niggle" data-action="mute" title="Mute" id="ngMuteBtn">
+                            <svg viewBox="0 0 24 24" width="40" height="40" id="ngVolIcon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                            <svg viewBox="0 0 24 24" width="40" height="40" id="ngMuteIcon" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                          </button>
+                          <input type="range" class="mv-vol-slider" id="ngVolSlider" min="0" max="1" step="0.02" value="1" title="Volume">
+                        </div>
+                      </div>
+                      <div class="mv-transport-mid">
+                        <button type="button" class="control-btn mv-seek-btn tv-media-btn" data-media="niggle" data-action="seek-back" title="Back 10s">
+                          <svg viewBox="0 0 24 24" width="40" height="40"><path d="M11.99 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8s-3.58-8-8-8z"/></svg>
+                          <span class="mv-seek-lbl">10</span>
+                        </button>
+                        <button type="button" class="control-btn mv-pp-btn tv-media-btn" data-media="niggle" data-action="playpause" title="Play/Pause" id="nigglePlayPauseBtn">
+                          <svg viewBox="0 0 24 24" width="40" height="40" id="ngPlayIcon"><path d="M8 5v14l11-7z"/></svg>
+                          <svg viewBox="0 0 24 24" width="40" height="40" id="ngPauseIcon" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        </button>
+                        <button type="button" class="control-btn mv-seek-btn tv-media-btn" data-media="niggle" data-action="seek-fwd" title="Forward 10s">
+                          <svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+                          <span class="mv-seek-lbl">10</span>
+                        </button>
+                      </div>
+                      <div class="mv-transport-right">
+                        <button type="button" class="bar-icon-btn tv-media-btn" data-media="niggle" data-action="fullscreen" title="Fullscreen" id="ngFsBtn">
+                          <svg viewBox="0 0 24 24" width="40" height="40" id="ngFsIcon"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                          <svg viewBox="0 0 24 24" width="40" height="40" id="ngExitFsIcon" style="display:none"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <iframe id="niggleIframe"
                   style="width:100%;height:100%;border:none;display:none;"
                   allowfullscreen
@@ -4019,9 +4598,404 @@
       _showControls();
     }
 
+    // ══════════════════════════════════════════════
+    //  Movies / Niggle custom overlay (idle-hide + progress)
+    // ══════════════════════════════════════════════
+    const _mvIdle = { movies: null, niggle: null };
+    const MV_IDLE_MS = 4000;
+    const MV_IDLE_TV_MS = 4000; // same 4s on Fire TV / D-pad
+
+    function _mvWrap(media) {
+      return document.getElementById(media === 'niggle' ? 'niggleVideoWrap' : 'moviesIframeWrap');
+    }
+    function _mvVideo(media) {
+      return document.getElementById(media === 'niggle' ? 'niggleVideo' : 'moviesVideo');
+    }
+    function _mvFmt(t, forceHours) {
+      if (!isFinite(t) || t < 0) t = 0;
+      const h = Math.floor(t / 3600);
+      const m = Math.floor((t % 3600) / 60);
+      const s = Math.floor(t % 60);
+      if (forceHours || h > 0) {
+        return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+      }
+      return m + ':' + String(s).padStart(2, '0');
+    }
+    function _mvShowControls(media) {
+      const wrap = _mvWrap(media);
+      if (!wrap) return;
+      wrap.classList.add('controls-visible');
+      wrap.classList.remove('cursor-hidden');
+      clearTimeout(_mvIdle[media]);
+      // Stay visible while scrubbing the progress thumb
+      const thumb = document.getElementById(media === 'niggle' ? 'ngProgressThumb' : 'mvProgressThumb');
+      if (thumb && thumb.dataset.scrubbing === '1') return;
+      const ms = (typeof MV_IDLE_TV_MS !== 'undefined' && document.body.classList.contains('tv-nav-mode'))
+        ? MV_IDLE_TV_MS : MV_IDLE_MS;
+      _mvIdle[media] = setTimeout(() => _mvHideControls(media), ms);
+    }
+    function _mvHideControls(media) {
+      const wrap = _mvWrap(media);
+      if (!wrap) return;
+      const progress = document.getElementById(media === 'niggle' ? 'ngProgressWrap' : 'mvProgressWrap');
+      const thumb = document.getElementById(media === 'niggle' ? 'ngProgressThumb' : 'mvProgressThumb');
+      // Stay up only while actively scrubbing
+      if ((progress && progress.dataset.scrubbing === '1') || (thumb && thumb.dataset.scrubbing === '1')) return;
+      wrap.classList.remove('tv-controls-locked');
+      wrap.classList.remove('controls-visible');
+      wrap.classList.add('cursor-hidden');
+      // Blur any focused control inside the overlay so nothing keeps it "active"
+      const overlay = wrap.querySelector('.mv-video-overlay');
+      if (overlay) {
+        overlay.querySelectorAll('.tv-focused').forEach(el => el.classList.remove('tv-focused'));
+        const ae = document.activeElement;
+        if (ae && overlay.contains(ae) && typeof ae.blur === 'function') {
+          try { ae.blur(); } catch (_) {}
+        }
+      }
+    }
+    // ── Global scrub toggle (works even if per-element handlers weren't bound) ──
+    function _mvIsScrubbing(media) {
+      const thumb = document.getElementById(media === 'niggle' ? 'ngProgressThumb' : 'mvProgressThumb');
+      const progress = document.getElementById(media === 'niggle' ? 'ngProgressWrap' : 'mvProgressWrap');
+      return !!(thumb && thumb.dataset.scrubbing === '1') || !!(progress && progress.dataset.scrubbing === '1');
+    }
+    function _mvEnterScrub(media) {
+      const progress = document.getElementById(media === 'niggle' ? 'ngProgressWrap' : 'mvProgressWrap');
+      const thumb = document.getElementById(media === 'niggle' ? 'ngProgressThumb' : 'mvProgressThumb');
+      if (progress) {
+        progress.classList.add('mv-scrubbing');
+        progress.dataset.scrubbing = '1';
+      }
+      if (thumb) {
+        thumb.dataset.scrubbing = '1';
+        thumb.classList.add('mv-scrubbing');
+      }
+      if (typeof _mvShowControls === 'function') _mvShowControls(media);
+    }
+    function _mvExitScrub(media) {
+      const progress = document.getElementById(media === 'niggle' ? 'ngProgressWrap' : 'mvProgressWrap');
+      const thumb = document.getElementById(media === 'niggle' ? 'ngProgressThumb' : 'mvProgressThumb');
+      if (progress) {
+        progress.classList.remove('mv-scrubbing');
+        delete progress.dataset.scrubbing;
+      }
+      if (thumb) {
+        delete thumb.dataset.scrubbing;
+        thumb.classList.remove('mv-scrubbing');
+      }
+      if (typeof _mvShowControls === 'function') _mvShowControls(media);
+    }
+    function _mvToggleScrub(media) {
+      if (_mvIsScrubbing(media)) _mvExitScrub(media);
+      else _mvEnterScrub(media);
+    }
+    function _mvSeekBy(media, deltaSec) {
+      const v = document.getElementById(media === 'niggle' ? 'niggleVideo' : 'moviesVideo');
+      if (!v) return;
+      v.currentTime = Math.max(0, Math.min(v.duration || 1e9, (v.currentTime || 0) + deltaSec));
+      if (typeof _mvUpdateProgress === 'function') _mvUpdateProgress(media);
+      if (typeof _mvShowControls === 'function') _mvShowControls(media);
+    }
+
+    // Hold Left/Right while scrubbing → accelerating seek
+    const _mvHold = { timer: null, dir: 0, media: null, started: 0, lastTick: 0 };
+    function _mvStopHoldSeek() {
+      if (_mvHold.timer) {
+        cancelAnimationFrame(_mvHold.timer);
+        _mvHold.timer = null;
+      }
+      _mvHold.dir = 0;
+      _mvHold.media = null;
+    }
+    function _mvHoldTick(now) {
+      if (!_mvHold.dir || !_mvHold.media) return;
+      if (typeof _mvIsScrubbing === 'function' && !_mvIsScrubbing(_mvHold.media)) {
+        _mvStopHoldSeek();
+        return;
+      }
+      const held = (now - _mvHold.started) / 1000; // seconds held
+      // Ramp: 10s → 30s → 60s → 120s jumps as hold continues
+      let step;
+      if (held < 0.8) step = 10;
+      else if (held < 2) step = 30;
+      else if (held < 4) step = 60;
+      else step = 120;
+      // Tick about every 180ms early, then faster (~90ms) when fully ramped
+      const interval = held < 2 ? 180 : 90;
+      if (now - _mvHold.lastTick >= interval) {
+        _mvHold.lastTick = now;
+        _mvSeekBy(_mvHold.media, _mvHold.dir * step);
+      }
+      _mvHold.timer = requestAnimationFrame(_mvHoldTick);
+    }
+    function _mvStartHoldSeek(media, dir) {
+      // dir: -1 left, +1 right
+      if (_mvHold.dir === dir && _mvHold.media === media && _mvHold.timer) return; // already holding
+      _mvStopHoldSeek();
+      _mvHold.dir = dir;
+      _mvHold.media = media;
+      _mvHold.started = performance.now();
+      _mvHold.lastTick = 0;
+      // Immediate first step
+      _mvSeekBy(media, dir * 10);
+      _mvHold.lastTick = performance.now();
+      _mvHold.timer = requestAnimationFrame(_mvHoldTick);
+    }
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'Left' || e.key === 'ArrowRight' || e.key === 'Right') {
+        _mvStopHoldSeek();
+      }
+    });
+    window.addEventListener('blur', _mvStopHoldSeek);
+
+    // Ensure TV nav / other scopes can always reach these
+    window._mvToggleScrub = _mvToggleScrub;
+    window._mvEnterScrub = _mvEnterScrub;
+    window._mvExitScrub = _mvExitScrub;
+    window._mvSeekBy = _mvSeekBy;
+    window._mvIsScrubbing = _mvIsScrubbing;
+    window._mvStartHoldSeek = _mvStartHoldSeek;
+    window._mvStopHoldSeek = _mvStopHoldSeek;
+
+    function _mvSyncPlayIcon(media) {
+      const v = _mvVideo(media);
+      if (!v) return;
+      const wrap = _mvWrap(media);
+      if (wrap) wrap.classList.toggle('mv-is-paused', !!v.paused);
+      const playId = media === 'niggle' ? 'ngPlayIcon' : 'mvPlayIcon';
+      const pauseId = media === 'niggle' ? 'ngPauseIcon' : 'mvPauseIcon';
+      const playIcon = document.getElementById(playId);
+      const pauseIcon = document.getElementById(pauseId);
+      if (!playIcon || !pauseIcon) return;
+      if (v.paused) {
+        playIcon.style.display = '';
+        pauseIcon.style.display = 'none';
+      } else {
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = '';
+      }
+    }
+    function _mvSyncMuteIcon(media) {
+      const v = _mvVideo(media);
+      if (!v) return;
+      const volId = media === 'niggle' ? 'ngVolIcon' : 'mvVolIcon';
+      const muteId = media === 'niggle' ? 'ngMuteIcon' : 'mvMuteIcon';
+      const volIcon = document.getElementById(volId);
+      const muteIcon = document.getElementById(muteId);
+      if (!volIcon || !muteIcon) return;
+      if (v.muted || v.volume === 0) {
+        volIcon.style.display = 'none';
+        muteIcon.style.display = '';
+      } else {
+        volIcon.style.display = '';
+        muteIcon.style.display = 'none';
+      }
+    }
+    function _mvUpdateProgress(media) {
+      const v = _mvVideo(media);
+      if (!v) return;
+      const pfx = media === 'niggle' ? 'ng' : 'mv';
+      const elapsed = document.getElementById(pfx + 'TimeElapsed');
+      const total = document.getElementById(pfx + 'TimeTotal');
+      const fill = document.getElementById(pfx + 'ProgressFill');
+      const thumb = document.getElementById(pfx + 'ProgressThumb');
+      const buf = document.getElementById(pfx + 'ProgressBuf');
+      const dur = v.duration || 0;
+      const cur = v.currentTime || 0;
+      const pct = dur > 0 ? (cur / dur) * 100 : 0;
+      const useHours = dur >= 3600 || cur >= 3600;
+      if (elapsed) elapsed.textContent = _mvFmt(cur, useHours);
+      if (total) total.textContent = _mvFmt(dur, useHours);
+      if (fill) fill.style.width = pct + '%';
+      if (thumb) thumb.style.left = pct + '%';
+      if (buf && v.buffered && v.buffered.length) {
+        try {
+          const end = v.buffered.end(v.buffered.length - 1);
+          buf.style.width = (dur > 0 ? (end / dur) * 100 : 0) + '%';
+        } catch (_) {}
+      }
+    }
+    function _mvSeekFromEvent(media, e) {
+      const v = _mvVideo(media);
+      const wrap = document.getElementById(media === 'niggle' ? 'ngProgressWrap' : 'mvProgressWrap');
+      if (!v || !wrap || !v.duration) return;
+      const rect = wrap.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      v.currentTime = ratio * v.duration;
+      _mvUpdateProgress(media);
+    }
+    function _bindMvOverlay(media) {
+      const wrap = _mvWrap(media);
+      const v = _mvVideo(media);
+      if (!wrap || !v) return;
+      if (wrap._mvBound) return;
+      wrap._mvBound = true;
+
+      const show = () => _mvShowControls(media);
+      wrap.addEventListener('mousemove', show);
+      wrap.addEventListener('mouseenter', show);
+      wrap.addEventListener('mouseleave', () => {
+        const th = document.getElementById(media === 'niggle' ? 'ngProgressThumb' : 'mvProgressThumb');
+        if (th && th.dataset.scrubbing === '1') return;
+        clearTimeout(_mvIdle[media]);
+        _mvIdle[media] = setTimeout(() => _mvHideControls(media), MV_IDLE_MS);
+      });
+      wrap.addEventListener('click', (e) => {
+        // click on empty video area toggles play
+        if (e.target.closest('.mv-video-overlay') && !e.target.closest('button, input, .mv-progress-wrap')) {
+          // clicked on gradient but not a control — still show
+          show();
+          return;
+        }
+        if (e.target === v || e.target === wrap) {
+          if (v.paused) v.play().catch(() => {});
+          else v.pause();
+          show();
+        }
+      });
+
+      const pfx = media === 'niggle' ? 'ng' : 'mv';
+      const progress = document.getElementById(pfx + 'ProgressWrap');
+      const thumb = document.getElementById(pfx + 'ProgressThumb');
+      if (progress) {
+        let dragging = false;
+        const seekAt = (e) => {
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const vv = _mvVideo(media);
+          const rect = progress.getBoundingClientRect();
+          if (!vv || !vv.duration) return;
+          const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+          vv.currentTime = ratio * vv.duration;
+          _mvUpdateProgress(media);
+        };
+        const enterScrub = () => _mvEnterScrub(media);
+        const exitScrub = () => _mvExitScrub(media);
+        progress._enterScrub = enterScrub;
+        progress._exitScrub = exitScrub;
+        if (thumb) {
+          thumb._enterScrub = enterScrub;
+          thumb._exitScrub = exitScrub;
+        }
+
+        // Mouse: click / drag track to seek
+        progress.addEventListener('click', (e) => {
+          if (e.target === thumb || e.target.closest?.('.mv-progress-thumb')) return;
+          e.stopPropagation();
+          seekAt(e);
+          show();
+        });
+        progress.addEventListener('pointerdown', (e) => {
+          if (e.target === thumb || e.target.closest?.('.mv-progress-thumb')) return;
+          dragging = true;
+          progress.setPointerCapture?.(e.pointerId);
+          seekAt(e);
+          show();
+        });
+        progress.addEventListener('pointermove', (e) => {
+          if (!dragging) return;
+          seekAt(e);
+          show();
+        });
+        progress.addEventListener('pointerup', () => { dragging = false; });
+        progress.addEventListener('pointercancel', () => { dragging = false; });
+      }
+      if (thumb) {
+        // Fire TV / remote on the DOT:
+        //   Focus (Up) → dot selected
+        //   Enter / center → scrub mode
+        //   Left / Right → seek
+        //   Down → exit scrub + move to transport
+        const onToggle = (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          _mvToggleScrub(media);
+        };
+        thumb.addEventListener('click', onToggle);
+        thumb.addEventListener('keydown', (e) => {
+          const scrubbing = _mvIsScrubbing(media);
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Select') {
+            onToggle(e);
+            return;
+          }
+          if (!scrubbing) return;
+          if (e.key === 'ArrowLeft' || e.key === 'Left') {
+            e.preventDefault(); e.stopPropagation();
+            if (!e.repeat) _mvStartHoldSeek(media, -1);
+          } else if (e.key === 'ArrowRight' || e.key === 'Right') {
+            e.preventDefault(); e.stopPropagation();
+            if (!e.repeat) _mvStartHoldSeek(media, 1);
+          } else if (e.key === 'ArrowDown' || e.key === 'Down') {
+            e.preventDefault(); e.stopPropagation();
+            _mvStopHoldSeek();
+            _mvExitScrub(media);
+            if (window.tvNav && typeof window.tvNav.move === 'function') {
+              setTimeout(() => window.tvNav.move('down'), 0);
+            }
+          } else if (e.key === 'ArrowUp' || e.key === 'Up') {
+            e.preventDefault(); e.stopPropagation();
+            show();
+          } else if (e.key === 'Escape' || e.key === 'BrowserBack' || e.key === 'GoBack') {
+            e.preventDefault(); e.stopPropagation();
+            _mvExitScrub(media);
+          }
+        });
+      }
+      const vol = document.getElementById(pfx + 'VolSlider');
+      if (vol) {
+        vol.addEventListener('input', () => {
+          v.volume = parseFloat(vol.value);
+          v.muted = v.volume === 0;
+          _mvSyncMuteIcon(media);
+          show();
+        });
+      }
+
+      v.addEventListener('timeupdate', () => _mvUpdateProgress(media));
+      v.addEventListener('progress', () => _mvUpdateProgress(media));
+      v.addEventListener('loadedmetadata', () => _mvUpdateProgress(media));
+      v.addEventListener('play', () => {
+        _mvSyncPlayIcon(media);
+        show();
+      });
+      v.addEventListener('pause', () => {
+        _mvSyncPlayIcon(media);
+        show(); // show then auto-hide after 4s
+      });
+      v.addEventListener('volumechange', () => _mvSyncMuteIcon(media));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      _bindMvOverlay('movies');
+      _bindMvOverlay('niggle');
+    });
+    // Also bind immediately in case DOMContentLoaded already fired
+    if (document.readyState !== 'loading') {
+      _bindMvOverlay('movies');
+      _bindMvOverlay('niggle');
+    }
+
+
+    document.addEventListener('fullscreenchange', () => {
+      const fs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      ['mv','ng'].forEach(pfx => {
+        const enter = document.getElementById(pfx + 'FsIcon');
+        const exit = document.getElementById(pfx + 'ExitFsIcon');
+        if (enter) enter.style.display = fs ? 'none' : '';
+        if (exit) exit.style.display = fs ? '' : 'none';
+      });
+    });
+
     // ── YouTube-style keyboard shortcuts ──
     document.addEventListener('keydown', e => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+      // Don't steal keys while using movie/niggle player chrome or scrubbing
+      if (e.target?.closest?.('.mv-video-overlay')
+          || e.target?.classList?.contains('mv-progress-thumb')
+          || document.querySelector('.mv-progress-thumb.tv-focused, .mv-progress-thumb.mv-scrubbing')
+          || document.querySelector('#moviesIframeWrap.controls-visible .tv-focused, #niggleVideoWrap.controls-visible .tv-focused')) {
+        return;
+      }
       const v = vid();
       const dur = v.duration || 0;
 
@@ -4424,6 +5398,7 @@
       // Hide placeholder, show iframe wrap
       document.getElementById('mvPlayerPlaceholder').style.display = 'none';
       document.getElementById('moviesIframeWrap').style.display = '';
+      if (typeof _bindMvOverlay === 'function') _bindMvOverlay('movies');
 
       // Direct MP4 — play immediately without the worker
       if (directUrl) {
@@ -4618,6 +5593,7 @@
       }
       document.getElementById('mvPlayerPlaceholder').style.display = 'none';
       document.getElementById('moviesIframeWrap').style.display = '';
+      if (typeof _bindMvOverlay === 'function') _bindMvOverlay('movies');
       _renderSourceBar(0);
       switchSource(0);
     }
@@ -4804,6 +5780,7 @@
     async function loadMoviesEmbed(id, type, season, episode) {
       document.getElementById('mvPlayerPlaceholder').style.display = 'none';
       document.getElementById('moviesIframeWrap').style.display = '';
+      if (typeof _bindMvOverlay === 'function') _bindMvOverlay('movies');
 
       const video  = document.getElementById('moviesVideo');
       const iframe = document.getElementById('moviesIframe');
@@ -4867,6 +5844,7 @@
         video.src = hlsUrl;
         video.load();
         video.play().catch(() => {});
+        if (typeof _mvShowControls === 'function') _mvShowControls('movies');
         return;
       }
       if (typeof Hls !== 'undefined' && Hls.isSupported()) {
@@ -4900,6 +5878,7 @@
           _scheduleAudioRecheck(hls);
           document.getElementById('mvIframeLoading').style.display = 'none';
           video.play().catch(() => {});
+          if (typeof _mvShowControls === 'function') _mvShowControls('movies');
         });
         hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => { _applyDesiredAudio(hls); });
         hls.on(Hls.Events.LEVEL_SWITCHED, () => { _applyDesiredAudio(hls); });
@@ -5037,6 +6016,7 @@
         video.addEventListener('loadedmetadata', () => {
           document.getElementById('mvIframeLoading').style.display = 'none';
           video.play().catch(() => {});
+          if (typeof _mvShowControls === 'function') _mvShowControls('movies');
         }, { once: true });
         video.addEventListener('error', () => {
           src._failed = true;
@@ -5339,6 +6319,8 @@
         video.src = `${NIGGLE_STREAM_WORKER.replace(/\/$/, '')}/${v.driveId}`;
         video.load();
         video.play().catch(() => {});
+        if (typeof _mvShowControls === 'function') _mvShowControls('niggle');
+        if (typeof _bindMvOverlay === 'function') _bindMvOverlay('niggle');
       } else {
         // Fallback: Drive preview iframe (slower but no worker needed)
         video.style.display = 'none';
@@ -5347,6 +6329,685 @@
         iframe.src = `https://drive.google.com/file/d/${v.driveId}/preview`;
       }
     }
+
+
+    // ══════════════════════════════════════════════
+    //  TV-STYLE D-PAD / SPATIAL NAVIGATION
+    //  Arrow keys move focus; Enter activates; Escape backs out
+    // ══════════════════════════════════════════════
+    (function initTvNav() {
+      const FOCUS_SEL = [
+        '#topBarLogo',
+        '.nav-item:not([style*="display: none"])',
+        '#urlInput:not([style*="display: none"])',
+        '#moviesSearchInput:not([style*="display: none"])',
+        '.unified-search-btn',
+        '.unified-add-btn',
+        '.sq-tab',
+        '.sq-action-btn',
+        '.queue-item',
+        '.playlist-item',
+        '.search-result-item',
+        '.mv-poster-card',
+        '.niggle-vid-card',
+        '.ch-qa-chip',
+        '.ch-tab',
+        '.ch-card',
+        '.ch-lookup-btn',
+        '.ch-header-add-btn',
+        '#channelHandleInput',
+        '.mv-pill',
+        '.player-overlay .control-btn',
+        '.player-overlay .bar-icon-btn',
+        '.player-overlay .settings-btn',
+        '.mv-video-overlay .control-btn',
+        '.mv-video-overlay .bar-icon-btn',
+        '.mv-video-overlay .mv-progress-thumb',
+        '.mv-video-overlay input.mv-vol-slider',
+        '#playPauseBtn',
+        '#muteBtn',
+        '#fullscreenBtn',
+        '#settingsGearBtn',
+        '#progressWrap',
+        'input[type="range"]#volSlider',
+        '.tv-media-btn',
+        '.control-btn',
+        '.bar-icon-btn',
+        '.settings-btn',
+        '.episode-select',
+        '#seasonSelect',
+        '#episodeSelect',
+        'button.button',
+        '.ch-post-play-btn',
+        '#mvLangBtn',
+      ].join(',');
+
+      let _tvFocusEl = null;
+      let _tvNavActive = false;
+
+      function isVisible(el) {
+        if (!el || !el.isConnected) return false;
+        const st = getComputedStyle(el);
+        if (st.display === 'none' || st.visibility === 'hidden') return false;
+        // Player overlays use opacity:0 until hover — still treat controls as navigable
+        const inPlayerOverlay = !!el.closest('.player-overlay, .mv-video-overlay');
+        if (st.opacity === '0' && !inPlayerOverlay) return false;
+        // Walk up for hidden ancestors (panels)
+        let p = el.parentElement;
+        while (p && p !== document.body) {
+          const ps = getComputedStyle(p);
+          if (ps.display === 'none' || ps.visibility === 'hidden') return false;
+          if ((p.id === 'channelPanel' || p.id === 'nigglePanel') && !p.classList.contains('visible')) return false;
+          // music panel hidden via style.display
+          if (p.id === 'musicPanel' && ps.display === 'none') return false;
+          if (p.id === 'moviesPanel' && ps.display === 'none') return false;
+          p = p.parentElement;
+        }
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      }
+
+      function showPlayerChromeFor(el) {
+        const wrap = el && el.closest('.player-video-wrap');
+        if (wrap) {
+          wrap.classList.add('controls-visible', 'tv-controls-locked');
+          if (typeof _showControls === 'function') try { _showControls(); } catch(_) {}
+        }
+        // Movies / niggle: show chrome + start 4s idle timer (do NOT lock forever)
+        const mvWrap = el && el.closest('#moviesIframeWrap');
+        if (mvWrap && typeof _mvShowControls === 'function') {
+          try { _mvShowControls('movies'); } catch(_) {}
+        }
+        const ngWrap = el && el.closest('#niggleVideoWrap');
+        if (ngWrap && typeof _mvShowControls === 'function') {
+          try { _mvShowControls('niggle'); } catch(_) {}
+        }
+      }
+
+      function clearPlayerChromeLock() {
+        document.querySelectorAll('.player-video-wrap.tv-controls-locked, #moviesIframeWrap.tv-controls-locked, #niggleVideoWrap.tv-controls-locked').forEach(w => {
+          w.classList.remove('tv-controls-locked');
+        });
+      }
+
+      function _activeMediaKind() {
+        const moviesPanel = document.getElementById('moviesPanel');
+        const nigglePanel = document.getElementById('nigglePanel');
+        const mv = document.getElementById('moviesVideo');
+        const ng = document.getElementById('niggleVideo');
+        if (nigglePanel && nigglePanel.classList.contains('visible') && ng && (ng.src || ng.currentSrc) && ng.style.display !== 'none')
+          return 'niggle';
+        if (moviesPanel && moviesPanel.style.display !== 'none' && mv && (mv.src || mv.currentSrc) && mv.style.display !== 'none')
+          return 'movies';
+        const musicPanel = document.getElementById('musicPanel');
+        const player = document.getElementById('player');
+        if (musicPanel && musicPanel.style.display !== 'none' && player && (player.src || player.currentSrc))
+          return 'music';
+        return null;
+      }
+
+      function mediaAction(media, action) {
+        const video = media === 'niggle'
+          ? document.getElementById('niggleVideo')
+          : media === 'movies'
+            ? document.getElementById('moviesVideo')
+            : document.getElementById('player');
+        if (!video) return;
+        if (action === 'playpause') {
+          if (video.paused) video.play().catch(() => {});
+          else video.pause();
+        } else if (action === 'seek-back') {
+          video.currentTime = Math.max(0, (video.currentTime || 0) - 10);
+        } else if (action === 'seek-fwd') {
+          video.currentTime = Math.min(video.duration || 1e9, (video.currentTime || 0) + 10);
+        } else if (action === 'mute') {
+          video.muted = !video.muted;
+          if (!video.muted && video.volume === 0) video.volume = 0.5;
+        } else if (action === 'fullscreen') {
+          const root = video.closest('#moviesIframeWrap, #niggleVideoWrap, .player-video-wrap') || video;
+          if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            (root.requestFullscreen || root.webkitRequestFullscreen || root.mozRequestFullScreen || (()=>{})).call(root);
+          } else {
+            (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || (()=>{})).call(document);
+          }
+        }
+        if (media === 'movies' || media === 'niggle') {
+          try {
+            _mvSyncPlayIcon(media);
+            _mvSyncMuteIcon(media);
+            _mvUpdateProgress(media);
+            _mvShowControls(media);
+          } catch(_) {}
+        }
+      }
+
+      function getFocusables() {
+        const list = [];
+        document.querySelectorAll(FOCUS_SEL).forEach(el => {
+          // skip hidden nav-niggle etc.
+          if (el.id === 'navNiggle' && el.style.display === 'none') return;
+          // Logo is position:absolute in the top bar — always include when present
+          if (el.id === 'topBarLogo') {
+            list.push(el);
+            return;
+          }
+          if (!isVisible(el)) return;
+          // skip elements inside collapsed sidebars
+          if (el.closest('.right-sidebar.collapsed')) return;
+          list.push(el);
+        });
+        // Guarantee logo is first candidate if somehow missed by selector
+        const logo = document.getElementById('topBarLogo');
+        if (logo && !list.includes(logo)) list.unshift(logo);
+        return list;
+      }
+
+      function clearTvFocus() {
+        document.querySelectorAll('.tv-focused').forEach(e => e.classList.remove('tv-focused'));
+        _tvFocusEl = null;
+      }
+
+      function setTvFocus(el, scroll = true) {
+        if (!el) return;
+        // Logo always focusable; progress dot always focusable when chrome is up
+        const isDot = el.classList?.contains('mv-progress-thumb');
+        if (el.id !== 'topBarLogo' && !isDot && !isVisible(el)) return;
+        if (isDot) {
+          // Ensure player chrome is visible so the dot can be used
+          const media = el.dataset?.media || (el.id === 'ngProgressThumb' ? 'niggle' : 'movies');
+          if (typeof _mvShowControls === 'function') _mvShowControls(media);
+        }
+        clearTvFocus();
+        el.classList.add('tv-focused', 'tv-focusable');
+        if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+        _tvFocusEl = el;
+        _tvNavActive = true;
+        document.body.classList.add('tv-nav-mode');
+        // Reveal music overlay / movies bars while D-pad is on media controls
+        const isMediaCtrl = el.closest('.player-overlay') || el.closest('.mv-video-overlay') || el.classList.contains('tv-media-btn')
+          || el.id === 'playPauseBtn' || el.id === 'muteBtn' || el.id === 'fullscreenBtn'
+          || el.id === 'progressWrap' || el.id === 'volSlider' || el.id === 'settingsGearBtn';
+        if (isMediaCtrl) showPlayerChromeFor(el);
+        else clearPlayerChromeLock();
+        try { el.focus({ preventScroll: true }); } catch (_) {}
+        // Never scroll the sticky top-bar / logo / nav rail — that shifts the whole UI
+        const noScroll = el.id === 'topBarLogo'
+          || el.classList.contains('nav-item')
+          || el.closest('.top-bar')
+          || el.closest('.nav-rail')
+          || el.closest('.player-overlay')
+          || el.closest('.mv-video-overlay')
+          || el.classList.contains('tv-media-btn');
+        if (scroll && !noScroll) {
+          el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+        }
+      }
+
+      function centerOf(el) {
+        const r = el.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, r };
+      }
+
+      function findInDirection(current, dir) {
+        const items = getFocusables();
+        if (!items.length) return null;
+        if (!current || !items.includes(current)) {
+          // prefer current tab's first content card, else first focusable
+          const preferred = items.find(e =>
+            e.classList.contains('mv-poster-card') ||
+            e.classList.contains('niggle-vid-card') ||
+            e.classList.contains('queue-item') ||
+            e.classList.contains('ch-card')
+          );
+          return preferred || items[0];
+        }
+
+        const logoEl = items.find(e => e.id === 'topBarLogo')
+          || document.getElementById('topBarLogo');
+        const navs = items.filter(e => e.classList.contains('nav-item'));
+        // Visible search field in the top bar (music URL or movies search)
+        const searchEl = items.find(e =>
+          e.id === 'urlInput' || e.id === 'moviesSearchInput'
+        ) || items.find(e =>
+          e.classList && e.classList.contains('unified-search-input')
+        ) || document.getElementById('urlInput') || document.getElementById('moviesSearchInput');
+
+        // ── Sidebar nav rail: Up/Down wrap within the rail.
+        //    Logo is reached via Right from the top item; another Right → search. ──
+        if (current.classList.contains('nav-item') && navs.length) {
+          const i = navs.indexOf(current);
+          if (i >= 0) {
+            if (dir === 'up') {
+              // Wrap: top → bottom
+              return navs[i === 0 ? navs.length - 1 : i - 1];
+            }
+            if (dir === 'down') {
+              // Wrap: bottom → top
+              return navs[i === navs.length - 1 ? 0 : i + 1];
+            }
+            if (dir === 'right') {
+              // From top item → logo; otherwise fall through to content spatial nav
+              if (i === 0 && logoEl) return logoEl;
+            }
+            // Left stays on rail (no jump to logo)
+            if (dir === 'left') return current;
+          }
+        }
+        if (current.id === 'topBarLogo') {
+          if (dir === 'right' && searchEl) return searchEl;
+          if (dir === 'left' || dir === 'down') {
+            if (navs.length) return navs[0];
+          }
+          if (dir === 'up') return logoEl; // stay
+        }
+        // From search field: Left → logo, then Left again can go to top nav
+        if (searchEl && (current === searchEl || current.id === 'urlInput' || current.id === 'moviesSearchInput')) {
+          if (dir === 'left') {
+            if (logoEl) return logoEl;
+            if (navs.length) return navs[0];
+          }
+        }
+
+        // From bottom transport → Up lands on the progress DOT
+        if (dir === 'up' && current.closest && current.closest('.mv-transport, .mv-dock')) {
+          const dock = current.closest('.mv-video-overlay');
+          const dot = dock && dock.querySelector('.mv-progress-thumb');
+          if (dot && isVisible(dot)) return dot;
+        }
+        // From progress DOT → Down goes to play/pause in transport
+        if (dir === 'down' && current.classList.contains('mv-progress-thumb')) {
+          if (current.dataset.scrubbing === '1') {
+            // scrub mode handles down itself
+          } else {
+            const media = current.dataset.media;
+            const pp = document.getElementById(media === 'niggle' ? 'nigglePlayPauseBtn' : 'mvPlayPauseBtn');
+            if (pp && isVisible(pp)) return pp;
+          }
+        }
+
+        const cur = centerOf(current);
+        const horizontal = dir === 'left' || dir === 'right';
+        let best = null;
+        let bestScore = Infinity;
+
+        for (const el of items) {
+          if (el === current) continue;
+          // Don't steal logo via weak geometry when leaving content leftward —
+          // only reach logo via the explicit nav rules above, or strong "up" hit.
+          if (el.id === 'topBarLogo' && dir !== 'up') continue;
+
+          const c = centerOf(el);
+          let dx = c.x - cur.x;
+          let dy = c.y - cur.y;
+
+          // Must be primarily in the requested direction
+          if (dir === 'right' && dx <= 4) continue;
+          if (dir === 'left'  && dx >= -4) continue;
+          if (dir === 'down'  && dy <= 4) continue;
+          if (dir === 'up'    && dy >= -4) continue;
+
+          // Primary axis distance + weighted orthogonal penalty
+          let primary, ortho;
+          if (horizontal) {
+            primary = Math.abs(dx);
+            ortho = Math.abs(dy);
+            if (ortho > Math.max(cur.r.height, c.r.height) * 1.8 && ortho > primary * 1.2) continue;
+          } else {
+            primary = Math.abs(dy);
+            ortho = Math.abs(dx);
+            if (ortho > Math.max(cur.r.width, c.r.width) * 1.8 && ortho > primary * 1.2) continue;
+          }
+
+          const score = primary + ortho * 2.4;
+          if (score < bestScore) {
+            bestScore = score;
+            best = el;
+          }
+        }
+
+        // Fallback: wrap nav rail vertically (same as explicit rules)
+        if (!best && current.classList.contains('nav-item') && navs.length) {
+          const i = navs.indexOf(current);
+          if (i >= 0) {
+            if (dir === 'down') best = navs[i === navs.length - 1 ? 0 : i + 1];
+            if (dir === 'up')   best = navs[i === 0 ? navs.length - 1 : i - 1];
+          }
+        }
+        return best;
+      }
+
+      function activate(el) {
+        if (!el) return;
+        if (el.classList.contains('mv-progress-thumb') || el.classList.contains('mv-progress-wrap')) {
+          // Enter / center on the DOT → scrub mode
+          const media = el.dataset.media || (el.closest('[data-media]') && el.closest('[data-media]').dataset.media) || 'movies';
+          const toggle = (typeof _mvToggleScrub === 'function' ? _mvToggleScrub : window._mvToggleScrub);
+          if (typeof toggle === 'function') toggle(media);
+          return;
+        }
+        if (el.classList.contains('tv-media-btn')) {
+          mediaAction(el.dataset.media, el.dataset.action);
+          return;
+        }
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') {
+          el.focus();
+          return;
+        }
+        el.click();
+      }
+
+      function goBack() {
+        // Fire TV / remote Back hierarchy:
+        // 1) Close open menus/dropdowns
+        // 2) Exit fullscreen
+        // 3) If player chrome hidden while video plays → show chrome
+        // 4) If focus is on player controls → leave chrome to content grid
+        // 5) Jump to nav rail
+
+        const openMenu = document.querySelector('.settings-popover.open, .mv-lang-popover.open');
+        if (openMenu) {
+          openMenu.classList.remove('open');
+          return;
+        }
+        const dd = document.getElementById('searchDropdown');
+        if (dd && dd.style.display !== 'none' && dd.style.display !== '') {
+          dd.style.display = 'none';
+          return;
+        }
+
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || (()=>{})).call(document);
+          return;
+        }
+
+        // Active media player wraps
+        const mvWrap = document.getElementById('moviesIframeWrap');
+        const ngWrap = document.getElementById('niggleVideoWrap');
+        const musicWrap = document.getElementById('playerVideoWrap');
+        const activeWrap = [
+          [mvWrap, 'movies'],
+          [ngWrap, 'niggle'],
+          [musicWrap, 'music'],
+        ].find(([w]) => w && w.offsetParent !== null && w.style.display !== 'none');
+
+        if (activeWrap) {
+          const [wrap, kind] = activeWrap;
+          const chromeUp = wrap.classList.contains('controls-visible');
+          const v = kind === 'music' ? document.getElementById('player')
+            : kind === 'niggle' ? document.getElementById('niggleVideo')
+            : document.getElementById('moviesVideo');
+          const playing = v && !v.paused && (v.src || v.currentSrc);
+
+          // Back while chrome hidden → reveal controls (common TV player pattern)
+          if (playing && !chromeUp) {
+            if (kind === 'music' && typeof _showControls === 'function') _showControls();
+            else if (typeof _mvShowControls === 'function') _mvShowControls(kind);
+            // Prefer focusing play button
+            const pp = kind === 'music' ? document.getElementById('playPauseBtn')
+              : kind === 'niggle' ? document.getElementById('nigglePlayPauseBtn')
+              : document.getElementById('mvPlayPauseBtn');
+            if (pp) setTvFocus(pp);
+            return;
+          }
+
+          // Back while focused inside chrome → unlock and move to poster/grid
+          if (_tvFocusEl && (_tvFocusEl.closest('.mv-video-overlay') || _tvFocusEl.closest('.player-overlay'))) {
+            clearPlayerChromeLock();
+            wrap.classList.remove('tv-controls-locked');
+            const card = document.querySelector('.mv-poster-card.active, .niggle-vid-card.active, .queue-item.current')
+              || document.querySelector('.mv-poster-card, .niggle-vid-card, .queue-item');
+            if (card && isVisible(card)) {
+              setTvFocus(card);
+              return;
+            }
+          }
+        }
+
+        // If focus is deep in content, jump to nav rail active item
+        if (_tvFocusEl && !_tvFocusEl.classList.contains('nav-item')) {
+          const activeNav = document.querySelector('.nav-item.active') || document.getElementById('navMusic');
+          if (activeNav && isVisible(activeNav)) {
+            setTvFocus(activeNav);
+            return;
+          }
+        }
+      }
+
+      document.addEventListener('keydown', (e) => {
+        // Don't steal keys while typing in inputs (except arrows leave the field)
+        const tag = (e.target && e.target.tagName) || '';
+        const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable;
+
+        if (typing && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && (tag === 'INPUT' || tag === 'TEXTAREA')) {
+          // allow caret movement inside text fields
+          return;
+        }
+        if (typing && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          return; // typing characters
+        }
+
+        const keyMap = {
+          ArrowUp: 'up',
+          ArrowDown: 'down',
+          ArrowLeft: 'left',
+          ArrowRight: 'right',
+          // Some TV remotes / gamepads
+          Up: 'up', Down: 'down', Left: 'left', Right: 'right',
+        };
+
+        // Fire TV / remote media keys — control the active video player
+        if (!typing && (
+          e.key === 'MediaPlayPause' || e.key === 'MediaPlay' || e.key === 'MediaPause' ||
+          e.key === 'MediaFastForward' || e.key === 'MediaRewind' ||
+          e.key === 'MediaTrackNext' || e.key === 'MediaTrackPrevious' ||
+          e.code === 'MediaPlayPause' || e.code === 'MediaTrackNext' || e.code === 'MediaTrackPrevious'
+        )) {
+          e.preventDefault();
+          e.stopPropagation();
+          const kind = _activeMediaKind();
+          if (!kind) return;
+          if (e.key === 'MediaPlayPause' || e.code === 'MediaPlayPause') mediaAction(kind, 'playpause');
+          else if (e.key === 'MediaPlay') {
+            const v = kind === 'niggle' ? document.getElementById('niggleVideo') : document.getElementById('moviesVideo');
+            if (v) v.play().catch(()=>{});
+            if (typeof _mvShowControls === 'function') _mvShowControls(kind);
+          } else if (e.key === 'MediaPause') {
+            const v = kind === 'niggle' ? document.getElementById('niggleVideo') : document.getElementById('moviesVideo');
+            if (v) v.pause();
+            if (typeof _mvShowControls === 'function') _mvShowControls(kind);
+          } else if (e.key === 'MediaRewind' || e.key === 'MediaTrackPrevious') mediaAction(kind, 'seek-back');
+          else if (e.key === 'MediaFastForward' || e.key === 'MediaTrackNext') mediaAction(kind, 'seek-fwd');
+          return;
+        }
+
+        if (keyMap[e.key]) {
+          // Focus is on the progress DOT
+          const onDot = _tvFocusEl && _tvFocusEl.classList.contains('mv-progress-thumb');
+          if (onDot) {
+            const media = _tvFocusEl.dataset.media || 'movies';
+            const scrubbing = typeof _mvIsScrubbing === 'function' ? _mvIsScrubbing(media) : (_tvFocusEl.dataset.scrubbing === '1');
+            const dir = keyMap[e.key];
+            if (scrubbing && (dir === 'left' || dir === 'right')) {
+              e.preventDefault(); e.stopPropagation();
+              // Ignore browser key-repeat events; our rAF loop handles hold acceleration
+              if (e.repeat) return;
+              const startHold = window._mvStartHoldSeek || (typeof _mvStartHoldSeek === 'function' ? _mvStartHoldSeek : null);
+              if (startHold) startHold(media, dir === 'left' ? -1 : 1);
+              else if (typeof _mvSeekBy === 'function') _mvSeekBy(media, dir === 'left' ? -10 : 10);
+              return;
+            }
+            if (scrubbing && dir === 'down') {
+              e.preventDefault(); e.stopPropagation();
+              if (typeof _mvStopHoldSeek === 'function') _mvStopHoldSeek();
+              else if (window._mvStopHoldSeek) window._mvStopHoldSeek();
+              if (typeof _mvExitScrub === 'function') _mvExitScrub(media);
+              const next = findInDirection(_tvFocusEl, 'down');
+              if (next) setTvFocus(next);
+              return;
+            }
+            if (scrubbing && dir === 'up') {
+              e.preventDefault(); e.stopPropagation();
+              if (typeof _mvShowControls === 'function') _mvShowControls(media);
+              return;
+            }
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          // If chrome is hidden on active player, first arrow press reveals it
+          const kind = _activeMediaKind();
+          if (kind && kind !== 'music') {
+            const wrap = document.getElementById(kind === 'niggle' ? 'niggleVideoWrap' : 'moviesIframeWrap');
+            if (wrap && !wrap.classList.contains('controls-visible')) {
+              if (typeof _mvShowControls === 'function') _mvShowControls(kind);
+              const pp = document.getElementById(kind === 'niggle' ? 'nigglePlayPauseBtn' : 'mvPlayPauseBtn');
+              if (pp) setTvFocus(pp);
+              return;
+            }
+          }
+          const next = findInDirection(_tvFocusEl, keyMap[e.key]);
+          if (next) setTvFocus(next);
+          return;
+        }
+
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Select' || e.key === 'MediaPlayPause') {
+          if (typing && e.key === 'Enter' && tag === 'INPUT') return;
+          // Space on volume slider: let native behavior
+          if (e.key === ' ' && e.target?.type === 'range') return;
+
+          // ★ Priority: Enter/Space/Select on the seek DOT → scrub mode
+          const focusEl = _tvFocusEl || document.activeElement;
+          const onDot = focusEl && (focusEl.classList?.contains('mv-progress-thumb')
+            || focusEl.id === 'mvProgressThumb' || focusEl.id === 'ngProgressThumb');
+          if (onDot && (e.key === 'Enter' || e.key === ' ' || e.key === 'Select')) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            const media = focusEl.dataset?.media
+              || (focusEl.id === 'ngProgressThumb' ? 'niggle' : 'movies');
+            if (typeof _mvToggleScrub === 'function') _mvToggleScrub(media);
+            else activate(focusEl);
+            return;
+          }
+
+          // Enter while chrome hidden on video → toggle play
+          if (!typing) {
+            const kind = _activeMediaKind();
+            if (kind && kind !== 'music') {
+              const wrap = document.getElementById(kind === 'niggle' ? 'niggleVideoWrap' : 'moviesIframeWrap');
+              if (wrap && !wrap.classList.contains('controls-visible') && (!_tvFocusEl || _tvFocusEl === document.body)) {
+                e.preventDefault();
+                mediaAction(kind, 'playpause');
+                return;
+              }
+            }
+          }
+          e.preventDefault();
+          activate(_tvFocusEl || document.activeElement);
+          return;
+        }
+
+        if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'BrowserBack' || e.key === 'GoBack') {
+          // Backspace only when not typing
+          if (e.key === 'Backspace' && typing) return;
+          e.preventDefault();
+          goBack();
+          return;
+        }
+      }, true);
+
+      // Mouse users: clear TV focus ring when they click
+      document.addEventListener('mousedown', () => {
+        document.body.classList.remove('tv-nav-mode');
+        clearTvFocus();
+      });
+
+      // Re-apply focus after dynamic grid renders (movies / channel / niggle)
+      const observer = new MutationObserver(() => {
+        if (_tvFocusEl && !isVisible(_tvFocusEl)) {
+          const next = getFocusables()[0];
+          if (next) setTvFocus(next, false);
+          else clearTvFocus();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+
+      // Make static nav items + logo keyboard-focusable
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.setAttribute('tabindex', '0');
+        el.classList.add('tv-focusable');
+      });
+      const logo = document.getElementById('topBarLogo');
+      if (logo) {
+        logo.setAttribute('tabindex', '0');
+        logo.classList.add('tv-focusable');
+        logo.setAttribute('role', 'button');
+        logo.setAttribute('aria-label', 'Televisor logo — press Enter five times to unlock Niggle');
+      }
+
+      // Initial focus on first nav item when page loads (optional — only after first key)
+      // Exposed helpers for debugging / remote integration
+
+      // Show media bars when videos become active; wire click handlers
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.tv-media-btn');
+        if (btn) {
+          if (btn.classList.contains('mv-progress-thumb')) return; // handled by thumb click
+          e.preventDefault();
+          mediaAction(btn.dataset.media, btn.dataset.action);
+        }
+      });
+      // Keep bars in sync when panels switch
+      const _origSwitchTab = window.switchTab;
+      // switchTab is a function declaration — wrap after a tick
+      setTimeout(() => {
+        const _st = switchTab;
+        window.switchTab = function(tab) {
+          _st(tab);
+          showPlayerChromeFor(null);
+          if (tab === 'movies' && typeof _mvShowControls === 'function') {
+            const v = document.getElementById('moviesVideo');
+            if (v && v.style.display !== 'none' && (v.src || v.currentSrc)) _mvShowControls('movies');
+          }
+          if (tab === 'niggle' && typeof _mvShowControls === 'function') {
+            const wrap = document.getElementById('niggleVideoWrap');
+            if (wrap && wrap.style.display !== 'none') _mvShowControls('niggle');
+          }
+        };
+      }, 0);
+
+
+      // When movies/niggle video becomes active, show custom overlay briefly
+      const mediaObs = new MutationObserver(() => {
+        // Only reveal chrome when a player first becomes active — don't reset idle on every attr tweak
+        const mv = document.getElementById('moviesVideo');
+        const mvWrap = document.getElementById('moviesIframeWrap');
+        if (mv && mvWrap && mv.style.display !== 'none' && (mv.src || mv.currentSrc)
+            && !mvWrap.classList.contains('controls-visible')
+            && typeof _mvShowControls === 'function') {
+          _mvShowControls('movies');
+        }
+        const ngWrap = document.getElementById('niggleVideoWrap');
+        if (ngWrap && ngWrap.style.display !== 'none'
+            && !ngWrap.classList.contains('controls-visible')
+            && typeof _mvShowControls === 'function') {
+          _mvShowControls('niggle');
+        }
+      });
+      const mvEl = document.getElementById('moviesVideo');
+      const ngWrapEl = document.getElementById('niggleVideoWrap');
+      if (mvEl) mediaObs.observe(mvEl, { attributes: true, attributeFilter: ['style', 'src'] });
+      if (ngWrapEl) mediaObs.observe(ngWrapEl, { attributes: true, attributeFilter: ['style'] });
+
+      window.tvNav = {
+        focus: setTvFocus,
+        clear: clearTvFocus,
+        getFocusables,
+        move: (dir) => {
+          const next = findInDirection(_tvFocusEl, dir);
+          if (next) setTvFocus(next);
+        },
+      };
+    })();
 
     // searchDropdown is now a body-level element to escape the top-bar backdrop-filter stacking context
     document.body.appendChild(Object.assign(document.createElement('div'), { id: 'searchDropdown' }));
@@ -5365,5 +7026,6 @@
       p.addEventListener('input', e => applyAccent(e.target.value));
     })();
   </script>
+
 </body>
 </html>
