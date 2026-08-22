@@ -233,7 +233,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 13px 14px 11px;
+      padding: 13px 10px 11px;
       border: none;
       background: transparent;
       color: var(--md-sys-color-on-surface-variant);
@@ -392,6 +392,13 @@
     .queue-item:hover .queue-item-remove { opacity: 1; }
     .queue-item-remove:hover { background: color-mix(in srgb, var(--md-sys-color-error) 15%, transparent); color: var(--md-sys-color-error); }
     .queue-item-remove svg { width: 15px; height: 15px; fill: currentColor; }
+    .queue-item-noimg {
+      width: 100px;
+      height: 56px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      background: var(--md-sys-color-surface-container-highest);
+    }
 
     /* ── Playlists pane ── */
     .sq-pl-new {
@@ -1571,6 +1578,30 @@
       from { opacity: 0; transform: translateY(18px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+
+    /* ── Continue Watching panel ── */
+    #continuePanel { display: none; padding: 12px 16px 16px; }
+    #continuePanel.visible { display: flex; }
+    .cw-grid {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    .cw-remove-btn {
+      position: absolute;
+      top: 6px; left: 6px;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s;
+      z-index: 4;
+    }
+    .mv-poster-card:hover .cw-remove-btn { opacity: 1; }
+    .cw-remove-btn:hover { background: color-mix(in srgb, var(--md-sys-color-error) 70%, black); }
+    .cw-remove-btn svg { width: 14px; height: 14px; fill: currentColor; }
 
     /* ── Channel view panel ── */
     #channelPanel { display: none; }
@@ -2848,6 +2879,12 @@
           </div>
           <div class="nav-label">TV Shows</div>
         </div>
+        <div class="nav-item" id="navContinue" onclick="switchTab('continue')">
+          <div class="nav-icon-wrapper">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+          </div>
+          <div class="nav-label">Continue</div>
+        </div>
         <!-- Niggle Vids — hidden until 5 logo taps -->
         <div class="nav-item" id="navNiggle" onclick="switchTab('niggle')" style="display:none;">
           <div class="nav-icon-wrapper">
@@ -3017,6 +3054,10 @@
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
                 Playlists
               </button>
+              <button class="sq-tab" id="sqTabRecommended" onclick="switchSqTab('recommended')">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 7.1-1.01L12 2z"/></svg>
+                For You
+              </button>
             </div>
             <!-- Queue actions -->
             <div class="sq-actions" id="sqQueueActions">
@@ -3038,6 +3079,13 @@
               <button class="sq-action-btn" onclick="importPlaylist()" title="Import playlist">
                 <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
                 Import
+              </button>
+            </div>
+            <!-- Recommended actions -->
+            <div class="sq-actions" id="sqRecommendedActions" style="display:none;">
+              <button class="sq-action-btn" onclick="loadRecommendations(true)" title="Refresh recommendations">
+                <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08a5.99 5.99 0 0 1-5.65 4c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L14 11h7V4l-3.35 2.35z"/></svg>
+                Refresh
               </button>
             </div>
           </div>
@@ -3062,6 +3110,14 @@
               <span class="sq-meta-name">Saved Playlists</span>
             </div>
             <div id="playlistList"></div>
+          </div>
+
+          <!-- ── Recommended pane ── -->
+          <div id="sqRecommendedPane" class="sq-pane" style="display:none;">
+            <div class="sq-meta">
+              <span class="sq-meta-name">Because you watched…</span>
+            </div>
+            <div id="recommendedList" class="queue-scroll"></div>
           </div>
 
           <!-- hidden -->
@@ -3209,6 +3265,14 @@
       </div>
 
     </div><!-- end moviesPanel -->
+
+        <!-- ── Continue Watching Panel ── -->
+        <div id="continuePanel" class="movies-layout">
+          <div class="mv-grid-panel" style="flex:1; overflow:hidden;">
+            <div class="mv-section-label">Continue Watching</div>
+            <div class="mv-poster-grid cw-grid" id="continueGrid"></div>
+          </div>
+        </div><!-- end continuePanel -->
 
         <!-- ── Channel View Panel ── -->
         <div id="channelPanel" class="movies-layout">
@@ -4467,12 +4531,18 @@
     // ── Fullscreen ──
     function switchSqTab(tab) {
       const isQueue = tab === 'queue';
+      const isPlaylists = tab === 'playlists';
+      const isRecommended = tab === 'recommended';
       document.getElementById('sqTabQueue').classList.toggle('active', isQueue);
-      document.getElementById('sqTabPlaylists').classList.toggle('active', !isQueue);
+      document.getElementById('sqTabPlaylists').classList.toggle('active', isPlaylists);
+      document.getElementById('sqTabRecommended').classList.toggle('active', isRecommended);
       document.getElementById('sqQueuePane').style.display = isQueue ? 'flex' : 'none';
-      document.getElementById('sqPlaylistsPane').style.display = isQueue ? 'none' : 'flex';
+      document.getElementById('sqPlaylistsPane').style.display = isPlaylists ? 'flex' : 'none';
+      document.getElementById('sqRecommendedPane').style.display = isRecommended ? 'flex' : 'none';
       document.getElementById('sqQueueActions').style.display = isQueue ? 'flex' : 'none';
-      document.getElementById('sqPlaylistActions').style.display = isQueue ? 'none' : 'flex';
+      document.getElementById('sqPlaylistActions').style.display = isPlaylists ? 'flex' : 'none';
+      document.getElementById('sqRecommendedActions').style.display = isRecommended ? 'flex' : 'none';
+      if (isRecommended) loadRecommendations(false);
     }
 
     function togglePanel(id) {
@@ -5249,20 +5319,23 @@
     //  TAB SWITCHING
     // ══════════════════════════════════════════════
     function switchTab(tab) {
-      const music   = document.getElementById('musicPanel');
-      const movies  = document.getElementById('moviesPanel');
-      const niggle  = document.getElementById('nigglePanel');
-      const channel = document.getElementById('channelPanel');
-      const ver     = document.getElementById('versionText');
-      const isMusic   = tab === 'music';
-      const isNiggle  = tab === 'niggle';
-      const isChannel = tab === 'channel';
-      const isMovies  = !isMusic && !isNiggle && !isChannel;
+      const music    = document.getElementById('musicPanel');
+      const movies   = document.getElementById('moviesPanel');
+      const niggle   = document.getElementById('nigglePanel');
+      const channel  = document.getElementById('channelPanel');
+      const continueP = document.getElementById('continuePanel');
+      const ver      = document.getElementById('versionText');
+      const isMusic    = tab === 'music';
+      const isNiggle   = tab === 'niggle';
+      const isChannel  = tab === 'channel';
+      const isContinue = tab === 'continue';
+      const isMovies   = !isMusic && !isNiggle && !isChannel && !isContinue;
 
       music.style.display  = isMusic  ? 'flex' : 'none';
       movies.style.display = isMovies ? 'flex' : 'none';
       niggle.classList.toggle('visible', isNiggle);
       channel.classList.toggle('visible', isChannel);
+      continueP.classList.toggle('visible', isContinue);
       ver.style.display    = isMusic ? '' : 'none';
 
       // Nav rail active states
@@ -5271,6 +5344,7 @@
       document.getElementById('navMovies').classList.toggle('active', isMovies && _currentMediaType === 'movie');
       document.getElementById('navTv').classList.toggle('active', isMovies && _currentMediaType === 'tv');
       document.getElementById('navNiggle').classList.toggle('active', isNiggle);
+      document.getElementById('navContinue').classList.toggle('active', isContinue);
 
       // Hide the niggle nav tab when switching away from it
       const navNiggle = document.getElementById('navNiggle');
@@ -5283,6 +5357,7 @@
 
       if (isMovies && !_moviesTrendingLoaded) loadTrending();
       if (isChannel) _renderChannelQuickAccess();
+      if (isContinue) renderContinueWatching();
     }
 
     // ══════════════════════════════════════════════
@@ -5424,6 +5499,9 @@
     async function selectMedia(id, type, title, thumb, year, rating, directUrl, director) {
       _moviesSelected = { id, type, title, directUrl };
 
+      // Remember this pick so it shows up under "Continue"
+      _cwUpsert({ id, type, title, thumb, year, rating, directUrl, director });
+
       // Show now-playing bar
       document.getElementById('moviesPlayerHeader').style.display = 'flex';
       document.getElementById('moviesPlayerTitle').textContent = title;
@@ -5502,7 +5580,239 @@
       const s  = document.getElementById('seasonSelect').value;
       const e  = document.getElementById('episodeSelect').value;
       if (!id || !s || !e) return;
+      _cwUpdateProgress(id, 'tv', { season: parseInt(s), episode: parseInt(e) });
       await loadMoviesEmbed(id, 'tv', parseInt(s), parseInt(e));
+    }
+
+    // ══════════════════════════════════════════════
+    //  CONTINUE WATCHING — remembers recently picked
+    //  movies/shows (and, for shows, the last season/
+    //  episode) so they can be resumed with one tap.
+    // ══════════════════════════════════════════════
+    const CW_STORAGE_KEY = 'gootContinueWatching';
+    const CW_MAX_ITEMS   = 24;
+
+    function _cwList() {
+      try { return JSON.parse(localStorage.getItem(CW_STORAGE_KEY) || '[]'); }
+      catch(e) { return []; }
+    }
+    function _cwSave(list) {
+      try { localStorage.setItem(CW_STORAGE_KEY, JSON.stringify(list)); } catch(e) {}
+    }
+    function _cwRenderIfVisible() {
+      const panel = document.getElementById('continuePanel');
+      if (panel && panel.classList.contains('visible')) renderContinueWatching();
+    }
+    function _cwUpsert(entry) {
+      if (!entry || entry.id == null) return;
+      let list = _cwList();
+      const existing = list.find(x => String(x.id) === String(entry.id) && x.type === entry.type);
+      list = list.filter(x => !(String(x.id) === String(entry.id) && x.type === entry.type));
+      list.unshift({
+        season: existing ? existing.season : null,
+        episode: existing ? existing.episode : null,
+        ...entry,
+        updatedAt: Date.now(),
+      });
+      if (list.length > CW_MAX_ITEMS) list = list.slice(0, CW_MAX_ITEMS);
+      _cwSave(list);
+      _cwRenderIfVisible();
+      _recLoaded = false; // watch history changed — refresh recommendations next time the tab is opened
+    }
+    function _cwUpdateProgress(id, type, patch) {
+      let list = _cwList();
+      const idx = list.findIndex(x => String(x.id) === String(id) && x.type === type);
+      if (idx < 0) return;
+      list[idx] = { ...list[idx], ...patch, updatedAt: Date.now() };
+      _cwSave(list);
+      _cwRenderIfVisible();
+    }
+    function removeFromContinueWatching(id, type, evt) {
+      if (evt) evt.stopPropagation();
+      const list = _cwList().filter(x => !(String(x.id) === String(id) && x.type === type));
+      _cwSave(list);
+      renderContinueWatching();
+    }
+
+    function renderContinueWatching() {
+      const grid = document.getElementById('continueGrid');
+      if (!grid) return;
+      const list = _cwList();
+      if (!list.length) {
+        grid.innerHTML = `<div class="niggle-empty" style="grid-column:1/-1;">
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" style="opacity:0.3;"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+          <div>Nothing here yet — pick a movie or show and it'll show up here so you can jump right back in.</div>
+        </div>`;
+        return;
+      }
+      grid.innerHTML = list.map(m => {
+        const sub = (m.type === 'tv' && m.season && m.episode) ? `S${m.season} · E${m.episode}` : (m.year || '');
+        const inner = m.thumb
+          ? `<img src="${m.thumb}" alt="" loading="lazy">
+             <div class="mv-poster-overlay">
+               <div class="mv-poster-title">${m.title}</div>
+               ${sub ? `<div class="mv-poster-year">${sub}</div>` : ''}
+             </div>`
+          : `<div class="mv-poster-no-img">
+               <svg viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+               ${m.title}
+             </div>`;
+        return `<div class="mv-poster-card" onclick="resumeContinueItem('${m.id}','${m.type}')">
+          <div class="mv-poster-inner">${inner}</div>
+          <button type="button" class="cw-remove-btn" onclick="removeFromContinueWatching('${m.id}','${m.type}', event)" title="Remove">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </button>
+        </div>`;
+      }).join('');
+    }
+
+    async function resumeContinueItem(id, type) {
+      const list = _cwList();
+      const m = list.find(x => String(x.id) === String(id) && x.type === type);
+      if (!m) return;
+      switchTab('movies');
+      setMediaType(type);
+      await selectMedia(m.id, m.type, m.title, m.thumb, m.year, m.rating, m.directUrl, m.director);
+      if (type === 'tv' && m.season && m.episode) {
+        // Give the season dropdown a moment to populate before jumping to it
+        setTimeout(() => {
+          const seasonSelect = document.getElementById('seasonSelect');
+          if (!seasonSelect) return;
+          seasonSelect.value = String(m.season);
+          onSeasonChange().then(() => {
+            setTimeout(() => {
+              const epSelect = document.getElementById('episodeSelect');
+              if (epSelect) { epSelect.value = String(m.episode); loadSelectedEpisode(); }
+            }, 300);
+          });
+        }, 500);
+      }
+    }
+
+    // ══════════════════════════════════════════════
+    //  RECOMMENDED — TMDB "For You" suggestions built
+    //  from what's in Continue Watching (watch history)
+    // ══════════════════════════════════════════════
+    let _recItemMap = {};
+    let _recLoaded  = false;
+    let _recLoading = false;
+
+    function _recEmptyState(msg) {
+      return `<div class="niggle-empty" style="grid-column:1/-1;">
+        <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" style="opacity:0.3;"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 7.1-1.01L12 2z"/></svg>
+        <div>${msg}</div>
+      </div>`;
+    }
+
+    async function loadRecommendations(force) {
+      const list = document.getElementById('recommendedList');
+      if (!list) return;
+      if (_recLoading) return;
+      if (_recLoaded && !force) return;
+
+      // Only real TMDB movies/shows can seed recommendations (skip custom/local entries)
+      const watched = _cwList();
+      const seeds = watched
+        .filter(m => (m.type === 'movie' || m.type === 'tv') && /^\d+$/.test(String(m.id)))
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+        .slice(0, 6);
+
+      if (!seeds.length) {
+        list.innerHTML = _recEmptyState("Watch a few movies or shows and we'll recommend more here.");
+        _recLoaded = true;
+        return;
+      }
+
+      _recLoading = true;
+      list.innerHTML = `<div class="mv-grid-loading"><div class="mv-spinner"></div>Finding recommendations…</div>`;
+
+      try {
+        const watchedKeys = new Set(watched.map(m => `${m.type}:${m.id}`));
+        const scored = {}; // "type:id" -> { item, type, score }
+
+        const responses = await Promise.all(seeds.map(seed =>
+          fetch(`${TMDB_BASE}/${seed.type}/${seed.id}/recommendations?api_key=${TMDB_KEY}&page=1`)
+            .then(r => r.ok ? r.json() : { results: [] })
+            .catch(() => ({ results: [] }))
+        ));
+
+        responses.forEach(data => {
+          (data.results || []).forEach(item => {
+            const type = item.media_type || (item.first_air_date ? 'tv' : 'movie');
+            const key = `${type}:${item.id}`;
+            if (watchedKeys.has(key)) return; // don't recommend what's already watched
+            if (!scored[key]) scored[key] = { item, type, score: 0 };
+            scored[key].score += 1;
+          });
+        });
+
+        const ranked = Object.values(scored)
+          .sort((a, b) => b.score - a.score || (b.item.vote_average || 0) - (a.item.vote_average || 0))
+          .slice(0, 20);
+
+        if (!ranked.length) {
+          list.innerHTML = _recEmptyState('No new recommendations yet — try watching a few more titles.');
+          return;
+        }
+
+        _recItemMap = {};
+        list.innerHTML = ranked.map(({ item, type }) => {
+          const id     = item.id;
+          const title  = item.title || item.name || 'Unknown';
+          const year   = (item.release_date || item.first_air_date || '').slice(0, 4);
+          const rating = item.vote_average ? item.vote_average.toFixed(1) : null;
+          const poster = item.poster_path ? `${TMDB_IMG}${item.poster_path}` : '';
+          const rowImg = item.backdrop_path
+            ? `https://image.tmdb.org/t/p/w300${item.backdrop_path}`
+            : poster;
+          _recItemMap[`${type}:${id}`] = { id, type, title, year, rating, thumb: poster };
+          return `<div class="queue-item" onclick="playRecommendedItem('${type}',${id})">
+            ${rowImg ? `<img src="${rowImg}" alt="" loading="lazy">` : `<div class="queue-item-noimg"></div>`}
+            <div class="queue-item-info">
+              <div class="queue-item-title">${title}</div>
+              <div class="queue-item-author">${type === 'tv' ? 'TV' : 'Movie'}${year ? ' · ' + year : ''}${rating ? ' · ★ ' + rating : ''}</div>
+            </div>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        list.innerHTML = _recEmptyState("Couldn't load recommendations. Check your connection.");
+      } finally {
+        _recLoading = false;
+        _recLoaded  = true;
+      }
+    }
+
+    function playRecommendedItem(type, id) {
+      const m = _recItemMap[`${type}:${id}`];
+      switchTab('movies');
+      setMediaType(type);
+      if (m) selectMedia(m.id, m.type, m.title, m.thumb, m.year, m.rating);
+      else selectMedia(id, type, '', '', '', '');
+    }
+
+    // ── Auto-advance to next episode when one finishes ──
+    async function _mvPlayNextEpisode() {
+      if (_moviesSelected?.type !== 'tv') return; // movies just stop
+
+      const epSelect = document.getElementById('episodeSelect');
+      const seSelect = document.getElementById('seasonSelect');
+      if (!epSelect || !seSelect) return;
+
+      // More episodes left in this season → advance the episode dropdown
+      if (epSelect.selectedIndex > -1 && epSelect.selectedIndex < epSelect.options.length - 1) {
+        epSelect.selectedIndex += 1;
+        await loadSelectedEpisode();
+        return;
+      }
+
+      // Last episode of the season → try the next season (starts at episode 1)
+      if (seSelect.selectedIndex > -1 && seSelect.selectedIndex < seSelect.options.length - 1) {
+        seSelect.selectedIndex += 1;
+        await onSeasonChange();
+        return;
+      }
+
+      // Last episode of the last season — nothing more to auto-play
     }
 
     async function runDiagnostic() {
@@ -5819,6 +6129,10 @@
       if (btn) btn.classList.remove('active');
     }
     document.addEventListener('click', closeMvLangMenu);
+
+    // Attached once — the #moviesVideo element persists across episode/source
+    // changes, so this single listener handles every "ended" event.
+    document.getElementById('moviesVideo').addEventListener('ended', () => { _mvPlayNextEpisode(); });
 
     async function loadMoviesEmbed(id, type, season, episode) {
       document.getElementById('mvPlayerPlaceholder').style.display = 'none';
